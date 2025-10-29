@@ -4,6 +4,8 @@ import { useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 
+// 注意：客户端组件默认就是动态渲染，适合注册页的需求
+// （CSRF、会话、A/B测试、风控等）
 export default function RegisterPage() {
   const router = useRouter();
   const params = useParams();

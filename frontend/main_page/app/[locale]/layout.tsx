@@ -6,9 +6,9 @@ import { locales, type Locale } from '../../i18n-config';
 // Cloudflare Pages 需要 Edge Runtime
 export const runtime = 'edge';
 
-export async function generateStaticParams(): Promise<Array<{ locale: string }>> {
-  return locales.map((locale) => ({ locale }));
-}
+// 注意：不在 layout 中使用 generateStaticParams
+// 注册和登录页面需要动态渲染（CSRF、会话、风控等）
+// 静态生成应该在具体页面的 page.tsx 中配置
 
 export default async function LocaleLayout({
   children,

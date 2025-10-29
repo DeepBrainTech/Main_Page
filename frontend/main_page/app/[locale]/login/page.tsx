@@ -4,6 +4,8 @@ import { useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 
+// 注意：客户端组件默认就是动态渲染，适合登录页的需求
+// （CSRF、会话、安全验证等）
 export default function LoginPage() {
   const router = useRouter();
   const params = useParams();
