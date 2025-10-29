@@ -57,7 +57,15 @@ export default function Home() {
   };
 
   const handleSudokuBattle = () => {
-    window.location.href = "https://sudoku-battle.deepbraintechnology.com/";
+    const token = localStorage.getItem("access_token");
+    const baseUrl = "https://sudoku-battle.deepbraintechnology.com/";
+    let url = baseUrl;
+    if (token) {
+      // 使用 URL fragment 传递，避免出现在 Referer 中
+      url = `${baseUrl}#token=${encodeURIComponent(token)}&locale=${encodeURIComponent(locale)}`;
+    }
+    // 在新标签页中打开
+    window.open(url, "_blank");
   };
 
   return (
