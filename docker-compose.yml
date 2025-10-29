@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  # FastAPI 后端服务
+  backend:
+    build:
+      context: ./backend/api
+      dockerfile: Dockerfile
+    container_name: main-page-api
+    ports:
+      - "8001:8000"
+    environment:
+      - HOST=0.0.0.0
+      - PORT=8000
+      - DEBUG=false
+      - ENVIRONMENT=production
+      - CORS_ORIGINS=http://localhost:3000,http://frontend:3000
+    restart: unless-stopped
+    networks:
+      - main-page-network
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health').read()"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # Next.js 前端服务
+  frontend:
+    build:
+      context: ./frontend/main_page
+      dockerfile: Dockerfile
+    container_name: main-page-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - NEXT_PUBLIC_API_URL=http://backend:8000
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - main-page-network
+
+networks:
+  main-page-network:
+    driver: bridge

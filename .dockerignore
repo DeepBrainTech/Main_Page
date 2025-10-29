@@ -1,0 +1,29 @@
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Docker
+docker-compose*.yml
+Dockerfile*
+.dockerignore
+
+# 文档
+README.md
+*.md
+
+# 许可证
+LICENSE
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# 日志
+*.log
