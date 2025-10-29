@@ -4,6 +4,7 @@ import { useRouter, useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
+import { getApiUrl } from "@/lib/api-config";
 
 export default function Home() {
   const router = useRouter();
@@ -18,7 +19,7 @@ export default function Home() {
     const token = localStorage.getItem("access_token");
     if (token) {
       // 验证 token 是否有效
-      fetch("http://localhost:8000/api/auth/verify", {
+      fetch(getApiUrl("/api/auth/verify"), {
         headers: {
           Authorization: `Bearer ${token}`,
         },

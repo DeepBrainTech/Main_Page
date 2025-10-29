@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { getApiUrl } from "@/lib/api-config";
 
 // 注意：客户端组件默认就是动态渲染，适合注册页的需求
 // （CSRF、会话、A/B测试、风控等）
@@ -45,7 +46,7 @@ export default function RegisterPage() {
     setLoading(true);
 
     try {
-      const response = await fetch("http://localhost:8000/api/auth/register", {
+      const response = await fetch(getApiUrl("/api/auth/register"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
