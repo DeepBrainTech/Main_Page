@@ -3,7 +3,7 @@ import { getMessages } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 import { locales, type Locale } from '../../i18n-config';
 
-export async function generateStaticParams(): Promise<Array<{ locale: Locale }>> {
+export async function generateStaticParams(): Promise<Array<{ locale: string }>> {
   return locales.map((locale) => ({ locale }));
 }
 
@@ -12,13 +12,17 @@ export default async function LocaleLayout({
   params
 }: {
   children: React.ReactNode;
-  params: Promise<{ locale: Locale }>;
+  params: Promise<{ locale: string }>;
 }) {
-  const { locale } = await params;
-
-  if (!locales.includes(locale)) {
+  const { locale: localeParam } = await params;
+  
+  // 验证 locale 是否在支持的语言列表中
+  if (!locales.includes(localeParam as Locale)) {
     notFound();
   }
+  
+  // 现在 localeParam 已经通过验证，可以安全地转换为 Locale 类型
+  const locale = localeParam as Locale;
 
   // 获取当前语言的翻译消息
   const messages = await getMessages({ locale });
