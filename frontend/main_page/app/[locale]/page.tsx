@@ -57,9 +57,7 @@ export default function Home() {
   };
 
   const handleSudokuBattle = () => {
-    // TODO: 跳转到数独对战页面
-    // router.push(`/${locale}/sudoku-battle`);
-    console.log("Sudoku Battle clicked");
+    window.location.href = "https://sudoku-battle.deepbraintechnology.com/";
   };
 
   return (
