@@ -1,13 +1,7 @@
 import { getRequestConfig } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 import { headers } from 'next/headers';
-
-// 支持的语言列表
-export const locales = ['zh', 'en'] as const;
-export type Locale = (typeof locales)[number];
-
-// 默认语言
-export const defaultLocale: Locale = 'zh';
+import { locales, defaultLocale, type Locale } from './i18n-config';
 
 // 获取语言配置
 export default getRequestConfig(async () => {
@@ -25,3 +19,6 @@ export default getRequestConfig(async () => {
     messages: (await import(`./language/${locale}.json`)).default
   };
 });
+
+// 重新导出常量和类型以供其他文件使用
+export { locales, defaultLocale, type Locale } from './i18n-config';

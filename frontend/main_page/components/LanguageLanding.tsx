@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useMemo } from "react";
-import { defaultLocale, type Locale } from "@/i18n";
+import { defaultLocale, type Locale } from "@/i18n-config";
 
 type LanguageOption = {
   locale: Locale;
