@@ -3,3 +3,20 @@ uvicorn[standard]==0.32.0
 python-dotenv==1.0.1
 pydantic==2.9.2
 pydantic-settings==2.5.2
+email-validator==2.2.0
+
+# ���?r��"
+sqlalchemy==2.0.35
+psycopg2-binary==2.9.10
+alembic==1.13.2
+pymongo==4.10.1
+pymysql==1.1.1
+
+# �r�_?�'O�r%�."
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+bcrypt==4.0.1
+python-multipart==0.0.9
+
+# �.��-����.�
+python-dateutil==2.9.0

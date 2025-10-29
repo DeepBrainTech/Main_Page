@@ -8,7 +8,7 @@ WORKDIR /app
 COPY package*.json ./
 
 # 安装依赖
-RUN npm ci
+RUN npm install --legacy-peer-deps
 
 # 暴露端口
 EXPOSE 3000

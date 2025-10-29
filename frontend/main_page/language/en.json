@@ -1,0 +1,63 @@
+{
+  "common": {
+    "welcome": "Welcome to DeepBrain Tech Platform",
+    "login": "Login",
+    "register": "Register",
+    "logout": "Logout",
+    "home": "Home",
+    "back": "Back",
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "submit": "Submit",
+    "cancel": "Cancel",
+    "confirm": "Confirm"
+  },
+  "home": {
+    "title": "DeepBrain Tech",
+    "welcomeUser": "Welcome, {username}",
+    "welcomeUser@": {
+      "username": "Username"
+    },
+    "sudokuBattle": "Sudoku Battle"
+  },
+  "login": {
+    "title": "DeepBrain Tech",
+    "subtitle": "Login to your account",
+    "username": "Username",
+    "password": "Password",
+    "usernamePlaceholder": "Enter your username",
+    "passwordPlaceholder": "Enter your password",
+    "button": "Login",
+    "buttonLoading": "Logging in...",
+    "noAccount": "Don't have an account?",
+    "registerLink": "Sign up now",
+    "loginFailed": "Login failed, please try again",
+    "invalidCredentials": "Invalid username or password"
+  },
+  "register": {
+    "title": "DeepBrain Tech",
+    "subtitle": "Create a new account",
+    "username": "Username",
+    "email": "Email",
+    "password": "Password",
+    "confirmPassword": "Confirm Password",
+    "usernamePlaceholder": "Enter username (3-50 characters)",
+    "emailPlaceholder": "Enter your email address",
+    "passwordPlaceholder": "Enter password (at least 6 characters)",
+    "confirmPasswordPlaceholder": "Enter password again",
+    "button": "Register",
+    "buttonLoading": "Registering...",
+    "hasAccount": "Already have an account?",
+    "loginLink": "Login now",
+    "registerFailed": "Registration failed, please try again",
+    "passwordMismatch": "Passwords do not match",
+    "passwordTooShort": "Password must be at least 6 characters",
+    "usernameExists": "Username already exists",
+    "emailExists": "Email already registered"
+  },
+  "auth": {
+    "tokenInvalid": "Token invalid",
+    "loginRequired": "Please login first"
+  }
+}
