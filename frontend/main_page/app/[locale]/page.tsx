@@ -4,6 +4,7 @@ import { useRouter, useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
+import { getApiUrl } from "@/lib/api-config";
 
 export default function Home() {
   const router = useRouter();
@@ -18,7 +19,7 @@ export default function Home() {
     const token = localStorage.getItem("access_token");
     if (token) {
       // 验证 token 是否有效
-      fetch("http://localhost:8000/api/auth/verify", {
+      fetch(getApiUrl("/api/auth/verify"), {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -56,9 +57,15 @@ export default function Home() {
   };
 
   const handleSudokuBattle = () => {
-    // TODO: 跳转到数独对战页面
-    // router.push(`/${locale}/sudoku-battle`);
-    console.log("Sudoku Battle clicked");
+    const token = localStorage.getItem("access_token");
+    const baseUrl = "https://sudoku-battle.deepbraintechnology.com/";
+    let url = baseUrl;
+    if (token) {
+      // 使用 URL fragment 传递，避免出现在 Referer 中
+      url = `${baseUrl}#token=${encodeURIComponent(token)}&locale=${encodeURIComponent(locale)}`;
+    }
+    // 在新标签页中打开
+    window.open(url, "_blank");
   };
 
   return (
