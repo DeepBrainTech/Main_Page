@@ -23,6 +23,7 @@ cors_origins_str = os.getenv(
     "CORS_ORIGINS",
     "http://localhost:3000,http://127.0.0.1:3000"
 )
+cors_regex = os.getenv("CORS_ORIGIN_REGEX", "")
 # 清理并分割 origins
 cors_origins = [origin.strip() for origin in cors_origins_str.split(",") if origin.strip()]
 
@@ -35,8 +36,9 @@ if "http://127.0.0.1:3000" not in cors_origins:
 app.add_middleware(
     CORSMiddleware,
     allow_origins=cors_origins,
+    allow_origin_regex=cors_regex if cors_regex else None,
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+    allow_methods=["*"],
     allow_headers=["*"],
     expose_headers=["*"],
 )
