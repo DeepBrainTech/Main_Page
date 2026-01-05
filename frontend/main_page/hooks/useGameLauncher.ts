@@ -130,6 +130,15 @@ export function useGameLauncher() {
     window.open("https://sudoku.deepbraintechnology.com/", "_blank");
   };
 
+  const handleMathQuest = () => {
+    launchGame({
+      gameKey: "mathQuest",
+      apiEndpoint: "/api/games/mathquest/token",
+      gameUrl: "https://mathquest-7od.pages.dev/",
+      openInNewTab: false,
+    });
+  };
+
   return {
     handleFogChess,
     handleSudokuBattle,
@@ -137,6 +146,7 @@ export function useGameLauncher() {
     handleQuantumGo,
     handleChessMater,
     handleChessTourmaster,
+    handleMathQuest,
   };
 }
 

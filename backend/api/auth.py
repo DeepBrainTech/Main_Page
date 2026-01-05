@@ -58,6 +58,14 @@ TOURMASTER_ISS = os.getenv("TOURMASTER_JWT_ISS", "main-portal")
 TOURMASTER_TOKEN_EXPIRE_SECONDS = int(os.getenv("TOURMASTER_TOKEN_EXPIRE_SECONDS", "300"))
 
 
+# MathQuest 专用配置
+MATHQUEST_SECRET = os.getenv("MATHQUEST_JWT_SECRET", "change-this-mathquest-secret")
+MATHQUEST_ALG = os.getenv("MATHQUEST_JWT_ALG", "HS256")
+MATHQUEST_AUD = os.getenv("MATHQUEST_JWT_AUD", "mathquest")
+MATHQUEST_ISS = os.getenv("MATHQUEST_JWT_ISS", "main-portal")
+MATHQUEST_TOKEN_EXPIRE_SECONDS = int(os.getenv("MATHQUEST_TOKEN_EXPIRE_SECONDS", "300"))
+
+
 # 密码加密
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -167,6 +175,24 @@ def create_tourmaster_token(claims: Dict[str, Any], expires_seconds: Optional[in
     })
 
     return jwt.encode(to_encode, TOURMASTER_SECRET, algorithm=TOURMASTER_ALG)
+
+
+def create_mathquest_token(claims: Dict[str, Any], expires_seconds: Optional[int] = None) -> str:
+    """
+    创建 MathQuest 短期访问 token
+    包含必要的 aud/iss 字段 默认 300s 过期.
+    """
+    to_encode = claims.copy()
+    expire_sec = expires_seconds or MATHQUEST_TOKEN_EXPIRE_SECONDS
+    expire = datetime.utcnow() + timedelta(seconds=expire_sec)
+
+    to_encode.update({
+        "exp": expire,
+        "iss": MATHQUEST_ISS,
+        "aud": MATHQUEST_AUD,
+    })
+
+    return jwt.encode(to_encode, MATHQUEST_SECRET, algorithm=MATHQUEST_ALG)
 
 
 def authenticate_user(db: Session, username: str, password: str) -> Optional[User]:

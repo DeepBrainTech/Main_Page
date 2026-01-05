@@ -19,6 +19,7 @@ export default function HomePage() {
     handleQuantumGo,
     handleChessMater,
     handleChessTourmaster,
+    handleMathQuest,
   } = useGameLauncher();
 
   if (loading) {
@@ -38,6 +39,7 @@ export default function HomePage() {
       onQuantumGo={handleQuantumGo}
       onChessMater={handleChessMater}
       onChessTourmaster={handleChessTourmaster}
+      onMathQuest={handleMathQuest}
       onLogout={logout}
     />
   );

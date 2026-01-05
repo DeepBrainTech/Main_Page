@@ -107,6 +107,16 @@ export default function Home() {
       linkUrl: `/${locale}/login`,
     },
     {
+      key: "mathQuest",
+      image: "/images/game-mathquest.jpg",
+      hoverImage: "/images/mathquest-hover.jpg",
+      buttonColor: "bg-[#10B981]",
+      titleColor: "text-gray-800",
+      taglineColor: "text-[#10B981]",
+      descriptionColor: "text-gray-600",
+      linkUrl: `/${locale}/login`,
+    },
+    {
       key: "more",
       image: "/images/more.jpg",
       hoverImage: "/images/6.jpg",
