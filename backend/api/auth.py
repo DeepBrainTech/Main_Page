@@ -58,6 +58,14 @@ TOURMASTER_ISS = os.getenv("TOURMASTER_JWT_ISS", "main-portal")
 TOURMASTER_TOKEN_EXPIRE_SECONDS = int(os.getenv("TOURMASTER_TOKEN_EXPIRE_SECONDS", "300"))
 
 
+# Mental Math Master 专用令牌配置
+MENTAL_MATH_MASTER_SECRET = os.getenv("MENTAL_MATH_MASTER_JWT_SECRET", "change-this-mental-math-master-secret")
+MENTAL_MATH_MASTER_ALG = os.getenv("MENTAL_MATH_MASTER_JWT_ALG", "HS256")
+MENTAL_MATH_MASTER_AUD = os.getenv("MENTAL_MATH_MASTER_JWT_AUD", "mental-math-master")
+MENTAL_MATH_MASTER_ISS = os.getenv("MENTAL_MATH_MASTER_JWT_ISS", "main-portal")
+MENTAL_MATH_MASTER_TOKEN_EXPIRE_SECONDS = int(os.getenv("MENTAL_MATH_MASTER_TOKEN_EXPIRE_SECONDS", "300"))
+
+
 # 密码加密
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -167,6 +175,28 @@ def create_tourmaster_token(claims: Dict[str, Any], expires_seconds: Optional[in
     })
 
     return jwt.encode(to_encode, TOURMASTER_SECRET, algorithm=TOURMASTER_ALG)
+
+
+def create_mental_math_master_token(
+    claims: Dict[str, Any],
+    expires_seconds: Optional[int] = None
+) -> str:
+    """
+    创建 Mental Math Master 短期访问的令牌
+    包含必要的 aud/iss 字段 默认 300s 过期.
+    """
+    to_encode = claims.copy()
+
+    expire_sec = expires_seconds or MENTAL_MATH_MASTER_TOKEN_EXPIRE_SECONDS
+    expire = datetime.utcnow() + timedelta(seconds=expire_sec)
+
+    to_encode.update({
+        "exp": expire,
+        "iss": MENTAL_MATH_MASTER_ISS,
+        "aud": MENTAL_MATH_MASTER_AUD,
+    })
+
+    return jwt.encode(to_encode, MENTAL_MATH_MASTER_SECRET, algorithm=MENTAL_MATH_MASTER_ALG)
 
 
 def authenticate_user(db: Session, username: str, password: str) -> Optional[User]:

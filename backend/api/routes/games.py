@@ -23,6 +23,9 @@ from auth import (
   
     create_tourmaster_token,
     TOURMASTER_TOKEN_EXPIRE_SECONDS,
+
+    create_mental_math_master_token,
+    MENTAL_MATH_MASTER_TOKEN_EXPIRE_SECONDS,
 )
 
 
@@ -197,6 +200,41 @@ async def issue_tourmaster_token(
         data={
             "game_token": token,
             "expires_in": TOURMASTER_TOKEN_EXPIRE_SECONDS,
+            "user": {
+                "id": current_user.id,
+                "username": current_user.username,
+            },
+        },
+    )
+
+
+@router.post("/mental-math-master/token", response_model=APIResponse)
+async def issue_mental_math_master_token(
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+):
+    """
+    为当前登录用户签发 Mental Math Master 短期令牌
+
+    返回字段:
+    - game_token: 供 Mental Math Master 使用的短期 JWT（建议用于首次授权后服务端会话）
+    - expires_in: 过期时间
+    - user: 基础的身份信息
+    """
+    claims = {
+        "sub": current_user.username,
+        "user_id": current_user.id,
+        "username": current_user.username,
+    }
+
+    token = create_mental_math_master_token(claims)
+
+    return APIResponse(
+        success=True,
+        message="ok",
+        data={
+            "game_token": token,
+            "expires_in": MENTAL_MATH_MASTER_TOKEN_EXPIRE_SECONDS,
             "user": {
                 "id": current_user.id,
                 "username": current_user.username,

@@ -130,6 +130,15 @@ export function useGameLauncher() {
     window.open("https://sudoku.deepbraintechnology.com/", "_blank");
   };
 
+  const handleMentalMathMaster = () => {
+    launchGame({
+      gameKey: "mentalMathMaster",
+      apiEndpoint: "/api/games/mental-math-master/token",
+      gameUrl: "https://mental-math-master.pages.dev",
+      openInNewTab: false,
+    });
+  };
+
   return {
     handleFogChess,
     handleSudokuBattle,
@@ -137,6 +146,7 @@ export function useGameLauncher() {
     handleQuantumGo,
     handleChessMater,
     handleChessTourmaster,
+    handleMentalMathMaster,
   };
 }
 
