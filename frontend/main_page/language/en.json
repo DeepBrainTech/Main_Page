@@ -109,6 +109,11 @@
         "tagline": "Strategic Chess Adventures Across Dynamic Boards.",
         "description": "Challenge your tactical planning and adaptability with innovative chess-based puzzles set across evolving board designs."
       },
+      "mathQuest": {
+        "name": "MathQuest",
+        "tagline": "Strengthen logic and reasoning through number-based quests.",
+        "description": "Develop arithmetic thinking and memory with progressively challenging math puzzles."
+      },
       "more": {
         "name": "More Games",
         "tagline": "Discover more cognitive training games.",
