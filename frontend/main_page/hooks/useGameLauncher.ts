@@ -134,7 +134,7 @@ export function useGameLauncher() {
     launchGame({
       gameKey: "mathQuest",
       apiEndpoint: "/api/games/mathquest/token",
-      gameUrl: process.env.NEXT_PUBLIC_MATHQUEST_URL || "https://mathquest-7od.pages.dev/",
+      gameUrl: "https://mathquest-7od.pages.dev/",
       openInNewTab: false,
     });
   };
