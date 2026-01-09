@@ -107,6 +107,16 @@ export default function Home() {
       linkUrl: `/${locale}/login`,
     },
     {
+      key: "spellChess",
+      image: "/images/game-spell-chess.jpg",
+      hoverImage: "/images/7.jpg",
+      buttonColor: "bg-[#7C3AED]",
+      titleColor: "text-gray-800",
+      taglineColor: "text-[#7C3AED]",
+      descriptionColor: "text-gray-600",
+      linkUrl: `/${locale}/login`,
+    },
+    {
       key: "more",
       image: "/images/more.jpg",
       hoverImage: "/images/6.jpg",

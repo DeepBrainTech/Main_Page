@@ -58,6 +58,14 @@ TOURMASTER_ISS = os.getenv("TOURMASTER_JWT_ISS", "main-portal")
 TOURMASTER_TOKEN_EXPIRE_SECONDS = int(os.getenv("TOURMASTER_TOKEN_EXPIRE_SECONDS", "300"))
 
 
+# SpellChess 专用配置
+SPELLCHESS_SECRET = os.getenv("SPELLCHESS_JWT_SECRET", "change-this-spellchess-secret")
+SPELLCHESS_ALG = os.getenv("SPELLCHESS_JWT_ALG", "HS256")
+SPELLCHESS_AUD = os.getenv("SPELLCHESS_JWT_AUD", "spellchess")
+SPELLCHESS_ISS = os.getenv("SPELLCHESS_JWT_ISS", "main-portal")
+SPELLCHESS_TOKEN_EXPIRE_SECONDS = int(os.getenv("SPELLCHESS_TOKEN_EXPIRE_SECONDS", "300"))
+
+
 # 密码加密
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -167,6 +175,21 @@ def create_tourmaster_token(claims: Dict[str, Any], expires_seconds: Optional[in
     })
 
     return jwt.encode(to_encode, TOURMASTER_SECRET, algorithm=TOURMASTER_ALG)
+
+
+
+def create_spellchess_token(claims: Dict[str, Any], expires_seconds: Optional[int] = None) -> str:
+    to_encode = claims.copy()
+    expire_sec = expires_seconds or SPELLCHESS_TOKEN_EXPIRE_SECONDS
+    expire = datetime.utcnow() + timedelta(seconds=expire_sec)
+
+    to_encode.update({
+        "exp": expire,
+        "iss": SPELLCHESS_ISS,
+        "aud": SPELLCHESS_AUD,
+    })
+
+    return jwt.encode(to_encode, SPELLCHESS_SECRET, algorithm=SPELLCHESS_ALG)
 
 
 def authenticate_user(db: Session, username: str, password: str) -> Optional[User]:

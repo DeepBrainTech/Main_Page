@@ -26,6 +26,7 @@
     "quantumGo": "Quantum Go",
     "chessMater": "ChessMater",
     "chessTourmaster": "Chess Tourmaster",
+    "spellChess": "Spell Chess",
     "failedToStartGame": "Failed to start game"
   },
   "login": {
@@ -107,6 +108,11 @@
         "name": "Chess Tourmaster",
         "tagline": "Strategic Chess Adventures Across Dynamic Boards.",
         "description": "Challenge your tactical planning and adaptability with innovative chess-based puzzles set across evolving board designs."
+      },
+      "spellChess": {
+        "name": "Spell Chess",
+        "tagline": "Cast Spells. Control the Game.",
+        "description": "Integrate spellcasting mechanics into classic chess gameplay. Manage resources, time your abilities, and adapt strategies to test your working memory and tactical flexibility."
       },
       "more": {
         "name": "More Games",

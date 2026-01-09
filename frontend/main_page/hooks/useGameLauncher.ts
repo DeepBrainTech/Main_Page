@@ -125,6 +125,15 @@ export function useGameLauncher() {
     });
   };
 
+  const handleSpellChess = () => {
+    launchGame({
+      gameKey: "spellChess",
+      apiEndpoint: "/api/games/spellchess/token",
+      gameUrl: "https://spellchess.pages.dev/",
+      openInNewTab: false,
+    });
+  };
+
   const handleSudoku = () => {
     // 直接打开链接，不需要 token
     window.open("https://sudoku.deepbraintechnology.com/", "_blank");
@@ -137,6 +146,7 @@ export function useGameLauncher() {
     handleQuantumGo,
     handleChessMater,
     handleChessTourmaster,
+    handleSpellChess,
   };
 }
 

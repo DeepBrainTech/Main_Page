@@ -26,6 +26,7 @@
     "quantumGo": "量子围棋",
     "chessMater": "棋艺大师",
     "chessTourmaster": "棋境之旅",
+    "spellChess": "法术棋",
     "failedToStartGame": "启动游戏失败"
   },
   "login": {
@@ -107,6 +108,11 @@
         "name": "棋旅大师",
         "tagline": "多维棋盘探索，策略思维升级。",
         "description": "在不断变化的棋盘与路径中制定最佳行动方案，挑战你的全局规划、适应力与高阶决策能力。"
+      },
+      "spellChess": {
+        "name": "法术棋",
+        "tagline": "运筹施法，智控棋局",
+        "description": "将魔法法术机制融入棋类对弈，通过技能释放、资源管理与时机判断，全面考验你的策略规划、工作记忆与灵活决策能力。"
       },
       "more": {
         "name": "更多游戏",
