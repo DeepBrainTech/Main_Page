@@ -58,6 +58,14 @@ TOURMASTER_ISS = os.getenv("TOURMASTER_JWT_ISS", "main-portal")
 TOURMASTER_TOKEN_EXPIRE_SECONDS = int(os.getenv("TOURMASTER_TOKEN_EXPIRE_SECONDS", "300"))
 
 
+# DragonChess 专用配置
+DRAGONCHESS_SECRET = os.getenv("DRAGONCHESS_JWT_SECRET", "change-this-dragonchess-secret")
+DRAGONCHESS_ALG = os.getenv("DRAGONCHESS_JWT_ALG", "HS256")
+DRAGONCHESS_AUD = os.getenv("DRAGONCHESS_JWT_AUD", "dragonchess")
+DRAGONCHESS_ISS = os.getenv("DRAGONCHESS_JWT_ISS", "main-portal")
+DRAGONCHESS_TOKEN_EXPIRE_SECONDS = int(os.getenv("DRAGONCHESS_TOKEN_EXPIRE_SECONDS", "300"))
+
+
 # 密码加密
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -167,6 +175,24 @@ def create_tourmaster_token(claims: Dict[str, Any], expires_seconds: Optional[in
     })
 
     return jwt.encode(to_encode, TOURMASTER_SECRET, algorithm=TOURMASTER_ALG)
+
+
+
+def create_dragonchess_token(claims: Dict[str, Any], expires_seconds: Optional[int] = None) -> str:
+    """
+    创建 DragonChess 短期访问令牌
+    """
+    to_encode = claims.copy()
+    expire_sec = expires_seconds or DRAGONCHESS_TOKEN_EXPIRE_SECONDS
+    expire = datetime.utcnow() + timedelta(seconds=expire_sec)
+
+    to_encode.update({
+        "exp": expire,
+        "iss": DRAGONCHESS_ISS,
+        "aud": DRAGONCHESS_AUD,
+    })
+
+    return jwt.encode(to_encode, DRAGONCHESS_SECRET, algorithm=DRAGONCHESS_ALG)
 
 
 def authenticate_user(db: Session, username: str, password: str) -> Optional[User]:

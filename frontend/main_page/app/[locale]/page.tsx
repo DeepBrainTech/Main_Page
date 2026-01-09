@@ -107,6 +107,16 @@ export default function Home() {
       linkUrl: `/${locale}/login`,
     },
     {
+      key: "dragonChess",
+      image: "/images/game-dragon-chess.jpg",
+      hoverImage: "/images/6.jpg", // or another hover image
+      buttonColor: "bg-[#D14B4B]",
+      titleColor: "text-gray-800",
+      taglineColor: "text-[#D14B4B]",
+      descriptionColor: "text-gray-600",
+      linkUrl: `/${locale}/login`,
+    },
+    {
       key: "more",
       image: "/images/more.jpg",
       hoverImage: "/images/6.jpg",

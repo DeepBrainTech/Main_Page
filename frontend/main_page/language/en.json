@@ -26,6 +26,7 @@
     "quantumGo": "Quantum Go",
     "chessMater": "ChessMater",
     "chessTourmaster": "Chess Tourmaster",
+    "dragonChess": "Dragon Chess",
     "failedToStartGame": "Failed to start game"
   },
   "login": {
@@ -107,6 +108,11 @@
         "name": "Chess Tourmaster",
         "tagline": "Strategic Chess Adventures Across Dynamic Boards.",
         "description": "Challenge your tactical planning and adaptability with innovative chess-based puzzles set across evolving board designs."
+      },
+      "dragonChess": {
+        "name": "Dragon Chess",
+        "tagline": "Command Dragons. Master the Board.",
+        "description": "A strategic chess variant infused with dragon powers, elemental abilities, and dynamic board mechanics."
       },
       "more": {
         "name": "More Games",

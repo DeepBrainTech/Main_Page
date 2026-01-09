@@ -11,6 +11,7 @@ interface HomeContentProps {
   onQuantumGo: () => void;
   onChessMater: () => void;
   onChessTourmaster: () => void;
+  onDragonChess: () => void;
   onLogout: () => void;
 }
 
@@ -26,6 +27,7 @@ export default function HomeContent({
   onQuantumGo,
   onChessMater,
   onChessTourmaster,
+  onDragonChess,
   onLogout,
 }: HomeContentProps) {
   const tCommon = useTranslations("common");
@@ -74,6 +76,13 @@ export default function HomeContent({
       onClick: onChessTourmaster,
       color: "bg-[#A3BE8C]",
       hoverColor: "hover:bg-[#93AE7C]",
+    },
+    {
+      key: "dragonChess",
+      name: tHome("dragonChess"),
+      onClick: onDragonChess,
+      color: "bg-[#D14B4B]",
+      hoverColor: "hover:bg-[#B93F3F]",
     },
   ];
 

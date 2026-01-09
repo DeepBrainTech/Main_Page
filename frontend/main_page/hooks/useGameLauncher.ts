@@ -130,6 +130,15 @@ export function useGameLauncher() {
     window.open("https://sudoku.deepbraintechnology.com/", "_blank");
   };
 
+  const handleDragonChess = () => {
+    launchGame({
+      gameKey: "dragonChess",
+      apiEndpoint: "/api/games/dragonchess/token",
+      gameUrl: "https://dragonchess.pages.dev/",
+      openInNewTab: false,
+    });
+  };
+
   return {
     handleFogChess,
     handleSudokuBattle,
@@ -137,6 +146,7 @@ export function useGameLauncher() {
     handleQuantumGo,
     handleChessMater,
     handleChessTourmaster,
+    handleDragonChess,
   };
 }
 
