@@ -23,6 +23,9 @@ from auth import (
   
     create_tourmaster_token,
     TOURMASTER_TOKEN_EXPIRE_SECONDS,
+
+    create_mathchess_token,
+    MATHCHESS_TOKEN_EXPIRE_SECONDS,
 )
 
 
@@ -197,6 +200,38 @@ async def issue_tourmaster_token(
         data={
             "game_token": token,
             "expires_in": TOURMASTER_TOKEN_EXPIRE_SECONDS,
+            "user": {
+                "id": current_user.id,
+                "username": current_user.username,
+            },
+        },
+    )
+
+
+
+
+@router.post("/mathchess/token", response_model=APIResponse)
+async def issue_mathchess_token(
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+):
+    """
+    为当前登录用户签发 MathChess 短期令牌
+    """
+    claims = {
+        "sub": current_user.username,
+        "user_id": current_user.id,
+        "username": current_user.username,
+    }
+
+    token = create_mathchess_token(claims)
+
+    return APIResponse(
+        success=True,
+        message="ok",
+        data={
+            "game_token": token,
+            "expires_in": MATHCHESS_TOKEN_EXPIRE_SECONDS,
             "user": {
                 "id": current_user.id,
                 "username": current_user.username,

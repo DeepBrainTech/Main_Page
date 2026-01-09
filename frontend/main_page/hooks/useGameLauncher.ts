@@ -130,6 +130,15 @@ export function useGameLauncher() {
     window.open("https://sudoku.deepbraintechnology.com/", "_blank");
   };
 
+  const handleMathChess = () => {
+    launchGame({
+      gameKey: "mathChess",
+      apiEndpoint: "/api/games/mathchess/token",
+      gameUrl: "https://math-chess.pages.dev/",
+      openInNewTab: false,
+    });
+  };
+
   return {
     handleFogChess,
     handleSudokuBattle,
@@ -137,6 +146,7 @@ export function useGameLauncher() {
     handleQuantumGo,
     handleChessMater,
     handleChessTourmaster,
+    handleMathChess,
   };
 }
 

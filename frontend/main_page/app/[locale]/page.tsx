@@ -107,6 +107,16 @@ export default function Home() {
       linkUrl: `/${locale}/login`,
     },
     {
+      key: "mathChess",
+      image: "/images/game-math-chess.jpg",
+      hoverImage: "/images/7.jpg",
+      buttonColor: "bg-[#4F46E5]",
+      titleColor: "text-gray-800",
+      taglineColor: "text-[#4F46E5]",
+      descriptionColor: "text-gray-600",
+      linkUrl: `/${locale}/login`,
+    },
+    {
       key: "more",
       image: "/images/more.jpg",
       hoverImage: "/images/6.jpg",

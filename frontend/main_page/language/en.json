@@ -26,6 +26,7 @@
     "quantumGo": "Quantum Go",
     "chessMater": "ChessMater",
     "chessTourmaster": "Chess Tourmaster",
+    "mathChess": "Math Chess",
     "failedToStartGame": "Failed to start game"
   },
   "login": {
@@ -107,6 +108,11 @@
         "name": "Chess Tourmaster",
         "tagline": "Strategic Chess Adventures Across Dynamic Boards.",
         "description": "Challenge your tactical planning and adaptability with innovative chess-based puzzles set across evolving board designs."
+      },
+      "mathChess": {
+        "name": "Math Chess",
+        "tagline": "Think Fast. Calculate Smarter.",
+        "description": "Solve math challenges to unlock moves and outplay your opponent in this logic-driven chess experience."
       },
       "more": {
         "name": "More Games",

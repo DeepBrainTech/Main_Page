@@ -58,6 +58,15 @@ TOURMASTER_ISS = os.getenv("TOURMASTER_JWT_ISS", "main-portal")
 TOURMASTER_TOKEN_EXPIRE_SECONDS = int(os.getenv("TOURMASTER_TOKEN_EXPIRE_SECONDS", "300"))
 
 
+
+# MathChess 专用配置
+MATHCHESS_SECRET = os.getenv("MATHCHESS_JWT_SECRET", "change-this-mathchess-secret")
+MATHCHESS_ALG = os.getenv("MATHCHESS_JWT_ALG", "HS256")
+MATHCHESS_AUD = os.getenv("MATHCHESS_JWT_AUD", "mathchess")
+MATHCHESS_ISS = os.getenv("MATHCHESS_JWT_ISS", "main-portal")
+MATHCHESS_TOKEN_EXPIRE_SECONDS = int(os.getenv("MATHCHESS_TOKEN_EXPIRE_SECONDS", "300"))
+
+
 # 密码加密
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -167,6 +176,26 @@ def create_tourmaster_token(claims: Dict[str, Any], expires_seconds: Optional[in
     })
 
     return jwt.encode(to_encode, TOURMASTER_SECRET, algorithm=TOURMASTER_ALG)
+
+
+def create_mathchess_token(
+    claims: Dict[str, Any],
+    expires_seconds: Optional[int] = None
+) -> str:
+    """
+    创建 MathChess 短期访问令牌
+    """
+    to_encode = claims.copy()
+    expire_sec = expires_seconds or MATHCHESS_TOKEN_EXPIRE_SECONDS
+    expire = datetime.utcnow() + timedelta(seconds=expire_sec)
+
+    to_encode.update({
+        "exp": expire,
+        "iss": MATHCHESS_ISS,
+        "aud": MATHCHESS_AUD,
+    })
+
+    return jwt.encode(to_encode, MATHCHESS_SECRET, algorithm=MATHCHESS_ALG)
 
 
 def authenticate_user(db: Session, username: str, password: str) -> Optional[User]:

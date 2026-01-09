@@ -26,6 +26,7 @@
     "quantumGo": "量子围棋",
     "chessMater": "棋艺大师",
     "chessTourmaster": "棋境之旅",
+    "mathChess": "数学棋",
     "failedToStartGame": "启动游戏失败"
   },
   "login": {
@@ -107,6 +108,11 @@
         "name": "棋旅大师",
         "tagline": "多维棋盘探索，策略思维升级。",
         "description": "在不断变化的棋盘与路径中制定最佳行动方案，挑战你的全局规划、适应力与高阶决策能力。"
+      },
+      "mathChess": {
+        "name": "数学棋",
+        "tagline": "计算致胜，思维为王",
+        "description": "将数学计算与棋类策略相结合，通过解题来解锁走法，在对弈中锻炼你的逻辑推理、专注力与快速计算能力。"
       },
       "more": {
         "name": "更多游戏",
