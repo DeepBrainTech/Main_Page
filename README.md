@@ -8,7 +8,7 @@ This project is an integrated web portal that hosts a collection of educational 
 
 Currently, our most established titles include:
 
-- QuantumGo: A strategic game blending traditional Go mechanics with quantum computing principles.
+- QuantumGo: A strategic game blending traditional Go mechanics with quantum pair pieces.
 
 - FogChess: A unique twist on Chess that incorporates "fog of war" elements to teach tactical uncertainty and risk management.
 
@@ -25,7 +25,7 @@ Backend	Deployed on Railway
         
 - Frontend: [Link to Cloudflare](https://dash.cloudflare.com/35ec55da1b68aff79643951f3277bf15/home/domains)
 
-- Website: [Here](game.deepbraintechnology.com)
+- Website: [Here](http://game.deepbraintechnology.com)
 
 
 ## Authentication & Data Persistence
@@ -52,8 +52,8 @@ We welcome contributions from students across different backgrounds. To keep the
 - API Standards: Ensure your game communicates with the main hub via the standardized REST/WebSocket protocols.
 
 ## Getting Started
-1. Make a new repo, and create your game there
-2. Clone this repo
+1. Make a new repo, and create your game there.
+2. Clone this repo.
 3. In this repo, open a new branch from **main** name **"YOUR GAME"**, then make a game entrance and update your branch.
 4. Open up a Pull Request from **"YOUR GAME"** to main. Admin will approve code changes.
 
@@ -62,4 +62,4 @@ We welcome contributions from students across different backgrounds. To keep the
 2. Make your code tide and clean. Make your code in modules and files. Make your code readable and workable.
 3. Ask for anything.
 4. Take this as exmaple: [QuantumGo](https://github.com/DeepBrainTech/QuantumGo) for any game similar code.
-5. Keep update your code in github. Do not accumulate your local changes too much. You will either miss the new changes on Github or We will have conflict with your other changes.
+5. Keep update your code in Github. Do not accumulate your local changes too much. Either You will miss the new changes on Github Or We will have conflict with your other changes.
