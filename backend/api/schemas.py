@@ -16,6 +16,7 @@ class UserBase(BaseModel):
 class UserCreate(UserBase):
     """创建用户模型"""
     password: str = Field(..., min_length=6, max_length=100)
+    verification_code: str = Field(..., min_length=6, max_length=6)
 
 
 class UserLogin(BaseModel):
@@ -46,6 +47,19 @@ class Token(BaseModel):
 class TokenData(BaseModel):
     """Token 数据"""
     username: Optional[str] = None
+
+
+class SendVerificationCode(BaseModel):
+    """发送验证码请求模型"""
+    email: EmailStr
+    language: Optional[str] = "zh"  # 语言：zh(中文) 或 en(英文)，默认中文
+
+
+class ResetPassword(BaseModel):
+    """重置密码请求模型"""
+    email: EmailStr
+    verification_code: str = Field(..., min_length=6, max_length=6)
+    new_password: str = Field(..., min_length=6, max_length=100)
 
 
 # ========== 游戏相关 ==========

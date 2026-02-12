@@ -8,7 +8,7 @@ from datetime import timedelta
 
 from database import get_db
 from models import User
-from schemas import UserCreate, UserResponse, Token, APIResponse
+from schemas import UserCreate, UserResponse, Token, APIResponse, SendVerificationCode, ResetPassword
 from auth import (
     authenticate_user,
     create_access_token,
@@ -16,13 +16,61 @@ from auth import (
     ACCESS_TOKEN_EXPIRE_MINUTES,
     get_current_active_user
 )
+from utils.email_service import email_service
+from utils.verification_service import verification_service
 
 router = APIRouter(prefix="/api/auth", tags=["认证"])
+
+
+@router.post("/send-verification-code", response_model=APIResponse)
+async def send_verification_code(request: SendVerificationCode):
+    """发送邮箱验证码"""
+    try:
+        # 生成6位数字验证码
+        code = verification_service.generate_code()
+        
+        # 保存验证码（5分钟有效期）
+        if not verification_service.save_code(request.email, code, expire_minutes=5):
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="VERIFICATION_CODE_SAVE_FAILED"
+            )
+        
+        # 发送验证码邮件，使用请求中的语言参数
+        language = request.language if request.language in ["zh", "en"] else "zh"
+        success = await email_service.send_verification_code(request.email, code, language=language)
+        
+        if not success:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="EMAIL_SEND_FAILED"
+            )
+        
+        return APIResponse(
+            success=True,
+            message="VERIFICATION_CODE_SENT",
+            data={"email": request.email}
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"发送验证码异常: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="VERIFICATION_CODE_SEND_FAILED"
+        )
 
 
 @router.post("/register", response_model=APIResponse, status_code=status.HTTP_201_CREATED)
 async def register(user_data: UserCreate, db: Session = Depends(get_db)):
     """用户注册"""
+    # 验证验证码
+    if not verification_service.verify_code(user_data.email, user_data.verification_code):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="VERIFICATION_CODE_INVALID"
+        )
+    
     # 检查用户名是否已存在
     existing_user = db.query(User).filter(User.username == user_data.username).first()
     if existing_user:
@@ -115,3 +163,88 @@ async def verify_token(current_user: User = Depends(get_current_active_user)):
         message="AUTH_TOKEN_VALID",
         data={"username": current_user.username, "user_id": current_user.id}
     )
+
+
+@router.post("/send-reset-password-code", response_model=APIResponse)
+async def send_reset_password_code(request: SendVerificationCode, db: Session = Depends(get_db)):
+    """发送重置密码验证码"""
+    try:
+        # 检查邮箱是否存在
+        user = db.query(User).filter(User.email == request.email).first()
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="EMAIL_NOT_FOUND"
+            )
+        
+        # 生成6位数字验证码
+        code = verification_service.generate_code()
+        
+        # 保存验证码（5分钟有效期）
+        if not verification_service.save_code(request.email, code, expire_minutes=5):
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="VERIFICATION_CODE_SAVE_FAILED"
+            )
+        
+        # 发送验证码邮件，使用请求中的语言参数
+        language = request.language if request.language in ["zh", "en"] else "zh"
+        success = await email_service.send_verification_code(request.email, code, language=language)
+        
+        if not success:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="EMAIL_SEND_FAILED"
+            )
+        
+        return APIResponse(
+            success=True,
+            message="VERIFICATION_CODE_SENT",
+            data={"email": request.email}
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"发送重置密码验证码异常: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="VERIFICATION_CODE_SEND_FAILED"
+        )
+
+
+@router.post("/reset-password", response_model=APIResponse)
+async def reset_password(request: ResetPassword, db: Session = Depends(get_db)):
+    """重置密码"""
+    try:
+        # 验证验证码
+        if not verification_service.verify_code(request.email, request.verification_code):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="VERIFICATION_CODE_INVALID"
+            )
+        
+        # 查找用户
+        user = db.query(User).filter(User.email == request.email).first()
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="EMAIL_NOT_FOUND"
+            )
+        
+        # 更新密码
+        user.hashed_password = get_password_hash(request.new_password)
+        db.commit()
+        
+        return APIResponse(
+            success=True,
+            message="PASSWORD_RESET_SUCCESS",
+            data={"email": request.email}
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"重置密码异常: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="PASSWORD_RESET_FAILED"
+        )
