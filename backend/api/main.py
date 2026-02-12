@@ -62,7 +62,7 @@ async def startup_event():
 async def root():
     """根路径 - 健康检查"""
     return {
-        "message": "欢迎使用 DeepBrain Tech API",
+        "message": "Welcome to DeepBrain Tech API",
         "status": "running",
         "version": "1.0.0"
     }

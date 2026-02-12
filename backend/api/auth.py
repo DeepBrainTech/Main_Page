@@ -188,7 +188,7 @@ async def get_current_user(
     """获取当前用户"""
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="无法验证凭据",
+        detail="AUTH_INVALID_TOKEN",
         headers={"WWW-Authenticate": "Bearer"},
     )
     
@@ -212,5 +212,8 @@ async def get_current_active_user(
 ) -> User:
     """获取当前活跃用户"""
     if not current_user.is_active:
-        raise HTTPException(status_code=400, detail="用户已被禁用")
+        raise HTTPException(
+            status_code=400, 
+            detail="AUTH_USER_DISABLED"
+        )
     return current_user

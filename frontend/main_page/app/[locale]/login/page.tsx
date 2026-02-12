@@ -34,7 +34,12 @@ export default function LoginPage() {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.detail || t("login.invalidCredentials"));
+        // 如果返回的是错误代码（全大写+下划线），则从语言文件中翻译
+        const errorCode = errorData.detail || "login.invalidCredentials";
+        const errorMessage = errorCode.match(/^[A-Z_]+$/) 
+          ? t(`auth.${errorCode}`) 
+          : errorCode;
+        throw new Error(errorMessage);
       }
 
       const data = await response.json();

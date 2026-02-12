@@ -65,7 +65,14 @@
   },
   "auth": {
     "tokenInvalid": "Token 无效",
-    "loginRequired": "请先登录"
+    "loginRequired": "请先登录",
+    "AUTH_USERNAME_EXISTS": "用户名已存在",
+    "AUTH_EMAIL_EXISTS": "邮箱已被注册",
+    "AUTH_REGISTER_SUCCESS": "注册成功",
+    "AUTH_INVALID_CREDENTIALS": "用户名或密码错误",
+    "AUTH_INVALID_TOKEN": "无法验证凭据",
+    "AUTH_USER_DISABLED": "用户已被禁用",
+    "AUTH_TOKEN_VALID": "Token 有效"
   },
   "beforelogin": {
     "hero": {

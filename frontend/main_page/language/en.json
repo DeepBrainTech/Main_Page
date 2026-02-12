@@ -65,7 +65,14 @@
   },
   "auth": {
     "tokenInvalid": "Token invalid",
-    "loginRequired": "Please login first"
+    "loginRequired": "Please login first",
+    "AUTH_USERNAME_EXISTS": "Username already exists",
+    "AUTH_EMAIL_EXISTS": "Email already registered",
+    "AUTH_REGISTER_SUCCESS": "Registration successful",
+    "AUTH_INVALID_CREDENTIALS": "Invalid username or password",
+    "AUTH_INVALID_TOKEN": "Could not validate credentials",
+    "AUTH_USER_DISABLED": "User is disabled",
+    "AUTH_TOKEN_VALID": "Token is valid"
   },
   "beforelogin": {
     "hero": {

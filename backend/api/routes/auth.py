@@ -28,7 +28,7 @@ async def register(user_data: UserCreate, db: Session = Depends(get_db)):
     if existing_user:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="用户名已存在"
+            detail="AUTH_USERNAME_EXISTS"
         )
     
     # 检查邮箱是否已存在
@@ -36,7 +36,7 @@ async def register(user_data: UserCreate, db: Session = Depends(get_db)):
     if existing_email:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="邮箱已被注册"
+            detail="AUTH_EMAIL_EXISTS"
         )
     
     # 创建新用户
@@ -61,7 +61,7 @@ async def register(user_data: UserCreate, db: Session = Depends(get_db)):
     
     return APIResponse(
         success=True,
-        message="注册成功",
+        message="AUTH_REGISTER_SUCCESS",
         data={
             "user_id": new_user.id,
             "username": new_user.username,
@@ -82,7 +82,7 @@ async def login(
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="用户名或密码错误",
+            detail="AUTH_INVALID_CREDENTIALS",
             headers={"WWW-Authenticate": "Bearer"},
         )
     
@@ -112,6 +112,6 @@ async def verify_token(current_user: User = Depends(get_current_active_user)):
     """验证 Token 是否有效"""
     return APIResponse(
         success=True,
-        message="Token 有效",
+        message="AUTH_TOKEN_VALID",
         data={"username": current_user.username, "user_id": current_user.id}
     )

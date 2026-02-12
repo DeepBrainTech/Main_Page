@@ -60,16 +60,14 @@ export default function RegisterPage() {
 
       if (!response.ok) {
         const errorData = await response.json();
-        const errorMessage = errorData.detail || t("register.registerFailed");
+        const errorCode = errorData.detail || "register.registerFailed";
         
-        // 处理特定的错误消息
-        if (errorData.detail?.includes("用户名")) {
-          setError(t("register.usernameExists"));
-        } else if (errorData.detail?.includes("邮箱")) {
-          setError(t("register.emailExists"));
-        } else {
-          setError(errorMessage);
-        }
+        // 如果返回的是错误代码（全大写+下划线），则从语言文件中翻译
+        const errorMessage = errorCode.match(/^[A-Z_]+$/) 
+          ? t(`auth.${errorCode}`) 
+          : errorCode;
+        
+        setError(errorMessage);
         throw new Error(errorMessage);
       }
 
