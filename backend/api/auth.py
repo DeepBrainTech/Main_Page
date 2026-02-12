@@ -169,9 +169,14 @@ def create_tourmaster_token(claims: Dict[str, Any], expires_seconds: Optional[in
     return jwt.encode(to_encode, TOURMASTER_SECRET, algorithm=TOURMASTER_ALG)
 
 
-def authenticate_user(db: Session, username: str, password: str) -> Optional[User]:
-    """验证用户"""
-    user = db.query(User).filter(User.username == username).first()
+def authenticate_user(db: Session, username_or_email: str, password: str) -> Optional[User]:
+    """验证用户（支持用户名或邮箱登录）"""
+    # 智能判断：如果包含@符号，当作邮箱查询；否则当作用户名
+    if "@" in username_or_email:
+        user = db.query(User).filter(User.email == username_or_email).first()
+    else:
+        user = db.query(User).filter(User.username == username_or_email).first()
+    
     if not user:
         return None
     if not verify_password(password, user.hashed_password):

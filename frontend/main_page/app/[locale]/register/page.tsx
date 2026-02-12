@@ -204,6 +204,7 @@ export default function RegisterPage() {
               required
               minLength={3}
               maxLength={50}
+              autoComplete="username"
               className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-black dark:focus:ring-white focus:border-transparent bg-white dark:bg-zinc-800 text-black dark:text-white"
               placeholder={t("register.usernamePlaceholder")}
             />
@@ -223,6 +224,7 @@ export default function RegisterPage() {
               value={formData.email}
               onChange={handleChange}
               required
+              autoComplete="email"
               className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-black dark:focus:ring-white focus:border-transparent bg-white dark:bg-zinc-800 text-black dark:text-white"
               placeholder={t("register.emailPlaceholder")}
             />
@@ -244,6 +246,7 @@ export default function RegisterPage() {
                 onChange={handleChange}
                 required
                 maxLength={6}
+                autoComplete="off"
                 className="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-black dark:focus:ring-white focus:border-transparent bg-white dark:bg-zinc-800 text-black dark:text-white"
                 placeholder={t("register.verificationCodePlaceholder")}
               />
@@ -277,6 +280,7 @@ export default function RegisterPage() {
               onChange={handleChange}
               required
               minLength={6}
+              autoComplete="new-password"
               className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-black dark:focus:ring-white focus:border-transparent bg-white dark:bg-zinc-800 text-black dark:text-white"
               placeholder={t("register.passwordPlaceholder")}
             />
@@ -297,6 +301,7 @@ export default function RegisterPage() {
               onChange={handleChange}
               required
               minLength={6}
+              autoComplete="new-password"
               className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-black dark:focus:ring-white focus:border-transparent bg-white dark:bg-zinc-800 text-black dark:text-white"
               placeholder={t("register.confirmPasswordPlaceholder")}
             />

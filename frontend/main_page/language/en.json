@@ -31,9 +31,9 @@
   "login": {
     "title": "DeepBrain Tech",
     "subtitle": "Login to your account",
-    "username": "Username",
+    "username": "Username or Email",
     "password": "Password",
-    "usernamePlaceholder": "Enter your username",
+    "usernamePlaceholder": "Enter your username or email",
     "passwordPlaceholder": "Enter your password",
     "button": "Login",
     "buttonLoading": "Logging in...",

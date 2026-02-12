@@ -31,9 +31,9 @@
   "login": {
     "title": "DeepBrain Tech",
     "subtitle": "登录您的账户",
-    "username": "用户名",
+    "username": "用户名或邮箱",
     "password": "密码",
-    "usernamePlaceholder": "请输入用户名",
+    "usernamePlaceholder": "请输入用户名或邮箱",
     "passwordPlaceholder": "请输入密码",
     "button": "登录",
     "buttonLoading": "登录中...",
