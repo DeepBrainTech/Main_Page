@@ -120,7 +120,7 @@ export function useGameLauncher() {
     launchGame({
       gameKey: "chessTourmaster",
       apiEndpoint: "/api/games/chess-tourmaster/token",
-      gameUrl: "https://chess-tourmaster.pages.dev/",
+      gameUrl: "https://chess-tourmaster.deepbraintechnology.com",
       openInNewTab: false,
     });
   };
