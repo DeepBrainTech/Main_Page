@@ -43,7 +43,7 @@ QUANTUMGO_ISS = os.getenv("QUANTUMGO_JWT_ISS", "main-portal")
 QUANTUMGO_TOKEN_EXPIRE_SECONDS = int(os.getenv("QUANTUMGO_TOKEN_EXPIRE_SECONDS", "300"))
 
 # ChessMater 专用令牌配置
-CHESSMATER_SECRET = os.getenv("CHESSMATER_JWT_SECRET", "change-this-chessmater-secret")
+CHESSMATER_SECRET = os.getenv("CHESSMATER_JWT_SECRET", "CHESSMATER")
 CHESSMATER_ALG = os.getenv("CHESSMATER_JWT_ALG", "HS256")
 CHESSMATER_AUD = os.getenv("CHESSMATER_JWT_AUD", "chessmater")
 CHESSMATER_ISS = os.getenv("CHESSMATER_JWT_ISS", "main-portal")
