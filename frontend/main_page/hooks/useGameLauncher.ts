@@ -111,7 +111,7 @@ export function useGameLauncher() {
     launchGame({
       gameKey: "chessMater",
       apiEndpoint: "/api/games/chessmater/token",
-      gameUrl: "https://chessmater.pages.dev/",
+      gameUrl: "https://chessmaster.deepbraintechnology.com/",
       openInNewTab: false,
     });
   };
