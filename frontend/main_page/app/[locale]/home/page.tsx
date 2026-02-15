@@ -19,6 +19,8 @@ export default function HomePage() {
     handleQuantumGo,
     handleChessMater,
     handleChessTourmaster,
+    totalFlowers,
+    rewardByMode,
   } = useGameLauncher();
 
   if (loading) {
@@ -39,6 +41,8 @@ export default function HomePage() {
       onChessMater={handleChessMater}
       onChessTourmaster={handleChessTourmaster}
       onLogout={logout}
+      totalFlowers={totalFlowers}
+      rewardByMode={rewardByMode}
     />
   );
 }
