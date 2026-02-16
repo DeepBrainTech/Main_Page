@@ -3,6 +3,7 @@
 import { useRouter, useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { getApiUrl } from "@/lib/api-config";
+import { useCallback, useEffect, useState } from "react";
 
 /**
  * 游戏启动配置类型
@@ -14,6 +15,22 @@ interface GameConfig {
   openInNewTab?: boolean;
 }
 
+interface RewardStatus {
+  game_mode: string;
+  flowers_earned: number;
+  click_count: number;
+  last_played_at: string | null;
+  last_claimed_at: string | null;
+  can_claim_now: boolean;
+  seconds_until_next_claim: number;
+}
+
+interface RewardsResponseData {
+  total_flowers: number;
+  rewards: RewardStatus[];
+  server_time: string;
+}
+
 /**
  * 游戏启动相关的 Hook
  * 统一处理所有游戏的启动逻辑
@@ -23,6 +40,55 @@ export function useGameLauncher() {
   const params = useParams();
   const locale = params.locale as string;
   const tHome = useTranslations("home");
+  const [totalFlowers, setTotalFlowers] = useState(0);
+  const [rewardByMode, setRewardByMode] = useState<Record<string, RewardStatus>>({});
+
+  const setRewardsData = useCallback((data: RewardsResponseData) => {
+    setTotalFlowers(data.total_flowers ?? 0);
+    const next: Record<string, RewardStatus> = {};
+    for (const item of data.rewards ?? []) {
+      next[item.game_mode] = item;
+    }
+    setRewardByMode(next);
+  }, []);
+
+  const fetchRewardsStatus = useCallback(async () => {
+    const accessToken = localStorage.getItem("access_token");
+    if (!accessToken) {
+      return;
+    }
+
+    const response = await fetch(getApiUrl("/api/games/rewards/status"), {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+    if (!response.ok) {
+      throw new Error("获取奖励状态失败");
+    }
+
+    const data = await response.json();
+    if (data?.data) {
+      setRewardsData(data.data as RewardsResponseData);
+    }
+  }, [setRewardsData]);
+
+  useEffect(() => {
+    fetchRewardsStatus().catch((error) => {
+      console.error(error);
+    });
+
+    const intervalId = window.setInterval(() => {
+      fetchRewardsStatus().catch((error) => {
+        console.error(error);
+      });
+    }, 30000);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [fetchRewardsStatus]);
 
   /**
    * 启动游戏的通用函数
@@ -51,6 +117,17 @@ export function useGameLauncher() {
       const gameToken = data?.data?.game_token;
       if (!gameToken) {
         throw new Error("无效的游戏令牌响应");
+      }
+
+      if (data?.data?.reward_status) {
+        const rewardStatus = data.data.reward_status as RewardStatus;
+        setRewardByMode((prev) => ({
+          ...prev,
+          [rewardStatus.game_mode]: rewardStatus,
+        }));
+      }
+      if (typeof data?.data?.total_flowers === "number") {
+        setTotalFlowers(data.data.total_flowers);
       }
 
       // 使用配置中的游戏 URL
@@ -126,8 +203,40 @@ export function useGameLauncher() {
   };
 
   const handleSudoku = () => {
-    // 直接打开链接，不需要 token
-    window.open("https://sudoku.deepbraintechnology.com/", "_blank");
+    const accessToken = localStorage.getItem("access_token");
+    if (!accessToken) {
+      router.push(`/${locale}/login`);
+      return;
+    }
+
+    fetch(getApiUrl("/api/games/sudoku/play"), {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    })
+      .then(async (response) => {
+        if (!response.ok) {
+          throw new Error("记录数独奖励失败");
+        }
+        const data = await response.json();
+        if (data?.data?.reward_status) {
+          const rewardStatus = data.data.reward_status as RewardStatus;
+          setRewardByMode((prev) => ({
+            ...prev,
+            [rewardStatus.game_mode]: rewardStatus,
+          }));
+        }
+        if (typeof data?.data?.total_flowers === "number") {
+          setTotalFlowers(data.data.total_flowers);
+        }
+      })
+      .catch((error) => {
+        console.error(error);
+      })
+      .finally(() => {
+        window.open("https://sudoku.deepbraintechnology.com/", "_blank");
+      });
   };
 
   return {
@@ -137,6 +246,8 @@ export function useGameLauncher() {
     handleQuantumGo,
     handleChessMater,
     handleChessTourmaster,
+    totalFlowers,
+    rewardByMode,
   };
 }
 

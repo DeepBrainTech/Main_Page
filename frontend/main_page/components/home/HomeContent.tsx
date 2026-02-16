@@ -2,6 +2,17 @@
 
 import { useTranslations } from "next-intl";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
+import { useEffect, useState } from "react";
+
+interface RewardStatus {
+  game_mode: string;
+  flowers_earned: number;
+  click_count: number;
+  last_played_at: string | null;
+  last_claimed_at: string | null;
+  can_claim_now: boolean;
+  seconds_until_next_claim: number;
+}
 
 interface HomeContentProps {
   username: string;
@@ -12,6 +23,32 @@ interface HomeContentProps {
   onChessMater: () => void;
   onChessTourmaster: () => void;
   onLogout: () => void;
+  totalFlowers: number;
+  rewardByMode: Record<string, RewardStatus>;
+}
+
+function FlowerIcon() {
+  return (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <circle cx="12" cy="12" r="2.2" fill="#F59E0B" />
+      <ellipse cx="12" cy="5" rx="2.6" ry="3.2" fill="#F472B6" />
+      <ellipse cx="12" cy="19" rx="2.6" ry="3.2" fill="#F472B6" />
+      <ellipse cx="5" cy="12" rx="3.2" ry="2.6" fill="#F472B6" />
+      <ellipse cx="19" cy="12" rx="3.2" ry="2.6" fill="#F472B6" />
+      <ellipse cx="7.2" cy="7.2" rx="2.1" ry="2.8" transform="rotate(-45 7.2 7.2)" fill="#FB7185" />
+      <ellipse cx="16.8" cy="16.8" rx="2.1" ry="2.8" transform="rotate(-45 16.8 16.8)" fill="#FB7185" />
+      <ellipse cx="16.8" cy="7.2" rx="2.1" ry="2.8" transform="rotate(45 16.8 7.2)" fill="#FB7185" />
+      <ellipse cx="7.2" cy="16.8" rx="2.1" ry="2.8" transform="rotate(45 7.2 16.8)" fill="#FB7185" />
+    </svg>
+  );
+}
+
+function formatSeconds(totalSeconds: number): string {
+  const safe = Math.max(0, totalSeconds);
+  const hours = Math.floor(safe / 3600);
+  const minutes = Math.floor((safe % 3600) / 60);
+  const seconds = safe % 60;
+  return `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
 }
 
 /**
@@ -27,14 +64,42 @@ export default function HomeContent({
   onChessMater,
   onChessTourmaster,
   onLogout,
+  totalFlowers,
+  rewardByMode,
 }: HomeContentProps) {
   const tCommon = useTranslations("common");
   const tHome = useTranslations("home");
+  const [secondsByMode, setSecondsByMode] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    const initial: Record<string, number> = {};
+    for (const [mode, status] of Object.entries(rewardByMode)) {
+      initial[mode] = status.seconds_until_next_claim;
+    }
+    setSecondsByMode(initial);
+  }, [rewardByMode]);
+
+  useEffect(() => {
+    const timerId = window.setInterval(() => {
+      setSecondsByMode((prev) => {
+        const next: Record<string, number> = {};
+        for (const [mode, sec] of Object.entries(prev)) {
+          next[mode] = Math.max(0, sec - 1);
+        }
+        return next;
+      });
+    }, 1000);
+
+    return () => {
+      window.clearInterval(timerId);
+    };
+  }, []);
 
   // 游戏配置，包含颜色和图标
   const games = [
     {
       key: "fogChess",
+      modeKey: "fogchess",
       name: tHome("startFogChess"),
       onClick: onFogChess,
       color: "bg-[#D08770]",
@@ -42,6 +107,7 @@ export default function HomeContent({
     },
     {
       key: "sudoku",
+      modeKey: "sudoku",
       name: tHome("sudoku"),
       onClick: onSudoku,
       color: "bg-[#EEC643]",
@@ -56,6 +122,7 @@ export default function HomeContent({
     // },
     {
       key: "quantumGo",
+      modeKey: "quantumgo",
       name: tHome("quantumGo"),
       onClick: onQuantumGo,
       color: "bg-[#5E81AC]",
@@ -63,6 +130,7 @@ export default function HomeContent({
     },
     {
       key: "chessMater",
+      modeKey: "chessmater",
       name: tHome("chessMater"),
       onClick: onChessMater,
       color: "bg-[#5E81AC]",
@@ -70,6 +138,7 @@ export default function HomeContent({
     },
     {
       key: "chessTourmaster",
+      modeKey: "chess-tourmaster",
       name: tHome("chessTourmaster"),
       onClick: onChessTourmaster,
       color: "bg-[#A3BE8C]",
@@ -105,6 +174,10 @@ export default function HomeContent({
             <p className="text-lg text-gray-700 max-w-2xl mx-auto">
               {tHome("subtitle")}
             </p>
+            <div className="mt-6 inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 shadow-md">
+              <FlowerIcon />
+              <span className="font-semibold text-[#2C3539]">Flowers: {totalFlowers}</span>
+            </div>
           </div>
 
           {/* 游戏按钮网格 */}
@@ -115,7 +188,16 @@ export default function HomeContent({
                 onClick={game.onClick}
                 className={`${game.color} ${game.hoverColor} text-white rounded-2xl px-6 py-8 text-lg font-semibold transition-all duration-300 shadow-lg hover:shadow-xl hover:-translate-y-1 flex items-center justify-center min-h-[120px]`}
               >
-                {game.name}
+                <div className="flex flex-col items-center gap-2">
+                  <span>{game.name}</span>
+                  {rewardByMode[game.modeKey]?.can_claim_now || rewardByMode[game.modeKey] === undefined ? (
+                    <span className="text-xs rounded-full bg-white/20 px-2 py-1">Daily reward ready (+10 🌸)</span>
+                  ) : (
+                    <span className="text-xs rounded-full bg-black/20 px-2 py-1">
+                      Next reward in {formatSeconds(secondsByMode[game.modeKey] ?? rewardByMode[game.modeKey].seconds_until_next_claim)}
+                    </span>
+                  )}
+                </div>
               </button>
             ))}
           </div>

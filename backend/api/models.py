@@ -1,7 +1,7 @@
 """
 数据库模型
 """
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text, ForeignKey, JSON
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text, ForeignKey, JSON, UniqueConstraint
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from database import Base
@@ -22,6 +22,7 @@ class User(Base):
 
     # 关联游戏访问记录
     game_accesses = relationship("GameAccess", back_populates="user")
+    game_rewards = relationship("UserGameReward", back_populates="user")
 
 
 class GameConfig(Base):
@@ -75,3 +76,24 @@ class GameAccess(Base):
     # 关系
     user = relationship("User", back_populates="game_accesses")
     game = relationship("GameConfig", back_populates="game_accesses")
+
+
+class UserGameReward(Base):
+    """用户-游戏每日奖励记录（按游戏模式）"""
+    __tablename__ = "user_game_rewards"
+    __table_args__ = (
+        UniqueConstraint("user_id", "game_mode", name="uq_user_game_mode_reward"),
+    )
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    game_mode = Column(String(50), nullable=False, index=True)
+
+    click_count = Column(Integer, default=0)
+    flowers_earned = Column(Integer, default=0)
+    last_played_at = Column(DateTime)
+    last_claimed_at = Column(DateTime)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    user = relationship("User", back_populates="game_rewards")
