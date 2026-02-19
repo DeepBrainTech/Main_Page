@@ -209,6 +209,9 @@ export function useGameLauncher() {
       return;
     }
 
+    // 必须在用户手势内同步打开窗口，否则触屏/弹窗拦截会阻止打开
+    window.open("https://sudoku.deepbraintechnology.com/", "_blank");
+
     fetch(getApiUrl("/api/games/sudoku/play"), {
       method: "POST",
       headers: {
@@ -233,9 +236,6 @@ export function useGameLauncher() {
       })
       .catch((error) => {
         console.error(error);
-      })
-      .finally(() => {
-        window.open("https://sudoku.deepbraintechnology.com/", "_blank");
       });
   };
 
