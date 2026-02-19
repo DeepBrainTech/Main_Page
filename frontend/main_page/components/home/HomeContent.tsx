@@ -144,6 +144,13 @@ export default function HomeContent({
       color: "bg-[#A3BE8C]",
       hoverColor: "hover:bg-[#93AE7C]",
     },
+    {
+      key: "intercontinentalChess",
+      name: tHome("intercontinentalChess"),
+      externalUrl: "https://intercontinental-chess.deepbraintechnology.com/",
+      color: "bg-[#B48EAD]",
+      hoverColor: "hover:bg-[#A47E9D]",
+    },
   ];
 
   return (
@@ -185,18 +192,19 @@ export default function HomeContent({
             {games.map((game) => (
               <button
                 key={game.key}
-                onClick={game.onClick}
+                onClick={"externalUrl" in game && game.externalUrl ? () => window.open(game.externalUrl, "_blank") : game.onClick}
                 className={`${game.color} ${game.hoverColor} text-white rounded-2xl px-6 py-8 text-lg font-semibold transition-all duration-300 shadow-lg hover:shadow-xl hover:-translate-y-1 flex items-center justify-center min-h-[120px]`}
               >
                 <div className="flex flex-col items-center gap-2">
                   <span>{game.name}</span>
-                  {rewardByMode[game.modeKey]?.can_claim_now || rewardByMode[game.modeKey] === undefined ? (
-                    <span className="text-xs rounded-full bg-white/20 px-2 py-1">Daily reward ready (+10 🌸)</span>
-                  ) : (
-                    <span className="text-xs rounded-full bg-black/20 px-2 py-1">
-                      Next reward in {formatSeconds(secondsByMode[game.modeKey] ?? rewardByMode[game.modeKey].seconds_until_next_claim)}
-                    </span>
-                  )}
+                  {"modeKey" in game && game.modeKey != null &&
+                    (rewardByMode[game.modeKey]?.can_claim_now || rewardByMode[game.modeKey] === undefined ? (
+                      <span className="text-xs rounded-full bg-white/20 px-2 py-1">Daily reward ready (+10 🌸)</span>
+                    ) : (
+                      <span className="text-xs rounded-full bg-black/20 px-2 py-1">
+                        Next reward in {formatSeconds(secondsByMode[game.modeKey] ?? rewardByMode[game.modeKey].seconds_until_next_claim)}
+                      </span>
+                    ))}
                 </div>
               </button>
             ))}
