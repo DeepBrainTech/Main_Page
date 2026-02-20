@@ -19,7 +19,6 @@ export default function HomePage() {
     handleQuantumGo,
     handleChessMater,
     handleChessTourmaster,
-    handleIntercontinentalChess,
     totalFlowers,
     rewardByMode,
   } = useGameLauncher();
@@ -41,7 +40,6 @@ export default function HomePage() {
       onQuantumGo={handleQuantumGo}
       onChessMater={handleChessMater}
       onChessTourmaster={handleChessTourmaster}
-      onIntercontinentalChess={handleIntercontinentalChess}
       onLogout={logout}
       totalFlowers={totalFlowers}
       rewardByMode={rewardByMode}
