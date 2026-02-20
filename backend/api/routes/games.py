@@ -298,6 +298,26 @@ async def track_sudoku_play(
     )
 
 
+@router.post("/intercontinental-chess/play", response_model=APIResponse)
+async def track_intercontinental_chess_play(
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+):
+    """记录 Intercontinental Chess 点击并按 24 小时规则发放花朵奖励。"""
+    _, reward_status, flowers_awarded = _record_play_and_claim_if_ready(db, current_user, "intercontinental-chess")
+    total_flowers = _total_flowers_for_user(db, current_user.id)
+    return APIResponse(
+        success=True,
+        message="ok",
+        data={
+            "flowers_awarded": flowers_awarded,
+            "reward_status": reward_status,
+            "total_flowers": total_flowers,
+            "server_time": datetime.utcnow().isoformat(),
+        },
+    )
+
+
 @router.get("/rewards/status", response_model=APIResponse)
 async def get_reward_status(
     current_user: User = Depends(get_current_active_user),
@@ -305,7 +325,7 @@ async def get_reward_status(
 ):
     """获取当前用户所有游戏模式的每日奖励状态（以服务端时间为准）。"""
     now = datetime.utcnow()
-    modes = ["fogchess", "sudoku", "quantumgo", "chessmater", "chess-tourmaster"]
+    modes = ["fogchess", "sudoku", "quantumgo", "chessmater", "chess-tourmaster", "intercontinental-chess"]
     rewards = db.query(UserGameReward).filter(UserGameReward.user_id == current_user.id).all()
     reward_map = {item.game_mode: item for item in rewards}
 

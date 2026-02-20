@@ -202,6 +202,40 @@ export function useGameLauncher() {
     });
   };
 
+  const handleIntercontinentalChess = () => {
+    const accessToken = localStorage.getItem("access_token");
+    if (!accessToken) {
+      router.push(`/${locale}/login`);
+      return;
+    }
+
+    fetch(getApiUrl("/api/games/intercontinental-chess/play"), {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    })
+      .then(async (response) => {
+        if (!response.ok) {
+          throw new Error("记录洲际象棋奖励失败");
+        }
+        const data = await response.json();
+        if (data?.data?.reward_status) {
+          const rewardStatus = data.data.reward_status as RewardStatus;
+          setRewardByMode((prev) => ({
+            ...prev,
+            [rewardStatus.game_mode]: rewardStatus,
+          }));
+        }
+        if (typeof data?.data?.total_flowers === "number") {
+          setTotalFlowers(data.data.total_flowers);
+        }
+      })
+      .catch((error) => {
+        console.error(error);
+      });
+  };
+
   const handleSudoku = () => {
     const accessToken = localStorage.getItem("access_token");
     if (!accessToken) {
@@ -246,6 +280,7 @@ export function useGameLauncher() {
     handleQuantumGo,
     handleChessMater,
     handleChessTourmaster,
+    handleIntercontinentalChess,
     totalFlowers,
     rewardByMode,
   };

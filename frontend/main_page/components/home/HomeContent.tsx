@@ -22,6 +22,7 @@ interface HomeContentProps {
   onQuantumGo: () => void;
   onChessMater: () => void;
   onChessTourmaster: () => void;
+  onIntercontinentalChess: () => void;
   onLogout: () => void;
   totalFlowers: number;
   rewardByMode: Record<string, RewardStatus>;
@@ -63,6 +64,7 @@ export default function HomeContent({
   onQuantumGo,
   onChessMater,
   onChessTourmaster,
+  onIntercontinentalChess,
   onLogout,
   totalFlowers,
   rewardByMode,
@@ -148,7 +150,7 @@ export default function HomeContent({
       key: "intercontinentalChess",
       modeKey: "intercontinental-chess",
       name: tHome("intercontinentalChess"),
-      externalUrl: "https://intercontinental-chess.deepbraintechnology.com/",
+      onClick: onIntercontinentalChess,
       color: "bg-[#B48EAD]",
       hoverColor: "hover:bg-[#A47E9D]",
     },
@@ -193,7 +195,7 @@ export default function HomeContent({
             {games.map((game) => (
               <button
                 key={game.key}
-                onClick={"externalUrl" in game && game.externalUrl ? () => window.open(game.externalUrl, "_blank") : game.onClick}
+                onClick={game.onClick}
                 className={`${game.color} ${game.hoverColor} text-white rounded-2xl px-6 py-8 text-lg font-semibold transition-all duration-300 shadow-lg hover:shadow-xl hover:-translate-y-1 flex items-center justify-center min-h-[120px]`}
               >
                 <div className="flex flex-col items-center gap-2">
