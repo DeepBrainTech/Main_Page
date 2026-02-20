@@ -27,6 +27,9 @@
     "chessMater": "ChessMater",
     "chessTourmaster": "Chess Tourmaster",
     "intercontinentalChess": "Intercontinental Chess",
+    "flowersCount": "Flowers: {count}",
+    "dailyRewardReady": "Daily reward ready (+10 🌸)",
+    "nextRewardIn": "Next reward in {time}",
     "failedToStartGame": "Failed to start game"
   },
   "login": {
