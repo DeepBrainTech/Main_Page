@@ -146,7 +146,6 @@ export default function HomeContent({
     },
     {
       key: "intercontinentalChess",
-      modeKey: "intercontinental-chess",
       name: tHome("intercontinentalChess"),
       externalUrl: "https://intercontinental-chess.deepbraintechnology.com/",
       color: "bg-[#B48EAD]",
