@@ -27,6 +27,9 @@
     "chessMater": "棋艺大师",
     "chessTourmaster": "棋境之旅",
     "intercontinentalChess": "洲际象棋",
+    "flowersCount": "花朵: {count}",
+    "dailyRewardReady": "每日奖励可领取（+10 🌸）",
+    "nextRewardIn": "距离下次奖励还有 {time}",
     "failedToStartGame": "启动游戏失败"
   },
   "login": {

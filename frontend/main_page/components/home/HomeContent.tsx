@@ -27,9 +27,9 @@ interface HomeContentProps {
   rewardByMode: Record<string, RewardStatus>;
 }
 
-function FlowerIcon() {
+function FlowerIcon({ size = 24 }: { size?: number }) {
   return (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
       <circle cx="12" cy="12" r="2.2" fill="#F59E0B" />
       <ellipse cx="12" cy="5" rx="2.6" ry="3.2" fill="#F472B6" />
       <ellipse cx="12" cy="19" rx="2.6" ry="3.2" fill="#F472B6" />
@@ -146,6 +146,7 @@ export default function HomeContent({
     },
     {
       key: "intercontinentalChess",
+      modeKey: "intercontinental-chess",
       name: tHome("intercontinentalChess"),
       externalUrl: "https://intercontinental-chess.deepbraintechnology.com/",
       color: "bg-[#B48EAD]",
@@ -183,7 +184,7 @@ export default function HomeContent({
             </p>
             <div className="mt-6 inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 shadow-md">
               <FlowerIcon />
-              <span className="font-semibold text-[#2C3539]">Flowers: {totalFlowers}</span>
+              <span className="font-semibold text-[#2C3539]">{tHome("flowersCount", { count: totalFlowers })}</span>
             </div>
           </div>
 
@@ -199,10 +200,14 @@ export default function HomeContent({
                   <span>{game.name}</span>
                   {"modeKey" in game && game.modeKey != null &&
                     (rewardByMode[game.modeKey]?.can_claim_now || rewardByMode[game.modeKey] === undefined ? (
-                      <span className="text-xs rounded-full bg-white/20 px-2 py-1">Daily reward ready (+10 🌸)</span>
+                      <span className="text-xs rounded-full bg-white/20 px-2 py-1">{tHome("dailyRewardReady")}</span>
                     ) : (
                       <span className="text-xs rounded-full bg-black/20 px-2 py-1">
-                        Next reward in {formatSeconds(secondsByMode[game.modeKey] ?? rewardByMode[game.modeKey].seconds_until_next_claim)}
+                        {tHome("nextRewardIn", {
+                          time: formatSeconds(
+                            secondsByMode[game.modeKey] ?? rewardByMode[game.modeKey].seconds_until_next_claim
+                          ),
+                        })}
                       </span>
                     ))}
                 </div>
