@@ -21,25 +21,32 @@ class VerificationService:
     """验证码服务类"""
     
     def __init__(self):
-        self.redis_host = os.getenv("REDIS_HOST", "localhost")
-        self.redis_port = int(os.getenv("REDIS_PORT", "6379"))
-        self.redis_db = int(os.getenv("REDIS_DB", "0"))
-        self.redis_password = os.getenv("REDIS_PASSWORD", None)
-        
-        # 尝试连接Redis，如果失败则使用内存存储
         self.use_redis = False
         self.memory_store = {}
         
         if REDIS_AVAILABLE:
             try:
-                self.redis_client = redis.Redis(
-                    host=self.redis_host,
-                    port=self.redis_port,
-                    db=self.redis_db,
-                    password=self.redis_password if self.redis_password else None,
-                    decode_responses=True
-                )
-                # 测试连接
+                redis_url = os.getenv("REDIS_URL")
+                
+                if redis_url:
+                    self.redis_client = redis.from_url(
+                        redis_url,
+                        decode_responses=True
+                    )
+                else:
+                    redis_host = os.getenv("REDIS_HOST") or os.getenv("REDISHOST", "localhost")
+                    redis_port = int(os.getenv("REDIS_PORT") or os.getenv("REDISPORT", "6379"))
+                    redis_db = int(os.getenv("REDIS_DB", "0"))
+                    redis_password = os.getenv("REDIS_PASSWORD") or os.getenv("REDISPASSWORD")
+                    
+                    self.redis_client = redis.Redis(
+                        host=redis_host,
+                        port=redis_port,
+                        db=redis_db,
+                        password=redis_password if redis_password else None,
+                        decode_responses=True
+                    )
+                
                 self.redis_client.ping()
                 self.use_redis = True
                 print("✓ Redis 连接成功，使用 Redis 存储验证码")
