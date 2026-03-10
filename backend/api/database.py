@@ -45,6 +45,8 @@ def init_db():
     """
     初始化数据库（创建表 + 兼容旧表结构）
     """
+    # 确保所有模型已注册到 Base（用于创建 user_rewards 等新表）
+    import models  # noqa: F401
     Base.metadata.create_all(bind=engine)
     ensure_users_table_compatibility()
 

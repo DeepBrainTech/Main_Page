@@ -1,27 +1,29 @@
 "use client";
 
+import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { useAuth } from "@/hooks/useAuth";
 import { useGameLauncher } from "@/hooks/useGameLauncher";
-import HomeContent from "@/components/home/HomeContent";
+import AppShell, { type AppTab } from "@/components/layout/AppShell";
+import HomeTab from "@/components/features/home/HomeTab";
+import TestTab from "@/components/features/test/TestTab";
+import BrainGamesTab from "@/components/features/brain-games/BrainGamesTab";
+import LeaderboardTab from "@/components/features/leaderboard/LeaderboardTab";
 
 /**
- * 登录后的主页
- * page.tsx 应该保持简洁，只负责组装逻辑
+ * 登录后的主页：Tab 导航（主页 / 脑力测试 / 脑力游戏 / 排行榜）+ 个人头像弹窗
  */
 export default function HomePage() {
   const tCommon = useTranslations("common");
   const { username, loading, logout } = useAuth();
   const {
     handleFogChess,
-    handleSudokuBattle,
     handleSudoku,
     handleQuantumGo,
     handleChessMater,
     handleChessTourmaster,
-    totalFlowers,
-    rewardByMode,
   } = useGameLauncher();
+  const [activeTab, setActiveTab] = useState<AppTab>("home");
 
   if (loading) {
     return (
@@ -32,18 +34,26 @@ export default function HomePage() {
   }
 
   return (
-    <HomeContent
+    <AppShell
+      activeTab={activeTab}
+      onTabChange={setActiveTab}
       username={username}
-      onFogChess={handleFogChess}
-      onSudokuBattle={handleSudokuBattle}
-      onSudoku={handleSudoku}
-      onQuantumGo={handleQuantumGo}
-      onChessMater={handleChessMater}
-      onChessTourmaster={handleChessTourmaster}
       onLogout={logout}
-      totalFlowers={totalFlowers}
-      rewardByMode={rewardByMode}
-    />
+    >
+      {activeTab === "home" && <HomeTab username={username} />}
+      {activeTab === "test" && <TestTab />}
+      {activeTab === "brainGames" && (
+        <BrainGamesTab
+          onLaunch={{
+            chessMater: handleChessMater,
+            chessTourmaster: handleChessTourmaster,
+            sudoku: handleSudoku,
+            quantumGo: handleQuantumGo,
+            fogChess: handleFogChess,
+          }}
+        />
+      )}
+      {activeTab === "leaderboard" && <LeaderboardTab />}
+    </AppShell>
   );
 }
-

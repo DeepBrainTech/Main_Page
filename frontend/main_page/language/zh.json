@@ -13,6 +13,21 @@
     "cancel": "取消",
     "confirm": "确认"
   },
+  "nav": {
+    "home": "主页",
+    "test": "脑力测试",
+    "brainGames": "脑力训练游戏",
+    "leaderboard": "排行榜",
+    "profile": "个人"
+  },
+  "dimensions": {
+    "memory": "记忆力",
+    "logic": "逻辑推理",
+    "focus": "专注力",
+    "reaction": "反应速度",
+    "strategy": "战略规划",
+    "spatial": "空间想象力"
+  },
   "home": {
     "title": "DeepBrain Tech",
     "welcomeUser": "欢迎, {username}",
@@ -30,7 +45,95 @@
     "flowersCount": "花朵: {count}",
     "dailyRewardReady": "每日奖励可领取（+10 🌸）",
     "nextRewardIn": "距离下次奖励还有 {time}",
-    "failedToStartGame": "启动游戏失败"
+    "failedToStartGame": "启动游戏失败",
+    "homestead": "家园",
+    "homesteadDesc": "使用金币/钻石兑换衣服与背景",
+    "homesteadPlaceholder": "卡通形象占位，后续可兑换装扮",
+    "coins": "金币",
+    "diamonds": "钻石",
+    "checkIn": "签到",
+    "checkInTitle": "每日签到",
+    "checkInReward": "每日签到 +10 金币",
+    "checkInStreak": "连续签到 7 天 +10 钻石",
+    "signed": "已签",
+    "signToday": "今日签到",
+    "dailyTasks": "每日任务",
+    "monthlyTask": "每月任务",
+    "taskDone": "已完成",
+    "taskProgress": "{current}/{target}",
+    "radarTitle": "核心认知维度",
+    "radarSubtitle": "六维脑力概览"
+  },
+  "tasks": {
+    "dailyPlayChessMaster": "完成一局棋艺大师",
+    "dailyPlayChessTourmaster": "完成一局棋境之旅",
+    "dailyPlaceholder": "敬请期待",
+    "monthlyChessTourmaster20": "通关前 20 局棋境之旅",
+    "rewardCoins": "+{count} 金币",
+    "rewardDiamonds": "+{count} 钻石"
+  },
+  "test": {
+    "title": "脑力测试",
+    "subtitle": "按维度完成测试，获得总脑力指数",
+    "selectDimension": "选择测试维度",
+    "freeUserLimit": "免费用户仅可免费体验一个维度（1～2 种测试，约 15 分钟）",
+    "startTest": "开始测试",
+    "yourScore": "您的得分",
+    "brainIndex": "总脑力指数",
+    "memory": {
+      "sequenceTitle": "序列记忆",
+      "sequenceDesc": "记住数字顺序，两秒后输入",
+      "gridTitle": "图形记忆",
+      "gridDesc": "记住亮起的格子位置，两秒后点击",
+      "next": "下一题"
+    },
+    "logic": {
+      "patternTitle": "规律补全",
+      "patternDesc": "根据规律选择缺失的数字",
+      "matrixTitle": "矩阵推理",
+      "matrixDesc": "选出缺失的图形",
+      "next": "下一题"
+    },
+    "focus": {
+      "schulteTitle": "舒尔特方格",
+      "schulteDesc": "按 1～25 顺序点击",
+      "stroopTitle": "颜色冲突",
+      "stroopDesc": "根据字体颜色选择，忽略文字含义"
+    },
+    "reaction": {
+      "title": "反应速度",
+      "desc": "屏幕变色后尽快点击"
+    },
+    "strategy": {
+      "pathTitle": "最短路径",
+      "pathDesc": "在 10×8 格子中找出从起点到终点的最短路径，可斜走"
+    },
+    "spatial": {
+      "title": "空间想象力",
+      "desc": "判断旋转后两图形是否相同"
+    },
+    "resultRadar": "六维雷达图"
+  },
+  "leaderboard": {
+    "title": "排行榜",
+    "total": "总脑力榜",
+    "byDimension": "各维度榜",
+    "rank": "排名",
+    "user": "用户",
+    "score": "分数",
+    "noData": "暂无数据",
+    "loading": "加载中..."
+  },
+  "brainGames": {
+    "title": "脑力训练游戏",
+    "subtitle": "按认知维度选择游戏",
+    "play": "开始游戏",
+    "noData": "暂无游戏"
+  },
+  "profile": {
+    "title": "个人信息",
+    "username": "用户名",
+    "email": "邮箱"
   },
   "login": {
     "title": "DeepBrain Tech",

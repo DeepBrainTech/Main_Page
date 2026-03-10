@@ -102,3 +102,54 @@ class UserGameReward(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     user = relationship("User", back_populates="game_rewards")
+
+
+class UserRewards(Base):
+    """用户金币/钻石与签到、任务领取状态"""
+    __tablename__ = "user_rewards"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, unique=True, index=True)
+    coins = Column(Integer, default=0)
+    diamonds = Column(Integer, default=0)
+    last_streak_award_start = Column(String(10), nullable=True)  # 最近一次 7 日连续签到发钻石的起始日 YYYY-MM-DD
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class UserCheckIn(Base):
+    """用户签到记录（按日）"""
+    __tablename__ = "user_check_ins"
+    __table_args__ = (UniqueConstraint("user_id", "check_in_date", name="uq_user_check_in_date"),)
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    check_in_date = Column(String(10), nullable=False, index=True)  # YYYY-MM-DD
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class UserTaskClaim(Base):
+    """用户任务领取记录（防止重复领取）"""
+    __tablename__ = "user_task_claims"
+    __table_args__ = (UniqueConstraint("user_id", "task_id", "claimed_date", name="uq_user_task_claimed"),)
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    task_id = Column(String(50), nullable=False, index=True)
+    claimed_date = Column(String(10), nullable=False, index=True)  # YYYY-MM-DD 或 YYYY-MM 每月任务
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class UserCognitiveScores(Base):
+    """用户六维认知分数（雷达图）"""
+    __tablename__ = "user_cognitive_scores"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, unique=True, index=True)
+    memory = Column(Integer, default=0)
+    logic = Column(Integer, default=0)
+    focus = Column(Integer, default=0)
+    reaction = Column(Integer, default=0)
+    strategy = Column(Integer, default=0)
+    spatial = Column(Integer, default=0)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

@@ -2,7 +2,7 @@
 Pydantic 数据验证模型
 """
 from pydantic import BaseModel, EmailStr, Field
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 from datetime import datetime
 
 
@@ -110,6 +110,48 @@ class GameAccessResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+# ========== 用户奖励 / 签到 / 任务 / 认知分数 ==========
+class RewardsState(BaseModel):
+    """用户奖励与签到状态"""
+    coins: int = 0
+    diamonds: int = 0
+    check_in_dates: list[str] = []  # 本月已签到日期 YYYY-MM-DD
+    has_checked_in_today: bool = False
+    current_streak: int = 0
+    daily_progress: Dict[str, int] = {}  # task_id -> count (来自游戏)
+    monthly_progress: int = 0  # 本月棋境之旅完成局数
+    task_claimed_today: List[str] = []  # 今日已领取的 daily task_id
+    monthly_claimed: bool = False
+
+
+class CognitiveScoresBody(BaseModel):
+    """六维分数（单维或全量）"""
+    memory: Optional[int] = None
+    logic: Optional[int] = None
+    focus: Optional[int] = None
+    reaction: Optional[int] = None
+    strategy: Optional[int] = None
+    spatial: Optional[int] = None
+
+
+class CognitiveScoresResponse(BaseModel):
+    """六维分数响应"""
+    memory: int = 0
+    logic: int = 0
+    focus: int = 0
+    reaction: int = 0
+    strategy: int = 0
+    spatial: int = 0
+
+
+class LeaderboardEntry(BaseModel):
+    """排行榜单项"""
+    rank: int
+    user_id: int
+    username: str
+    score: int
 
 
 # ========== API 响应 ==========

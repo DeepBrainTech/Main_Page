@@ -13,6 +13,21 @@
     "cancel": "Cancel",
     "confirm": "Confirm"
   },
+  "nav": {
+    "home": "Home",
+    "test": "Brain Test",
+    "brainGames": "Brain Games",
+    "leaderboard": "Leaderboard",
+    "profile": "Profile"
+  },
+  "dimensions": {
+    "memory": "Memory",
+    "logic": "Logic",
+    "focus": "Focus",
+    "reaction": "Reaction",
+    "strategy": "Strategy",
+    "spatial": "Spatial"
+  },
   "home": {
     "title": "DeepBrain Tech",
     "welcomeUser": "Welcome, {username}",
@@ -30,7 +45,95 @@
     "flowersCount": "Flowers: {count}",
     "dailyRewardReady": "Daily reward ready (+10 🌸)",
     "nextRewardIn": "Next reward in {time}",
-    "failedToStartGame": "Failed to start game"
+    "failedToStartGame": "Failed to start game",
+    "homestead": "Homestead",
+    "homesteadDesc": "Use coins/diamonds to unlock outfits and backgrounds",
+    "homesteadPlaceholder": "Avatar placeholder; outfits coming later",
+    "coins": "Coins",
+    "diamonds": "Diamonds",
+    "checkIn": "Check-in",
+    "checkInTitle": "Daily Check-in",
+    "checkInReward": "Daily +10 coins",
+    "checkInStreak": "7-day streak +10 diamonds",
+    "signed": "Signed",
+    "signToday": "Sign today",
+    "dailyTasks": "Daily Tasks",
+    "monthlyTask": "Monthly Task",
+    "taskDone": "Done",
+    "taskProgress": "{current}/{target}",
+    "radarTitle": "Core Cognitive Dimensions",
+    "radarSubtitle": "Six-dimension brain overview"
+  },
+  "tasks": {
+    "dailyPlayChessMaster": "Complete 1 game of Chess Master",
+    "dailyPlayChessTourmaster": "Complete 1 game of Chess Tourmaster",
+    "dailyPlaceholder": "Coming soon",
+    "monthlyChessTourmaster20": "Complete first 20 games of Chess Tourmaster",
+    "rewardCoins": "+{count} coins",
+    "rewardDiamonds": "+{count} diamonds"
+  },
+  "test": {
+    "title": "Brain Test",
+    "subtitle": "Complete tests by dimension to get your brain index",
+    "selectDimension": "Select a dimension",
+    "freeUserLimit": "Free users can try one dimension (1–2 tests, ~15 min)",
+    "startTest": "Start Test",
+    "yourScore": "Your score",
+    "brainIndex": "Brain Index",
+    "memory": {
+      "sequenceTitle": "Sequence Memory",
+      "sequenceDesc": "Remember the number order, then type after 2 seconds",
+      "gridTitle": "Grid Memory",
+      "gridDesc": "Remember lit cells, then click after 2 seconds",
+      "next": "Next"
+    },
+    "logic": {
+      "patternTitle": "Pattern Completion",
+      "patternDesc": "Choose the missing number by pattern",
+      "matrixTitle": "Matrix Reasoning",
+      "matrixDesc": "Select the missing figure",
+      "next": "Next"
+    },
+    "focus": {
+      "schulteTitle": "Schulte Grid",
+      "schulteDesc": "Click numbers 1–25 in order",
+      "stroopTitle": "Stroop",
+      "stroopDesc": "Select by font color, ignore word meaning"
+    },
+    "reaction": {
+      "title": "Reaction Speed",
+      "desc": "Click as soon as the screen changes color"
+    },
+    "strategy": {
+      "pathTitle": "Shortest Path",
+      "pathDesc": "Find shortest path from start to end on 10×8 grid (diagonal allowed)"
+    },
+    "spatial": {
+      "title": "Spatial Imagination",
+      "desc": "Decide if two shapes are the same after rotation"
+    },
+    "resultRadar": "Six-dimension radar"
+  },
+  "leaderboard": {
+    "title": "Leaderboard",
+    "total": "Overall",
+    "byDimension": "By dimension",
+    "rank": "Rank",
+    "user": "User",
+    "score": "Score",
+    "noData": "No data yet",
+    "loading": "Loading..."
+  },
+  "brainGames": {
+    "title": "Brain Games",
+    "subtitle": "Choose by cognitive dimension",
+    "play": "Play",
+    "noData": "No games yet"
+  },
+  "profile": {
+    "title": "Profile",
+    "username": "Username",
+    "email": "Email"
   },
   "login": {
     "title": "DeepBrain Tech",
