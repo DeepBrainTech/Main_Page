@@ -1,0 +1,72 @@
+"use client";
+
+import { GoogleLogin } from "@react-oauth/google";
+import { getApiUrl } from "@/lib/api-config";
+
+export type GoogleButtonVariant = "signin" | "signup";
+
+type GoogleLoginButtonProps = {
+  variant: GoogleButtonVariant;
+  onSuccess: () => void;
+  onError: (message: string) => void;
+  disabled?: boolean;
+};
+
+/**
+ * 使用 Google 登录/注册按钮。成功后调用 onSuccess，失败调用 onError。
+ * 需在 GoogleOAuthProvider 内使用；未配置 Client ID 时不渲染。
+ */
+export default function GoogleLoginButton({
+  variant,
+  onSuccess,
+  onError,
+  disabled,
+}: GoogleLoginButtonProps) {
+  const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+  if (!clientId) return null;
+
+  const handleCredential = async (credential: string) => {
+    try {
+      const res = await fetch(getApiUrl("/api/auth/google"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id_token: credential }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        const code = data.detail || "AUTH_GOOGLE_TOKEN_INVALID";
+        onError(code.match(/^[A-Z_]+$/) ? code : "AUTH_GOOGLE_TOKEN_INVALID");
+        return;
+      }
+      const data = await res.json();
+      localStorage.setItem("access_token", data.access_token);
+      localStorage.setItem("token_expires_in", String(data.expires_in ?? 0));
+      onSuccess();
+    } catch {
+      onError("AUTH_GOOGLE_TOKEN_INVALID");
+    }
+  };
+
+  return (
+    <div className="flex justify-center items-center" aria-hidden={!!disabled}>
+      <GoogleLogin
+        onSuccess={(res) => {
+          if (res.credential) handleCredential(res.credential);
+          else onError("AUTH_GOOGLE_TOKEN_INVALID");
+        }}
+        onError={() => onError("AUTH_GOOGLE_TOKEN_INVALID")}
+        theme="filled_black"
+        size="large"
+        text={variant === "signup" ? "signup_with" : "signin_with"}
+        type="standard"
+        shape="rectangular"
+        logo_alignment="left"
+        width="320"
+        containerProps={{
+          style: { display: "flex", justifyContent: "center" },
+          "aria-disabled": disabled,
+        }}
+      />
+    </div>
+  );
+}

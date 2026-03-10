@@ -179,6 +179,9 @@ def authenticate_user(db: Session, username_or_email: str, password: str) -> Opt
     
     if not user:
         return None
+    # 仅 Google 登录的用户没有密码，不能使用密码登录
+    if not user.hashed_password:
+        return None
     if not verify_password(password, user.hashed_password):
         return None
     if not user.is_active:

@@ -45,7 +45,9 @@
     "registerLink": "立即注册",
     "forgotPassword": "忘记密码？",
     "loginFailed": "登录失败，请重试",
-    "invalidCredentials": "用户名或密码错误"
+    "invalidCredentials": "用户名或密码错误",
+    "signInWithGoogle": "使用 Google 登录",
+    "orContinueWith": "或继续使用"
   },
   "forgotPassword": {
     "title": "忘记密码",
@@ -104,7 +106,9 @@
     "verificationCodeSent": "验证码已发送到您的邮箱",
     "verificationCodeInvalid": "验证码错误或已过期",
     "emailRequired": "请先输入邮箱地址",
-    "emailInvalid": "邮箱格式不正确"
+    "emailInvalid": "邮箱格式不正确",
+    "signInWithGoogle": "使用 Google 注册",
+    "orContinueWith": "或使用邮箱注册"
   },
   "auth": {
     "tokenInvalid": "Token 无效",
@@ -123,7 +127,8 @@
     "VERIFICATION_CODE_SEND_FAILED": "验证码发送失败",
     "EMAIL_NOT_FOUND": "该邮箱未注册",
     "PASSWORD_RESET_SUCCESS": "密码重置成功",
-    "PASSWORD_RESET_FAILED": "密码重置失败"
+    "PASSWORD_RESET_FAILED": "密码重置失败",
+    "AUTH_GOOGLE_TOKEN_INVALID": "Google 登录无效，请重试"
   },
   "beforelogin": {
     "hero": {

@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { getApiUrl } from "@/lib/api-config";
+import GoogleLoginButton from "@/components/auth/GoogleLoginButton";
 
 // 注意：客户端组件默认就是动态渲染，适合注册页的需求
 // （CSRF、会话、A/B测试、风控等）
@@ -173,6 +174,25 @@ export default function RegisterPage() {
             {t("register.title")}
           </h1>
           <p className="text-zinc-600 dark:text-zinc-400">{t("register.subtitle")}</p>
+        </div>
+
+        {/* Google 注册：仅当配置了 Client ID 时显示 */}
+        <GoogleLoginButton
+          variant="signup"
+          onSuccess={() => router.push(`/${locale}/home`)}
+          onError={(code) => setError(t(`auth.${code}`))}
+          disabled={loading}
+        />
+
+        <div className="relative my-6">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-gray-300 dark:border-gray-600" />
+          </div>
+          <div className="relative flex justify-center text-sm">
+            <span className="px-2 bg-white dark:bg-zinc-900 text-zinc-500 dark:text-zinc-400">
+              {t("register.orContinueWith")}
+            </span>
+          </div>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">

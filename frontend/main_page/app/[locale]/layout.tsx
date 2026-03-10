@@ -2,6 +2,7 @@ import { NextIntlClientProvider } from 'next-intl';
 import { getMessages } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 import { locales, type Locale } from '../../i18n-config';
+import GoogleAuthProvider from '@/components/providers/GoogleOAuthProvider';
 
 // Cloudflare Pages 需要 Edge Runtime
 export const runtime = 'edge';
@@ -34,7 +35,9 @@ export default async function LocaleLayout({
   // 这些应该只在根 layout 中定义
   return (
     <NextIntlClientProvider messages={messages}>
-      {children}
+      <GoogleAuthProvider locale={locale}>
+        {children}
+      </GoogleAuthProvider>
     </NextIntlClientProvider>
   );
 }

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { getApiUrl } from "@/lib/api-config";
+import GoogleLoginButton from "@/components/auth/GoogleLoginButton";
 
 // 注意：客户端组件默认就是动态渲染，适合登录页的需求
 // （CSRF、会话、安全验证等）
@@ -128,7 +129,30 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <div className="mt-6 text-center">
+        <div className="flex flex-col items-center w-full my-6">
+          <div className="relative w-full">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-gray-300 dark:border-gray-600" />
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-2 bg-white dark:bg-zinc-900 text-zinc-500 dark:text-zinc-400">
+                {t("login.orContinueWith")}
+              </span>
+            </div>
+          </div>
+
+          {/* Google 登录：仅当配置了 Client ID 时显示 */}
+          <div className="w-full flex justify-center mt-4">
+            <GoogleLoginButton
+              variant="signin"
+              onSuccess={() => router.push(`/${locale}/home`)}
+              onError={(code) => setError(t(`auth.${code}`))}
+              disabled={loading}
+            />
+          </div>
+        </div>
+
+        <div className="mt-6 flex flex-col items-center text-center">
           <p className="text-sm text-zinc-600 dark:text-zinc-400">
             {t("login.noAccount")}{" "}
             <button
@@ -140,7 +164,7 @@ export default function LoginPage() {
           </p>
         </div>
 
-        <div className="mt-4 text-center">
+        <div className="mt-4 flex justify-center">
           <button
             onClick={() => router.push(`/${locale}`)}
             className="text-sm text-zinc-500 dark:text-zinc-400 hover:underline"

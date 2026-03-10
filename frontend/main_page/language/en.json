@@ -45,7 +45,9 @@
     "registerLink": "Sign up now",
     "forgotPassword": "Forgot password?",
     "loginFailed": "Login failed, please try again",
-    "invalidCredentials": "Invalid username or password"
+    "invalidCredentials": "Invalid username or password",
+    "signInWithGoogle": "Sign in with Google",
+    "orContinueWith": "Or continue with"
   },
   "forgotPassword": {
     "title": "Forgot Password",
@@ -104,7 +106,9 @@
     "verificationCodeSent": "Verification code sent to your email",
     "verificationCodeInvalid": "Invalid or expired verification code",
     "emailRequired": "Please enter your email address first",
-    "emailInvalid": "Invalid email format"
+    "emailInvalid": "Invalid email format",
+    "signInWithGoogle": "Sign up with Google",
+    "orContinueWith": "Or register with email"
   },
   "auth": {
     "tokenInvalid": "Token invalid",
@@ -123,7 +127,8 @@
     "VERIFICATION_CODE_SEND_FAILED": "Failed to send verification code",
     "EMAIL_NOT_FOUND": "Email not registered",
     "PASSWORD_RESET_SUCCESS": "Password reset successful",
-    "PASSWORD_RESET_FAILED": "Password reset failed"
+    "PASSWORD_RESET_FAILED": "Password reset failed",
+    "AUTH_GOOGLE_TOKEN_INVALID": "Google sign-in failed, please try again"
   },
   "beforelogin": {
     "hero": {

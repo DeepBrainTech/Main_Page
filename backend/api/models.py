@@ -1,5 +1,9 @@
 """
 数据库模型
+若已有 users 表，需先执行迁移再启用 Google 登录：
+  PostgreSQL: ALTER TABLE users ADD COLUMN IF NOT EXISTS google_id VARCHAR(255) UNIQUE;
+              ALTER TABLE users ALTER COLUMN hashed_password DROP NOT NULL;
+  MySQL:      ALTER TABLE users ADD COLUMN google_id VARCHAR(255) UNIQUE; ALTER TABLE users MODIFY hashed_password VARCHAR(255) NULL;
 """
 from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text, ForeignKey, JSON, UniqueConstraint
 from sqlalchemy.orm import relationship
@@ -14,7 +18,8 @@ class User(Base):
     id = Column(Integer, primary_key=True, index=True)
     username = Column(String(50), unique=True, index=True, nullable=False)
     email = Column(String(100), unique=True, index=True, nullable=False)
-    hashed_password = Column(String(255), nullable=False)
+    hashed_password = Column(String(255), nullable=True)  # Google 登录用户可为空
+    google_id = Column(String(255), unique=True, index=True, nullable=True)  # Google 唯一标识
     is_active = Column(Boolean, default=True)
     is_superuser = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
