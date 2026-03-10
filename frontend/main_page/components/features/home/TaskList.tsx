@@ -61,7 +61,7 @@ function TaskRow({
             disabled={claiming}
             className="rounded bg-amber-500 px-2 py-0.5 text-xs text-white hover:bg-amber-600 disabled:opacity-50"
           >
-            {claiming ? tCommon("loading") : "领取"}
+            {claiming ? tCommon("loading") : tCommon("claim")}
           </button>
         ) : null}
         {done && claimed ? (

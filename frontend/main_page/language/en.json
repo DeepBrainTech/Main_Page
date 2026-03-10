@@ -11,7 +11,8 @@
     "success": "Success",
     "submit": "Submit",
     "cancel": "Cancel",
-    "confirm": "Confirm"
+    "confirm": "Confirm",
+    "claim": "Claim"
   },
   "nav": {
     "home": "Home",
