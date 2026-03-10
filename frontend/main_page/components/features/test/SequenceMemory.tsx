@@ -71,7 +71,7 @@ export default function SequenceMemory({
             className={`w-full max-w-xs rounded-lg border px-4 py-2 text-center font-mono text-xl ${
               error ? "border-red-500 bg-red-50" : "border-gray-300"
             }`}
-            placeholder="输入刚才的数字"
+            placeholder={t("sequencePlaceholder")}
           />
           <button
             type="button"

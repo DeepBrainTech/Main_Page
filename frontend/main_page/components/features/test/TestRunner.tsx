@@ -119,7 +119,7 @@ export default function TestRunner({ dimension, onBack }: TestRunnerProps) {
         {tCommon("back")}
       </button>
       <p className="text-sm text-gray-500">
-        测试 {testIndex + 1} / {testCount}
+        {t("testProgress", { current: testIndex + 1, total: testCount })}
       </p>
       <TestRender />
     </div>

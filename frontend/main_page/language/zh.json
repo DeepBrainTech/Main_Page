@@ -12,7 +12,10 @@
     "submit": "提交",
     "cancel": "取消",
     "confirm": "确认",
-    "claim": "领取"
+    "claim": "领取",
+    "appName": "DeepBrain Tech",
+    "localeZh": "中文",
+    "localeEn": "English"
   },
   "nav": {
     "home": "主页",
@@ -75,6 +78,7 @@
   },
   "test": {
     "title": "脑力测试",
+    "testProgress": "测试 {current}/{total}",
     "subtitle": "按维度完成测试，获得总脑力指数",
     "selectDimension": "选择测试维度",
     "freeUserLimit": "免费用户仅可免费体验一个维度（1～2 种测试，约 15 分钟）",
@@ -84,6 +88,7 @@
     "memory": {
       "sequenceTitle": "序列记忆",
       "sequenceDesc": "记住数字顺序，两秒后输入",
+      "sequencePlaceholder": "输入刚才的数字",
       "gridTitle": "图形记忆",
       "gridDesc": "记住亮起的格子位置，两秒后点击",
       "next": "下一题"

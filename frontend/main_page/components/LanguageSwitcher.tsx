@@ -2,12 +2,14 @@
 
 import { useRouter, usePathname } from "next/navigation";
 import { useParams } from "next/navigation";
+import { useTranslations } from "next-intl";
 
 export default function LanguageSwitcher() {
   const router = useRouter();
   const pathname = usePathname();
   const params = useParams();
   const currentLocale = params.locale as string;
+  const tCommon = useTranslations("common");
 
   const switchLanguage = (newLocale: string) => {
     // 替换当前路径中的语言代码
@@ -25,7 +27,7 @@ export default function LanguageSwitcher() {
             : "bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"
         }`}
       >
-        中文
+        {tCommon("localeZh")}
       </button>
       <button
         onClick={() => switchLanguage("en")}
@@ -35,7 +37,7 @@ export default function LanguageSwitcher() {
             : "bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"
         }`}
       >
-        English
+        {tCommon("localeEn")}
       </button>
     </div>
   );

@@ -12,7 +12,10 @@
     "submit": "Submit",
     "cancel": "Cancel",
     "confirm": "Confirm",
-    "claim": "Claim"
+    "claim": "Claim",
+    "appName": "DeepBrain Tech",
+    "localeZh": "中文",
+    "localeEn": "English"
   },
   "nav": {
     "home": "Home",
@@ -75,6 +78,7 @@
   },
   "test": {
     "title": "Brain Test",
+    "testProgress": "Test {current}/{total}",
     "subtitle": "Complete tests by dimension to get your brain index",
     "selectDimension": "Select a dimension",
     "freeUserLimit": "Free users can try one dimension (1–2 tests, ~15 min)",
@@ -84,6 +88,7 @@
     "memory": {
       "sequenceTitle": "Sequence Memory",
       "sequenceDesc": "Remember the number order, then type after 2 seconds",
+      "sequencePlaceholder": "Enter the numbers you saw",
       "gridTitle": "Grid Memory",
       "gridDesc": "Remember lit cells, then click after 2 seconds",
       "next": "Next"
