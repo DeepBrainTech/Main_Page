@@ -74,6 +74,14 @@ function TaskRow({
   );
 }
 
+/** 当月起止日期 */
+function getMonthDateRange(): string {
+  const now = new Date();
+  const month = now.getMonth() + 1;
+  const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+  return `${month}.1-${month}.${lastDay}`;
+}
+
 /**
  * 每日任务（3 个）+ 每月任务（1 个），支持领取奖励（调后端）
  */
@@ -89,6 +97,7 @@ export default function TaskList({
   const tTasks = useTranslations("tasks");
   const thisMonth = new Date().toISOString().slice(0, 7);
   const monthlyCount = monthlyProgress.month === thisMonth ? monthlyProgress.count : 0;
+  const monthDateRange = getMonthDateRange();
 
   return (
     <div className="space-y-4 rounded-xl bg-white p-4 shadow-md">
@@ -116,7 +125,10 @@ export default function TaskList({
           );
         })}
       </div>
-      <h3 className="mt-4 font-semibold text-gray-800">{tHome("monthlyTask")}</h3>
+      <h3 className="mt-4 font-semibold text-gray-800">
+        {tHome("monthlyTask")}
+        <span className="ml-1.5 font-normal text-gray-500">({monthDateRange})</span>
+      </h3>
       <TaskRow
         task={MONTHLY_TASK}
         current={monthlyCount}

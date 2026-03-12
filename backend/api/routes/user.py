@@ -1,13 +1,15 @@
 """
 用户奖励、签到、任务、六维分数、排行榜
 """
-from datetime import datetime, date
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from datetime import datetime, date, timedelta
+from zoneinfo import ZoneInfo
+
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Header
 from sqlalchemy.orm import Session
 from sqlalchemy import func, desc
 
 from database import get_db
-from models import User, UserRewards, UserCheckIn, UserTaskClaim, UserCognitiveScores, UserGameReward
+from models import User, UserRewards, UserCheckIn, UserTaskClaim, UserCognitiveScores, UserGameReward, UserGamePlayByDay
 from schemas import APIResponse, RewardsState, CognitiveScoresBody, CognitiveScoresResponse, LeaderboardEntry
 from auth import get_current_active_user
 
@@ -23,13 +25,24 @@ GAME_MODE_DAILY_2 = "chess-tourmaster"
 GAME_MODE_MONTHLY = "chess-tourmaster"
 MONTHLY_TARGET = 20
 
+# 未传或无效时区时回退到 UTC
+DEFAULT_TZ = "UTC"
 
-def _today() -> str:
-    return date.today().isoformat()
+
+def _today_in_tz(tz: str) -> str:
+    """用户当地时区的今日日期 YYYY-MM-DD"""
+    try:
+        return datetime.now(ZoneInfo(tz)).date().isoformat()
+    except Exception:
+        return datetime.now(ZoneInfo(DEFAULT_TZ)).date().isoformat()
 
 
-def _this_month() -> str:
-    return date.today().strftime("%Y-%m")
+def _this_month_in_tz(tz: str) -> str:
+    """用户当地时区的当月 YYYY-MM"""
+    try:
+        return datetime.now(ZoneInfo(tz)).strftime("%Y-%m")
+    except Exception:
+        return datetime.now(ZoneInfo(DEFAULT_TZ)).strftime("%Y-%m")
 
 
 def _get_or_create_rewards(db: Session, user_id: int) -> UserRewards:
@@ -43,10 +56,11 @@ def _get_or_create_rewards(db: Session, user_id: int) -> UserRewards:
     return r
 
 
-def _check_in_dates_this_month(db: Session, user_id: int) -> list[str]:
-    today = date.today()
-    start = today.replace(day=1).isoformat()
-    end = today.isoformat()
+def _check_in_dates_this_month(db: Session, user_id: int, today_iso: str) -> list[str]:
+    """当月签到日期列表（以用户当地当月为准）"""
+    d = date.fromisoformat(today_iso)
+    start = d.replace(day=1).isoformat()
+    end = today_iso
     rows = (
         db.query(UserCheckIn.check_in_date)
         .filter(UserCheckIn.user_id == user_id, UserCheckIn.check_in_date >= start, UserCheckIn.check_in_date <= end)
@@ -56,54 +70,61 @@ def _check_in_dates_this_month(db: Session, user_id: int) -> list[str]:
     return [r[0] for r in rows]
 
 
-def _current_streak(db: Session, user_id: int, sorted_dates: list[str]) -> int:
+def _current_streak(db: Session, user_id: int, sorted_dates: list[str], today_iso: str) -> int:
     if not sorted_dates:
         return 0
-    today = _today()
-    if today not in sorted_dates:
+    if today_iso not in sorted_dates:
         return 0
     streak = 0
-    d = date.fromisoformat(today)
+    d = date.fromisoformat(today_iso)
     while True:
         key = d.isoformat()
         if key not in sorted_dates:
             break
         streak += 1
-        from datetime import timedelta
         d -= timedelta(days=1)
     return streak
 
 
-def _daily_progress_from_games(db: Session, user_id: int) -> dict:
-    """从 UserGameReward 推导每日任务进度。task_id: daily-1 -> chessmater, daily-2 -> chess-tourmaster"""
+def _daily_progress_from_games(db: Session, user_id: int, today_iso: str) -> dict:
+    """从按日表读取当日点开次数，作为每日任务进度。task_id: daily-1 -> chessmater, daily-2 -> chess-tourmaster"""
     out = {}
     for mode, task_id in [(GAME_MODE_DAILY_1, "daily-1"), (GAME_MODE_DAILY_2, "daily-2")]:
-        r = db.query(UserGameReward).filter(UserGameReward.user_id == user_id, UserGameReward.game_mode == mode).first()
-        out[task_id] = r.click_count if r else 0
+        r = db.query(UserGamePlayByDay).filter(
+            UserGamePlayByDay.user_id == user_id,
+            UserGamePlayByDay.game_mode == mode,
+            UserGamePlayByDay.play_date == today_iso,
+        ).first()
+        out[task_id] = r.count if r else 0
     return out
 
 
-def _monthly_progress_from_games(db: Session, user_id: int) -> int:
-    r = db.query(UserGameReward).filter(
-        UserGameReward.user_id == user_id, UserGameReward.game_mode == GAME_MODE_MONTHLY
-    ).first()
-    return r.click_count if r else 0
+def _monthly_progress_from_games(db: Session, user_id: int, month_ym: str) -> int:
+    """当月该游戏模式点开次数之和（用于每月任务进度）"""
+    row = (
+        db.query(func.coalesce(func.sum(UserGamePlayByDay.count), 0))
+        .filter(
+            UserGamePlayByDay.user_id == user_id,
+            UserGamePlayByDay.game_mode == GAME_MODE_MONTHLY,
+            UserGamePlayByDay.play_date.like(f"{month_ym}-%"),
+        )
+        .scalar()
+    )
+    return int(row) if row is not None else 0
 
 
-def _task_claimed_today(db: Session, user_id: int) -> list[str]:
-    today = _today()
+def _task_claimed_today(db: Session, user_id: int, today_iso: str) -> list[str]:
     rows = db.query(UserTaskClaim.task_id).filter(
-        UserTaskClaim.user_id == user_id, UserTaskClaim.claimed_date == today
+        UserTaskClaim.user_id == user_id, UserTaskClaim.claimed_date == today_iso
     ).all()
     return [r[0] for r in rows]
 
 
-def _monthly_claimed(db: Session, user_id: int) -> bool:
-    month = _this_month()
+def _monthly_claimed(db: Session, user_id: int, month_ym: str) -> bool:
     return db.query(UserTaskClaim).filter(
         UserTaskClaim.user_id == user_id,
         UserTaskClaim.task_id == "monthly-1",
-        UserTaskClaim.claimed_date == month,
+        UserTaskClaim.claimed_date == month_ym,
     ).first() is not None
 
 
@@ -111,10 +132,15 @@ def _monthly_claimed(db: Session, user_id: int) -> bool:
 async def get_rewards(
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db),
+    x_user_timezone: str | None = Header(None, alias="X-User-Timezone"),
 ):
-    """获取金币、钻石、签到状态、每日/每月任务进度（由游戏记录推导）"""
+    """获取金币、钻石、签到状态、每日/每月任务进度。日期按请求头 X-User-Timezone 的用户当地时间计算。"""
+    tz = (x_user_timezone or "").strip() or DEFAULT_TZ
+    today_iso = _today_in_tz(tz)
+    month_ym = _this_month_in_tz(tz)
+
     rewards = _get_or_create_rewards(db, current_user.id)
-    check_in_dates = _check_in_dates_this_month(db, current_user.id)
+    check_in_dates = _check_in_dates_this_month(db, current_user.id, today_iso)
     all_dates = (
         db.query(UserCheckIn.check_in_date)
         .filter(UserCheckIn.user_id == current_user.id)
@@ -122,11 +148,11 @@ async def get_rewards(
         .all()
     )
     sorted_dates = [r[0] for r in all_dates]
-    streak = _current_streak(db, current_user.id, sorted_dates)
-    daily_progress = _daily_progress_from_games(db, current_user.id)
-    monthly_progress = _monthly_progress_from_games(db, current_user.id)
-    task_claimed = _task_claimed_today(db, current_user.id)
-    monthly_claimed = _monthly_claimed(db, current_user.id)
+    streak = _current_streak(db, current_user.id, sorted_dates, today_iso)
+    daily_progress = _daily_progress_from_games(db, current_user.id, today_iso)
+    monthly_progress = _monthly_progress_from_games(db, current_user.id, month_ym)
+    task_claimed = _task_claimed_today(db, current_user.id, today_iso)
+    monthly_claimed = _monthly_claimed(db, current_user.id, month_ym)
 
     return APIResponse(
         success=True,
@@ -135,7 +161,7 @@ async def get_rewards(
             "coins": rewards.coins,
             "diamonds": rewards.diamonds,
             "check_in_dates": check_in_dates,
-            "has_checked_in_today": _today() in sorted_dates,
+            "has_checked_in_today": today_iso in sorted_dates,
             "current_streak": streak,
             "daily_progress": daily_progress,
             "monthly_progress": monthly_progress,
@@ -150,9 +176,12 @@ async def get_rewards(
 async def do_check_in(
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db),
+    x_user_timezone: str | None = Header(None, alias="X-User-Timezone"),
 ):
-    """签到：今日未签则写入，发 10 金币；连续 7 天再发 10 钻石（每个 7 日周期只发一次）"""
-    today = _today()
+    """签到：按用户当地时区判定今日，未签则写入并发 10 金币；连续 7 天再发 10 钻石（每个 7 日周期只发一次）"""
+    tz = (x_user_timezone or "").strip() or DEFAULT_TZ
+    today = _today_in_tz(tz)
+
     existing = db.query(UserCheckIn).filter(
         UserCheckIn.user_id == current_user.id, UserCheckIn.check_in_date == today
     ).first()
@@ -169,9 +198,8 @@ async def do_check_in(
         r[0] for r in
         db.query(UserCheckIn.check_in_date).filter(UserCheckIn.user_id == current_user.id).order_by(UserCheckIn.check_in_date).all()
     ]
-    streak = _current_streak(db, current_user.id, all_dates)
+    streak = _current_streak(db, current_user.id, all_dates, today)
     if streak >= STREAK_DAYS:
-        from datetime import timedelta
         streak_start = date.fromisoformat(today) - timedelta(days=STREAK_DAYS - 1)
         streak_start_str = streak_start.isoformat()
         if rewards.last_streak_award_start != streak_start_str:
@@ -251,33 +279,36 @@ async def claim_task(
     task_id: str = Query(..., description="daily-1, daily-2, monthly-1"),
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db),
+    x_user_timezone: str | None = Header(None, alias="X-User-Timezone"),
 ):
-    """领取任务奖励。后端根据游戏进度判断是否可领，并写入 UserTaskClaim 防重复。"""
+    """领取任务奖励。今日/当月按请求头 X-User-Timezone 的用户当地时间计算。"""
+    tz = (x_user_timezone or "").strip() or DEFAULT_TZ
+    today = _today_in_tz(tz)
+    month = _this_month_in_tz(tz)
+
     rewards = _get_or_create_rewards(db, current_user.id)
-    today = _today()
-    month = _this_month()
 
     if task_id == "daily-1":
-        progress = _daily_progress_from_games(db, current_user.id).get("daily-1", 0)
+        progress = _daily_progress_from_games(db, current_user.id, today).get("daily-1", 0)
         if progress < 1:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="task_not_completed")
-        if task_id in _task_claimed_today(db, current_user.id):
+        if task_id in _task_claimed_today(db, current_user.id, today):
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="already_claimed")
         rewards.coins += DAILY_TASK_COINS
         db.add(UserTaskClaim(user_id=current_user.id, task_id=task_id, claimed_date=today))
     elif task_id == "daily-2":
-        progress = _daily_progress_from_games(db, current_user.id).get("daily-2", 0)
+        progress = _daily_progress_from_games(db, current_user.id, today).get("daily-2", 0)
         if progress < 1:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="task_not_completed")
-        if task_id in _task_claimed_today(db, current_user.id):
+        if task_id in _task_claimed_today(db, current_user.id, today):
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="already_claimed")
         rewards.coins += DAILY_TASK_COINS
         db.add(UserTaskClaim(user_id=current_user.id, task_id=task_id, claimed_date=today))
     elif task_id == "monthly-1":
-        progress = _monthly_progress_from_games(db, current_user.id)
+        progress = _monthly_progress_from_games(db, current_user.id, month)
         if progress < MONTHLY_TARGET:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="task_not_completed")
-        if _monthly_claimed(db, current_user.id):
+        if _monthly_claimed(db, current_user.id, month):
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="already_claimed")
         rewards.diamonds += MONTHLY_TASK_DIAMONDS
         db.add(UserTaskClaim(user_id=current_user.id, task_id=task_id, claimed_date=month))

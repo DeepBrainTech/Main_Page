@@ -3,6 +3,7 @@
 import { useRouter, useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { getApiUrl } from "@/lib/api-config";
+import { getUserTimezone } from "@/services/userApi";
 
 /**
  * 游戏启动配置类型
@@ -35,11 +36,13 @@ export function useGameLauncher() {
     }
 
     try {
-      // 获取游戏令牌
+      // 获取游戏令牌（带用户时区，用于按日任务进度）
       const response = await fetch(getApiUrl(config.apiEndpoint), {
         method: "POST",
         headers: {
+          "Content-Type": "application/json",
           Authorization: `Bearer ${accessToken}`,
+          "X-User-Timezone": getUserTimezone(),
         },
       });
 

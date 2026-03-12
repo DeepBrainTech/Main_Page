@@ -14,12 +14,13 @@
     "confirm": "Confirm",
     "claim": "Claim",
     "appName": "DeepBrain Tech",
+    "language": "Language",
     "localeZh": "中文",
     "localeEn": "English"
   },
   "nav": {
     "home": "Home",
-    "test": "Brain Test",
+    "test": "Test",
     "brainGames": "Brain Games",
     "leaderboard": "Leaderboard",
     "profile": "Profile"
@@ -47,8 +48,6 @@
     "chessTourmaster": "Chess Tourmaster",
     "intercontinentalChess": "Intercontinental Chess",
     "flowersCount": "Flowers: {count}",
-    "dailyRewardReady": "Daily reward ready (+10 🌸)",
-    "nextRewardIn": "Next reward in {time}",
     "failedToStartGame": "Failed to start game",
     "homestead": "Homestead",
     "homesteadDesc": "Use coins/diamonds to unlock outfits and backgrounds",
@@ -77,7 +76,7 @@
     "rewardDiamonds": "+{count} diamonds"
   },
   "test": {
-    "title": "Brain Test",
+    "title": "Test",
     "testProgress": "Test {current}/{total}",
     "subtitle": "Complete tests by dimension to get your brain index",
     "selectDimension": "Select a dimension",

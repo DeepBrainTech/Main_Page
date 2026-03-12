@@ -94,19 +94,6 @@ export default function HomeContent({
       {/* 主内容区域 */}
       <main className="pt-24 pb-16 px-6">
         <div className="max-w-6xl mx-auto">
-          {/* 欢迎区域 */}
-          <div className="text-center mb-12">
-            <h2 
-              className="text-4xl md:text-5xl font-bold text-[#2C3539] mb-4"
-              style={{ textShadow: '0 4px 6px rgba(0, 0, 0, 0.3)' }}
-            >
-              {tHome("welcomeUser", { username })}
-            </h2>
-            <p className="text-lg text-gray-700 max-w-2xl mx-auto">
-              {tHome("subtitle")}
-            </p>
-          </div>
-
           {/* 游戏按钮网格 */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
             {games.map((game) => (

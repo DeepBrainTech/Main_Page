@@ -1,10 +1,12 @@
 """游戏相关路由：签发游戏令牌并记录每日奖励。"""
 from datetime import datetime, timedelta
-from fastapi import APIRouter, Depends
+from zoneinfo import ZoneInfo
+
+from fastapi import APIRouter, Depends, Header
 from sqlalchemy.orm import Session
 
 from database import get_db
-from models import User, UserGameReward
+from models import User, UserGameReward, UserGamePlayByDay
 from schemas import APIResponse
 from auth import (
     get_current_active_user,
@@ -29,6 +31,30 @@ router = APIRouter(prefix="/api/games", tags=["游戏"])
 
 DAILY_REWARD_FLOWERS = 10
 REWARD_COOLDOWN = timedelta(hours=24)
+DEFAULT_TZ = "UTC"
+
+
+def _today_in_tz(tz: str) -> str:
+    """用户当地时区的今日日期 YYYY-MM-DD（用于按日任务进度）"""
+    try:
+        return datetime.now(ZoneInfo(tz)).date().isoformat()
+    except Exception:
+        return datetime.now(ZoneInfo(DEFAULT_TZ)).date().isoformat()
+
+
+def _increment_daily_play(db: Session, user_id: int, game_mode: str, today_iso: str) -> None:
+    """当日点开游戏次数 +1，用于每日/每月任务进度（按用户当地日期）"""
+    row = db.query(UserGamePlayByDay).filter(
+        UserGamePlayByDay.user_id == user_id,
+        UserGamePlayByDay.game_mode == game_mode,
+        UserGamePlayByDay.play_date == today_iso,
+    ).first()
+    if row:
+        row.count += 1
+        db.add(row)
+    else:
+        db.add(UserGamePlayByDay(user_id=user_id, game_mode=game_mode, play_date=today_iso, count=1))
+    db.flush()
 
 
 def _build_reward_status(record: UserGameReward, now: datetime) -> dict:
@@ -217,15 +243,16 @@ async def issue_quantumgo_token(
 async def issue_chessmater_token(
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db),
+    x_user_timezone: str | None = Header(None, alias="X-User-Timezone"),
 ):
     """
-    为当前登录用户签发 ChessMater 短期令牌
-
-    返回字段:
-    - game_token: 供 ChessMater 使用的短期 JWT（建议仅用于首次换取服务端会话）
-    - expires_in: 过期秒数
-    - user: 基础身份信息（可选，便于前端展示）
+    为当前登录用户签发 ChessMater 短期令牌；
+    按用户当地日期记录当日点开次数，用于每日任务进度。
     """
+    tz = (x_user_timezone or "").strip() or DEFAULT_TZ
+    today_iso = _today_in_tz(tz)
+    _increment_daily_play(db, current_user.id, "chessmater", today_iso)
+
     claims = {
         "sub": current_user.username,
         "user_id": current_user.id,
@@ -250,15 +277,16 @@ async def issue_chessmater_token(
 async def issue_tourmaster_token(
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db),
+    x_user_timezone: str | None = Header(None, alias="X-User-Timezone"),
 ):
     """
-    为当前登录用户签发 Chess-Tourmaster 短期令牌
-
-    返回字段:
-    - game_token: 供 Chess-Tourmaster 使用的短期 JWT（建议仅用于首次授权服务器端会话）
-    - expires_in: 过期时间
-    - user: 基础的身份信息
+    为当前登录用户签发 Chess-Tourmaster 短期令牌；
+    按用户当地日期记录当日点开次数，用于每日/每月任务进度。
     """
+    tz = (x_user_timezone or "").strip() or DEFAULT_TZ
+    today_iso = _today_in_tz(tz)
+    _increment_daily_play(db, current_user.id, "chess-tourmaster", today_iso)
+
     claims = {
         "sub": current_user.username,
         "user_id": current_user.id,

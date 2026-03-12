@@ -104,6 +104,22 @@ class UserGameReward(Base):
     user = relationship("User", back_populates="game_rewards")
 
 
+class UserGamePlayByDay(Base):
+    """用户按日游戏打开次数（用于每日/每月任务进度：当天点开即计一次）"""
+    __tablename__ = "user_game_play_by_day"
+    __table_args__ = (
+        UniqueConstraint("user_id", "game_mode", "play_date", name="uq_user_game_play_date"),
+    )
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    game_mode = Column(String(50), nullable=False, index=True)
+    play_date = Column(String(10), nullable=False, index=True)  # YYYY-MM-DD 用户当地日期
+    count = Column(Integer, default=0, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
 class UserRewards(Base):
     """用户金币/钻石与签到、任务领取状态"""
     __tablename__ = "user_rewards"

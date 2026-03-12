@@ -14,6 +14,7 @@
     "confirm": "确认",
     "claim": "领取",
     "appName": "DeepBrain Tech",
+    "language": "语言",
     "localeZh": "中文",
     "localeEn": "English"
   },
@@ -47,8 +48,6 @@
     "chessTourmaster": "棋境之旅",
     "intercontinentalChess": "洲际象棋",
     "flowersCount": "花朵: {count}",
-    "dailyRewardReady": "每日奖励可领取（+10 🌸）",
-    "nextRewardIn": "距离下次奖励还有 {time}",
     "failedToStartGame": "启动游戏失败",
     "homestead": "家园",
     "homesteadDesc": "使用金币/钻石兑换衣服与背景",

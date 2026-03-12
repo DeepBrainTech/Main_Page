@@ -3,10 +3,21 @@
  */
 import { getApiUrl } from "@/lib/api-config";
 
+/** 获取用户当地 IANA 时区（用于签到/任务“今日”判定），可供游戏启动等复用 */
+export function getUserTimezone(): string {
+  if (typeof Intl === "undefined" || !Intl.DateTimeFormat) return "UTC";
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+  } catch {
+    return "UTC";
+  }
+}
+
 function getAuthHeaders(): HeadersInit {
   const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
   return {
     "Content-Type": "application/json",
+    "X-User-Timezone": getUserTimezone(),
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
   };
 }

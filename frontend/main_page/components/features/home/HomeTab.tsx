@@ -43,11 +43,6 @@ export default function HomeTab({ username = "" }: HomeTabProps) {
 
   return (
     <div className="space-y-6">
-      <div className="text-center">
-        <h2 className="text-2xl font-bold text-[#2C3539]">{tHome("welcomeUser", { username })}</h2>
-        <p className="mt-1 text-gray-600">{tHome("subtitle")}</p>
-      </div>
-
       <div className="grid gap-6 lg:grid-cols-2">
         <HomesteadBlock coins={coins} diamonds={diamonds} />
         <CheckInCalendar

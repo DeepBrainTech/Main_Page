@@ -1,7 +1,6 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import LanguageSwitcher from "@/components/LanguageSwitcher";
 import ProfileDialog from "@/components/features/profile/ProfileDialog";
 import { useState } from "react";
 
@@ -61,22 +60,14 @@ export default function AppShell({
               </button>
             ))}
           </nav>
-          <div className="flex items-center gap-2">
-            <LanguageSwitcher />
+          <div className="flex items-center justify-end">
             <button
               type="button"
               onClick={() => setProfileOpen(true)}
-              className="flex h-9 w-9 items-center justify-center rounded-full bg-[#5E81AC] text-white shadow"
+              className="flex h-9 w-9 items-center justify-center rounded-full bg-[#5E81AC] text-white shadow hover:opacity-90"
               aria-label={tNav("profile")}
             >
               {username.charAt(0).toUpperCase() || "?"}
-            </button>
-            <button
-              type="button"
-              onClick={onLogout}
-              className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50"
-            >
-              {tCommon("logout")}
             </button>
           </div>
         </div>
@@ -87,6 +78,7 @@ export default function AppShell({
         onClose={() => setProfileOpen(false)}
         username={username}
         email={email}
+        onLogout={onLogout}
       />
     </div>
   );
