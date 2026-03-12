@@ -5,9 +5,16 @@ import { getApiUrl } from "@/lib/api-config";
 
 export type GoogleButtonVariant = "signin" | "signup";
 
+export type GoogleSuccessOptions = {
+  /** 是否需要补全资料（无出生日期时为 true） */
+  needsProfileCompletion: boolean;
+  /** 当前用户名，补全资料时预填 */
+  username?: string;
+};
+
 type GoogleLoginButtonProps = {
   variant: GoogleButtonVariant;
-  onSuccess: () => void;
+  onSuccess: (opts: GoogleSuccessOptions) => void;
   onError: (message: string) => void;
   disabled?: boolean;
 };
@@ -41,7 +48,22 @@ export default function GoogleLoginButton({
       const data = await res.json();
       localStorage.setItem("access_token", data.access_token);
       localStorage.setItem("token_expires_in", String(data.expires_in ?? 0));
-      onSuccess();
+      // 请求 /me 判断是否需要补全资料（出生日期）
+      try {
+        const meRes = await fetch(getApiUrl("/api/auth/me"), {
+          headers: { Authorization: `Bearer ${data.access_token}` },
+        });
+        if (meRes.ok) {
+          const me = await meRes.json();
+          if (me.date_of_birth == null) {
+            onSuccess({ needsProfileCompletion: true, username: me.username });
+            return;
+          }
+        }
+      } catch {
+        // 忽略，直接进入首页
+      }
+      onSuccess({ needsProfileCompletion: false });
     } catch {
       onError("AUTH_GOOGLE_TOKEN_INVALID");
     }

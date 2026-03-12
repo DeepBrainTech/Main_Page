@@ -86,7 +86,6 @@
   "tasks": {
     "dailyPlayChessMaster": "Complete 1 game of Chess Master",
     "dailyPlayChessTourmaster": "Complete 1 game of Chess Tourmaster",
-    "dailyPlaceholder": "Coming soon",
     "monthlyChessTourmaster20": "Complete first 20 games of Chess Tourmaster",
     "rewardCoins": "+{count} coins",
     "rewardDiamonds": "+{count} diamonds",
@@ -155,7 +154,15 @@
   "profile": {
     "title": "Profile",
     "username": "Username",
-    "email": "Email"
+    "email": "Email",
+    "age": "Age",
+    "ageYears": "{age}",
+    "ageUnknown": "Not set",
+    "editUsername": "Edit username",
+    "saveUsername": "Save",
+    "usernamePlaceholder": "3-50 characters",
+    "usernameUpdated": "Username updated",
+    "usernameUpdateFailed": "Update failed, please try again"
   },
   "login": {
     "title": "DeepBrain Tech",
@@ -233,7 +240,21 @@
     "emailRequired": "Please enter your email address first",
     "emailInvalid": "Invalid email format",
     "signInWithGoogle": "Sign up with Google",
-    "orContinueWith": "Or register with email"
+    "orContinueWith": "Or register with email",
+    "dateOfBirth": "Date of birth",
+    "dateOfBirthPlaceholder": "Select date of birth"
+  },
+  "completeProfile": {
+    "title": "Complete profile",
+    "subtitle": "Please set your username and date of birth (for age analysis)",
+    "username": "Username",
+    "usernamePlaceholder": "Enter username (3-50 characters)",
+    "dateOfBirth": "Date of birth",
+    "dateOfBirthPlaceholder": "Select date of birth",
+    "submit": "Done",
+    "submitLoading": "Submitting...",
+    "usernameExists": "Username already exists",
+    "usernameInvalid": "Username must be 3-50 characters"
   },
   "auth": {
     "tokenInvalid": "Token invalid",
@@ -253,7 +274,8 @@
     "EMAIL_NOT_FOUND": "Email not registered",
     "PASSWORD_RESET_SUCCESS": "Password reset successful",
     "PASSWORD_RESET_FAILED": "Password reset failed",
-    "AUTH_GOOGLE_TOKEN_INVALID": "Google sign-in failed, please try again"
+    "AUTH_GOOGLE_TOKEN_INVALID": "Google sign-in failed, please try again",
+    "AUTH_USERNAME_INVALID": "Username must be 3-50 characters"
   },
   "beforelogin": {
     "hero": {

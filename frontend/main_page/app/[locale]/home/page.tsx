@@ -9,13 +9,14 @@ import HomeTab from "@/components/features/home/HomeTab";
 import TestTab from "@/components/features/test/TestTab";
 import BrainGamesTab from "@/components/features/brain-games/BrainGamesTab";
 import LeaderboardTab from "@/components/features/leaderboard/LeaderboardTab";
+import CompleteProfileDialog from "@/components/features/profile/CompleteProfileDialog";
 
 /**
  * 登录后的主页：Tab 导航（主页 / 脑力测试 / 脑力游戏 / 排行榜）+ 个人头像弹窗
  */
 export default function HomePage() {
   const tCommon = useTranslations("common");
-  const { username, loading, logout } = useAuth();
+  const { username, email, loading, needsProfileCompletion, refetch, logout } = useAuth();
   const {
     handleFogChess,
     handleSudoku,
@@ -33,12 +34,29 @@ export default function HomePage() {
     );
   }
 
+  // 未填写出生日期时必须先补全（含已有老用户）
+  if (needsProfileCompletion) {
+    return (
+      <div className="min-h-screen bg-[var(--background)] flex items-center justify-center p-4">
+        <CompleteProfileDialog
+          open={true}
+          initialUsername={username}
+          onClose={() => {}}
+          onSuccess={() => refetch()}
+          required
+        />
+      </div>
+    );
+  }
+
   return (
     <AppShell
       activeTab={activeTab}
       onTabChange={setActiveTab}
       username={username}
+      email={email}
       onLogout={logout}
+      onProfileUpdate={refetch}
     >
       {activeTab === "home" && <HomeTab username={username} />}
       {activeTab === "test" && <TestTab />}

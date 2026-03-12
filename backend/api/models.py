@@ -5,7 +5,7 @@
               ALTER TABLE users ALTER COLUMN hashed_password DROP NOT NULL;
   MySQL:      ALTER TABLE users ADD COLUMN google_id VARCHAR(255) UNIQUE; ALTER TABLE users MODIFY hashed_password VARCHAR(255) NULL;
 """
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text, ForeignKey, JSON, UniqueConstraint
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, Date, Text, ForeignKey, JSON, UniqueConstraint
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from database import Base
@@ -20,6 +20,7 @@ class User(Base):
     email = Column(String(100), unique=True, index=True, nullable=False)
     hashed_password = Column(String(255), nullable=True)  # Google 登录用户可为空
     google_id = Column(String(255), unique=True, index=True, nullable=True)  # Google 唯一标识
+    date_of_birth = Column(Date, nullable=True)  # 出生日期，用于计算年龄
     is_active = Column(Boolean, default=True)
     is_superuser = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)

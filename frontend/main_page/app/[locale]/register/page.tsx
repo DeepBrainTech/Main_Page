@@ -5,6 +5,7 @@ import { useRouter, useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { getApiUrl } from "@/lib/api-config";
 import GoogleLoginButton from "@/components/auth/GoogleLoginButton";
+import CompleteProfileDialog from "@/components/features/profile/CompleteProfileDialog";
 
 // 注意：客户端组件默认就是动态渲染，适合注册页的需求
 // （CSRF、会话、A/B测试、风控等）
@@ -19,12 +20,15 @@ export default function RegisterPage() {
     verificationCode: "",
     password: "",
     confirmPassword: "",
+    dateOfBirth: "",
   });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [sendingCode, setSendingCode] = useState(false);
   const [countdown, setCountdown] = useState(0);
   const [successMessage, setSuccessMessage] = useState("");
+  const [showCompleteProfile, setShowCompleteProfile] = useState(false);
+  const [completeProfileUsername, setCompleteProfileUsername] = useState("");
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
@@ -127,6 +131,7 @@ export default function RegisterPage() {
           email: formData.email,
           password: formData.password,
           verification_code: formData.verificationCode,
+          date_of_birth: formData.dateOfBirth || null,
         }),
       });
 
@@ -179,7 +184,14 @@ export default function RegisterPage() {
         {/* Google 注册：仅当配置了 Client ID 时显示 */}
         <GoogleLoginButton
           variant="signup"
-          onSuccess={() => router.push(`/${locale}/home`)}
+          onSuccess={(opts) => {
+            if (opts.needsProfileCompletion) {
+              setCompleteProfileUsername(opts.username ?? "");
+              setShowCompleteProfile(true);
+            } else {
+              router.push(`/${locale}/home`);
+            }
+          }}
           onError={(code) => setError(t(`auth.${code}`))}
           disabled={loading}
         />
@@ -227,6 +239,24 @@ export default function RegisterPage() {
               autoComplete="username"
               className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-black dark:focus:ring-white focus:border-transparent bg-white dark:bg-zinc-800 text-black dark:text-white"
               placeholder={t("register.usernamePlaceholder")}
+            />
+          </div>
+
+          <div>
+            <label
+              htmlFor="dateOfBirth"
+              className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+            >
+              {t("register.dateOfBirth")}
+            </label>
+            <input
+              id="dateOfBirth"
+              name="dateOfBirth"
+              type="date"
+              value={formData.dateOfBirth}
+              onChange={handleChange}
+              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-black dark:focus:ring-white focus:border-transparent bg-white dark:bg-zinc-800 text-black dark:text-white"
+              placeholder={t("register.dateOfBirthPlaceholder")}
             />
           </div>
 
@@ -356,6 +386,16 @@ export default function RegisterPage() {
             {t("common.back")}
           </button>
         </div>
+
+        <CompleteProfileDialog
+          open={showCompleteProfile}
+          initialUsername={completeProfileUsername}
+          onClose={() => setShowCompleteProfile(false)}
+          onSuccess={() => {
+            setShowCompleteProfile(false);
+            router.push(`/${locale}/home`);
+          }}
+        />
       </main>
     </div>
   );

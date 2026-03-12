@@ -87,7 +87,6 @@
   "tasks": {
     "dailyPlayChessMaster": "完成一局棋艺大师",
     "dailyPlayChessTourmaster": "完成一局棋境之旅",
-    "dailyPlaceholder": "敬请期待",
     "monthlyChessTourmaster20": "通关前 20 局棋境之旅",
     "rewardCoins": "+{count} 金币",
     "rewardDiamonds": "+{count} 钻石",
@@ -156,7 +155,15 @@
   "profile": {
     "title": "个人信息",
     "username": "用户名",
-    "email": "邮箱"
+    "email": "邮箱",
+    "age": "年龄",
+    "ageYears": "{age}",
+    "ageUnknown": "未设置",
+    "editUsername": "修改用户名",
+    "saveUsername": "保存",
+    "usernamePlaceholder": "3-50 个字符",
+    "usernameUpdated": "用户名已更新",
+    "usernameUpdateFailed": "修改失败，请重试"
   },
   "login": {
     "title": "DeepBrain Tech",
@@ -234,7 +241,21 @@
     "emailRequired": "请先输入邮箱地址",
     "emailInvalid": "邮箱格式不正确",
     "signInWithGoogle": "使用 Google 注册",
-    "orContinueWith": "或使用邮箱注册"
+    "orContinueWith": "或使用邮箱注册",
+    "dateOfBirth": "出生日期",
+    "dateOfBirthPlaceholder": "选择出生日期"
+  },
+  "completeProfile": {
+    "title": "补全资料",
+    "subtitle": "请设置用户名和出生日期（用于年龄分析）",
+    "username": "用户名",
+    "usernamePlaceholder": "请输入用户名（3-50个字符）",
+    "dateOfBirth": "出生日期",
+    "dateOfBirthPlaceholder": "选择出生日期",
+    "submit": "完成",
+    "submitLoading": "提交中...",
+    "usernameExists": "用户名已存在",
+    "usernameInvalid": "用户名长度需 3-50 个字符"
   },
   "auth": {
     "tokenInvalid": "Token 无效",
@@ -254,7 +275,8 @@
     "EMAIL_NOT_FOUND": "该邮箱未注册",
     "PASSWORD_RESET_SUCCESS": "密码重置成功",
     "PASSWORD_RESET_FAILED": "密码重置失败",
-    "AUTH_GOOGLE_TOKEN_INVALID": "Google 登录无效，请重试"
+    "AUTH_GOOGLE_TOKEN_INVALID": "Google 登录无效，请重试",
+    "AUTH_USERNAME_INVALID": "用户名长度需 3-50 个字符"
   },
   "beforelogin": {
     "hero": {

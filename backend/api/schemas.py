@@ -3,7 +3,18 @@ Pydantic 数据验证模型
 """
 from pydantic import BaseModel, EmailStr, Field
 from typing import Optional, Dict, Any, List
-from datetime import datetime
+from datetime import datetime, date
+
+
+def compute_age(birth: Optional[date]) -> Optional[int]:
+    """根据出生日期计算年龄（周岁），未提供则返回 None"""
+    if not birth:
+        return None
+    today = date.today()
+    age = today.year - birth.year
+    if (today.month, today.day) < (birth.month, birth.day):
+        age -= 1
+    return age
 
 
 # ========== 用户相关 ==========
@@ -17,6 +28,7 @@ class UserCreate(UserBase):
     """创建用户模型"""
     password: str = Field(..., min_length=6, max_length=100)
     verification_code: str = Field(..., min_length=6, max_length=6)
+    date_of_birth: Optional[date] = None  # 出生日期，可选（测试阶段用于年龄分析）
 
 
 class UserLogin(BaseModel):
@@ -31,9 +43,20 @@ class UserResponse(UserBase):
     is_active: bool
     is_superuser: bool
     created_at: datetime
+    date_of_birth: Optional[date] = None
+    age: Optional[int] = None  # 由 date_of_birth 计算，序列化时由路由填充
+    access_token: Optional[str] = None  # 可选：用户名变更后返回新的访问令牌
+    token_type: Optional[str] = None
+    expires_in: Optional[int] = None  # 秒数，可选
 
     class Config:
         from_attributes = True
+
+
+class CompleteProfileBody(BaseModel):
+    """Google 用户补全资料：用户名、出生日期"""
+    username: Optional[str] = Field(None, min_length=3, max_length=50)
+    date_of_birth: Optional[date] = None
 
 
 # ========== 认证相关 ==========

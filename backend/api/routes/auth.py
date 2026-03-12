@@ -8,7 +8,17 @@ from datetime import timedelta
 
 from database import get_db
 from models import User
-from schemas import UserCreate, UserResponse, Token, APIResponse, SendVerificationCode, ResetPassword, GoogleTokenRequest
+from schemas import (
+    UserCreate,
+    UserResponse,
+    Token,
+    APIResponse,
+    SendVerificationCode,
+    ResetPassword,
+    GoogleTokenRequest,
+    CompleteProfileBody,
+)
+from schemas import compute_age
 from auth import (
     authenticate_user,
     create_access_token,
@@ -94,7 +104,8 @@ async def register(user_data: UserCreate, db: Session = Depends(get_db)):
         username=user_data.username,
         email=user_data.email,
         hashed_password=hashed_password,
-        is_active=True
+        date_of_birth=user_data.date_of_birth,
+        is_active=True,
     )
     
     db.add(new_user)
@@ -232,12 +243,79 @@ async def google_login(request: GoogleTokenRequest, db: Session = Depends(get_db
         expires_in=ACCESS_TOKEN_EXPIRE_MINUTES * 60,
     )
 
+
+def _user_to_response(
+    user: User,
+    access_token=None,
+    token_type=None,
+    expires_in=None,
+) -> UserResponse:
+    """将 User 转为 UserResponse，并计算 age，可选携带新的访问令牌"""
+    return UserResponse(
+        id=user.id,
+        username=user.username,
+        email=user.email,
+        is_active=user.is_active,
+        is_superuser=user.is_superuser,
+        created_at=user.created_at,
+        date_of_birth=user.date_of_birth,
+        age=compute_age(user.date_of_birth),
+        access_token=access_token,
+        token_type=token_type,
+        expires_in=expires_in,
+    )
+
+
 @router.get("/me", response_model=UserResponse)
 async def get_current_user_info(
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_active_user),
 ):
     """�Z��-�"�?��"��^�信息"""
-    return current_user
+    return _user_to_response(current_user)
+
+
+@router.patch("/me", response_model=UserResponse)
+async def update_current_user_profile(
+    body: CompleteProfileBody,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+):
+    """补全/更新当前用户资料（用户名、出生日期），用于 Google 登录后补填"""
+    original_username = current_user.username
+
+    if body.username is not None:
+        if len(body.username) < 3 or len(body.username) > 50:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="AUTH_USERNAME_INVALID",
+            )
+        existing = db.query(User).filter(User.username == body.username, User.id != current_user.id).first()
+        if existing:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="AUTH_USERNAME_EXISTS",
+            )
+        current_user.username = body.username
+    if body.date_of_birth is not None:
+        current_user.date_of_birth = body.date_of_birth
+    db.commit()
+    db.refresh(current_user)
+
+    # 如果用户名被修改，使用新用户名签发新的访问 token，避免旧 token 中的 sub 不一致导致 401
+    if body.username is not None and body.username != original_username:
+        access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+        access_token = create_access_token(
+            data={"sub": current_user.username},
+            expires_delta=access_token_expires,
+        )
+        return _user_to_response(
+            current_user,
+            access_token=access_token,
+            token_type="bearer",
+            expires_in=ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+        )
+
+    return _user_to_response(current_user)
 
 
 @router.get("/verify", response_model=APIResponse)

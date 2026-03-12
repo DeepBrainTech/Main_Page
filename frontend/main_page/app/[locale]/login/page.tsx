@@ -5,6 +5,7 @@ import { useRouter, useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { getApiUrl } from "@/lib/api-config";
 import GoogleLoginButton from "@/components/auth/GoogleLoginButton";
+import CompleteProfileDialog from "@/components/features/profile/CompleteProfileDialog";
 
 // 注意：客户端组件默认就是动态渲染，适合登录页的需求
 // （CSRF、会话、安全验证等）
@@ -17,6 +18,8 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showCompleteProfile, setShowCompleteProfile] = useState(false);
+  const [completeProfileUsername, setCompleteProfileUsername] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -145,12 +148,29 @@ export default function LoginPage() {
           <div className="w-full flex justify-center mt-4">
             <GoogleLoginButton
               variant="signin"
-              onSuccess={() => router.push(`/${locale}/home`)}
+              onSuccess={(opts) => {
+                if (opts.needsProfileCompletion) {
+                  setCompleteProfileUsername(opts.username ?? "");
+                  setShowCompleteProfile(true);
+                } else {
+                  router.push(`/${locale}/home`);
+                }
+              }}
               onError={(code) => setError(t(`auth.${code}`))}
               disabled={loading}
             />
           </div>
         </div>
+
+        <CompleteProfileDialog
+          open={showCompleteProfile}
+          initialUsername={completeProfileUsername}
+          onClose={() => setShowCompleteProfile(false)}
+          onSuccess={() => {
+            setShowCompleteProfile(false);
+            router.push(`/${locale}/home`);
+          }}
+        />
 
         <div className="mt-6 flex flex-col items-center text-center">
           <p className="text-sm text-zinc-600 dark:text-zinc-400">

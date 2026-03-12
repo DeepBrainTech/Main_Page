@@ -12,6 +12,8 @@ interface AppShellProps {
   username: string;
   email?: string;
   onLogout: () => void;
+  /** 个人资料更新后回调（如刷新用户名展示） */
+  onProfileUpdate?: () => void;
   children: React.ReactNode;
 }
 
@@ -24,6 +26,7 @@ export default function AppShell({
   username,
   email,
   onLogout,
+  onProfileUpdate,
   children,
 }: AppShellProps) {
   const tNav = useTranslations("nav");
@@ -96,6 +99,7 @@ export default function AppShell({
         username={username}
         email={email}
         onLogout={onLogout}
+        onProfileUpdate={onProfileUpdate}
       />
     </div>
   );

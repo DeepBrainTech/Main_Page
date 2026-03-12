@@ -38,14 +38,6 @@ export const DAILY_TASKS: TaskConfig[] = [
     targetCount: 1,
     rewardCoins: 10,
   },
-  {
-    id: "daily-3",
-    type: "daily",
-    labelKey: "dailyPlaceholder",
-    gameMode: "placeholder",
-    targetCount: 0,
-    rewardCoins: 0,
-  },
 ];
 
 /** 每月任务 */

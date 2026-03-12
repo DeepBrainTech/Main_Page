@@ -66,3 +66,5 @@ def ensure_users_table_compatibility():
         conn.execute(text("ALTER TABLE users ALTER COLUMN hashed_password DROP NOT NULL"))
         # 为 google_id 添加唯一索引（NULL 不冲突）
         conn.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS ix_users_google_id ON users (google_id)"))
+        # 兼容旧库：出生日期，用于计算年龄
+        conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS date_of_birth DATE"))
