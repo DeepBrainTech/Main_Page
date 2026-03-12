@@ -27,7 +27,7 @@ export default function HomePage() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-zinc-50">
+      <div className="flex min-h-screen items-center justify-center bg-[#FEF6EC]">
         <div className="text-gray-600">{tCommon("loading")}</div>
       </div>
     );
