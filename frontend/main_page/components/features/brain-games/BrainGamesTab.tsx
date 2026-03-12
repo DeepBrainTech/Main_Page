@@ -1,9 +1,23 @@
 "use client";
 
+import Image, { type StaticImageData } from "next/image";
 import { useTranslations } from "next-intl";
 import { GAMES_BY_DIMENSION } from "@/config/brain-games";
 import { COGNITIVE_DIMENSION_KEYS } from "@/types/cognitive";
 import type { GameEntry } from "@/config/brain-games";
+import chessmaterGif from "../../../public/brain-games/chessmater.gif";
+import sudokuGif from "../../../public/brain-games/sudoku.gif";
+import chessTourmasterGif from "../../../public/brain-games/chessTourmaster.gif";
+import quantumGoGif from "../../../public/brain-games/quantumgo.gif";
+import fogChessGif from "../../../public/brain-games/fogchess.gif";
+
+const GAME_COVER_MAP: Record<string, string | StaticImageData> = {
+  chessmater: chessmaterGif,
+  sudoku: sudokuGif,
+  "chess-tourmaster": chessTourmasterGif,
+  quantumgo: quantumGoGif,
+  fogchess: fogChessGif,
+};
 
 interface BrainGamesTabProps {
   onLaunch: {
@@ -50,17 +64,34 @@ export default function BrainGamesTab({ onLaunch }: BrainGamesTabProps) {
               {games.length === 0 ? (
                 <p className="text-sm text-gray-500">{t("noData")}</p>
               ) : (
-                <div className="flex flex-wrap gap-3">
-                  {games.map((entry) => (
-                    <button
-                      key={entry.key}
-                      type="button"
-                      onClick={launchForKey(entry, onLaunch)}
-                      className="rounded-lg bg-[#5E81AC] px-4 py-2 text-sm font-medium text-white hover:bg-[#4E719C]"
-                    >
-                      {tHome(entry.nameKey)} · {t("play")}
-                    </button>
-                  ))}
+                <div className="flex flex-wrap gap-4">
+                  {games.map((entry) => {
+                    const imageSrc =
+                      GAME_COVER_MAP[entry.key] ??
+                      `/brain-games/${entry.key}.gif`; // 其他游戏走 public 静态路径
+
+                    return (
+                      <div
+                        key={entry.key}
+                        onClick={launchForKey(entry, onLaunch)}
+                        className="flex w-40 cursor-pointer flex-col items-center rounded-lg bg-white p-2 shadow-sm transition-shadow hover:shadow-md"
+                      >
+                        <div className="mb-2 h-24 w-full overflow-hidden rounded-md bg-gray-200">
+                          <Image
+                            src={imageSrc}
+                            alt={tHome(entry.nameKey)}
+                            width={160}
+                            height={96}
+                            className="h-full w-full object-cover"
+                            unoptimized
+                          />
+                        </div>
+                        <span className="text-sm font-medium text-gray-800 text-center">
+                          {tHome(entry.nameKey)}
+                        </span>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </section>

@@ -20,7 +20,7 @@
   },
   "nav": {
     "home": "Home",
-    "test": "Test",
+    "test": "Cognitive Test",
     "brainGames": "Brain Games",
     "leaderboard": "Leaderboard",
     "profile": "Profile"
@@ -246,7 +246,7 @@
   },
   "completeProfile": {
     "title": "Complete profile",
-    "subtitle": "Please set your username and date of birth (for age analysis)",
+    "subtitle": "Please set your username and date of birth (for Cognitive analysis)",
     "username": "Username",
     "usernamePlaceholder": "Enter username (3-50 characters)",
     "dateOfBirth": "Date of birth",
