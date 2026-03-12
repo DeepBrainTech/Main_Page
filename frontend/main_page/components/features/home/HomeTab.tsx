@@ -13,7 +13,7 @@ interface HomeTabProps {
 }
 
 /**
- * 主页 Tab 内容：家园、签到、每日/每月任务、六维雷达图（数据均来自后端）
+ * 主页 Tab 内容：Bento Grid 布局
  */
 export default function HomeTab({ username = "" }: HomeTabProps) {
   const tHome = useTranslations("home");
@@ -36,35 +36,50 @@ export default function HomeTab({ username = "" }: HomeTabProps) {
   if (rewardsLoading) {
     return (
       <div className="flex justify-center py-12">
-        <p className="text-gray-500">加载中...</p>
+        <div className="flex flex-col items-center gap-2">
+            <div className="h-8 w-8 animate-spin rounded-full border-4 border-indigo-200 border-t-indigo-500"></div>
+            <p className="text-gray-500 text-sm">Loading...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <div className="grid gap-6 lg:grid-cols-2">
-        <HomesteadBlock coins={coins} diamonds={diamonds} />
-        <CheckInCalendar
-          checkIn={checkIn}
-          hasCheckedInToday={hasCheckedInToday}
-          onCheckIn={doCheckIn}
-        />
-      </div>
+    <div className="space-y-6 pb-12">
 
-      <TaskList
-        dailyProgress={dailyProgress}
-        monthlyProgress={monthlyProgress}
-        monthlyTarget={monthlyTarget}
-        taskClaimedToday={taskClaimedToday}
-        monthlyClaimed={monthlyClaimed}
-        onClaimTask={claimTaskReward}
-      />
+      {/* Bento Grid 布局 */}
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+        
+        {/* 左上：家园 (跨 8 列) */}
+        <div className="md:col-span-8 min-h-[200px]">
+          <HomesteadBlock coins={coins} diamonds={diamonds} />
+        </div>
+        
+        {/* 右上：签到 (跨 4 列) */}
+        <div className="md:col-span-4 min-h-[200px]">
+          <CheckInCalendar
+            checkIn={checkIn}
+            hasCheckedInToday={hasCheckedInToday}
+            onCheckIn={doCheckIn}
+          />
+        </div>
 
-      <div className="rounded-xl bg-white p-4 shadow-md">
-        <h3 className="mb-2 font-semibold text-gray-800">{tHome("radarTitle")}</h3>
-        <p className="mb-4 text-sm text-gray-600">{tHome("radarSubtitle")}</p>
-        <RadarChart scores={radarScores} />
+        {/* 左下：任务列表 (跨 7 列) */}
+        <div className="md:col-span-7">
+          <TaskList
+            dailyProgress={dailyProgress}
+            monthlyProgress={monthlyProgress}
+            monthlyTarget={monthlyTarget}
+            taskClaimedToday={taskClaimedToday}
+            monthlyClaimed={monthlyClaimed}
+            onClaimTask={claimTaskReward}
+          />
+        </div>
+
+        {/* 右下：雷达图 (跨 5 列) */}
+        <div className="md:col-span-5">
+          <RadarChart scores={radarScores} />
+        </div>
       </div>
     </div>
   );

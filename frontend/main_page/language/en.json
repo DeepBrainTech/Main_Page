@@ -49,9 +49,24 @@
     "intercontinentalChess": "Intercontinental Chess",
     "flowersCount": "Flowers: {count}",
     "failedToStartGame": "Failed to start game",
-    "homestead": "Homestead",
-    "homesteadDesc": "Use coins/diamonds to unlock outfits and backgrounds",
     "homesteadPlaceholder": "Avatar placeholder; outfits coming later",
+    "tapToInteract": "Tap to interact",
+    "changeOutfit": "Outfit",
+    "hats": {
+      "none": "None",
+      "cap": "Cap",
+      "beanie": "Beanie",
+      "crown": "Crown"
+    },
+    "labels": {
+      "accessories": "Headwear",
+      "scene": "Scene"
+    },
+    "scenes": {
+      "island": "Island",
+      "forest": "Forest",
+      "city": "City"
+    },
     "coins": "Coins",
     "diamonds": "Diamonds",
     "checkIn": "Check-in",
@@ -65,7 +80,8 @@
     "taskDone": "Done",
     "taskProgress": "{current}/{target}",
     "radarTitle": "Core Cognitive Dimensions",
-    "radarSubtitle": "Six-dimension brain overview"
+    "radarSubtitle": "Six-dimension brain overview",
+    "dailyLabel": "Daily"
   },
   "tasks": {
     "dailyPlayChessMaster": "Complete 1 game of Chess Master",
@@ -73,7 +89,8 @@
     "dailyPlaceholder": "Coming soon",
     "monthlyChessTourmaster20": "Complete first 20 games of Chess Tourmaster",
     "rewardCoins": "+{count} coins",
-    "rewardDiamonds": "+{count} diamonds"
+    "rewardDiamonds": "+{count} diamonds",
+    "statusCompleted": "Completed"
   },
   "test": {
     "title": "Test",

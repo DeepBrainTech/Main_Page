@@ -49,9 +49,24 @@
     "intercontinentalChess": "洲际象棋",
     "flowersCount": "花朵: {count}",
     "failedToStartGame": "启动游戏失败",
-    "homestead": "家园",
-    "homesteadDesc": "使用金币/钻石兑换衣服与背景",
     "homesteadPlaceholder": "卡通形象占位，后续可兑换装扮",
+    "tapToInteract": "点击互动",
+    "changeOutfit": "换装",
+    "hats": {
+      "none": "无",
+      "cap": "鸭舌帽",
+      "beanie": "针织帽",
+      "crown": "皇冠"
+    },
+    "labels": {
+      "accessories": "头饰",
+      "scene": "场景"
+    },
+    "scenes": {
+      "island": "海岛",
+      "forest": "森林",
+      "city": "城市"
+    },
     "coins": "金币",
     "diamonds": "钻石",
     "checkIn": "签到",
@@ -65,7 +80,9 @@
     "taskDone": "已完成",
     "taskProgress": "{current}/{target}",
     "radarTitle": "核心认知维度",
-    "radarSubtitle": "六维脑力概览"
+    "radarSubtitle": "六维脑力概览",
+
+    "dailyLabel": "每日"
   },
   "tasks": {
     "dailyPlayChessMaster": "完成一局棋艺大师",
@@ -73,7 +90,8 @@
     "dailyPlaceholder": "敬请期待",
     "monthlyChessTourmaster20": "通关前 20 局棋境之旅",
     "rewardCoins": "+{count} 金币",
-    "rewardDiamonds": "+{count} 钻石"
+    "rewardDiamonds": "+{count} 钻石",
+    "statusCompleted": "已完成"
   },
   "test": {
     "title": "脑力测试",

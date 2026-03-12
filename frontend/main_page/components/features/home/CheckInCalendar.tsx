@@ -10,7 +10,7 @@ interface CheckInCalendarProps {
 }
 
 /**
- * 签到日历：当月视图，已签/未签区分，今日签到按钮
+ * 签到日历：紧凑型设计
  */
 export default function CheckInCalendar({
   checkIn,
@@ -36,52 +36,59 @@ export default function CheckInCalendar({
   for (let d = 1; d <= daysInMonth; d++) days.push(d);
 
   return (
-    <div className="rounded-xl bg-white p-4 shadow-md">
-      <div className="mb-3 flex items-center justify-between">
-        <h3 className="font-semibold text-gray-800">{tHome("checkInTitle")}</h3>
+    <div className="h-full rounded-3xl bg-white p-6 shadow-sm border border-gray-100 flex flex-col">
+      <div className="mb-4 flex items-center justify-between">
+        <div>
+          <h3 className="font-bold text-gray-800">{tHome("checkInTitle")}</h3>
+          <p className="text-xs text-gray-500 mt-0.5">{tHome("checkInStreak")}</p>
+        </div>
+        
         <button
           type="button"
           onClick={onCheckIn}
           disabled={hasCheckedInToday}
-          className={`rounded-lg px-3 py-1.5 text-sm font-medium ${
+          className={`rounded-full px-4 py-1.5 text-xs font-bold transition-all shadow-sm ${
             hasCheckedInToday
-              ? "bg-gray-200 text-gray-500 cursor-not-allowed"
-              : "bg-amber-500 text-white hover:bg-amber-600"
+              ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+              : "bg-gradient-to-r from-amber-400 to-orange-400 text-white hover:shadow-md hover:scale-105 active:scale-95"
           }`}
         >
           {hasCheckedInToday ? tHome("signed") : tHome("signToday")}
         </button>
       </div>
-      <p className="mb-2 text-xs text-gray-500">
-        {tHome("checkInReward")} · {tHome("checkInStreak")}
-      </p>
-      <div className="grid grid-cols-7 gap-1 text-center">
-        {["日", "一", "二", "三", "四", "五", "六"].map((w) => (
-          <div key={w} className="py-1 text-xs text-gray-500">
-            {w}
-          </div>
-        ))}
-        {days.map((d, i) => {
-          if (d === null)
-            return <div key={`empty-${i}`} className="aspect-square" />;
-          const dateStr = `${monthKey}-${String(d).padStart(2, "0")}`;
-          const signed = signedSet.has(dateStr);
-          const isToday = d === today;
-          return (
-            <div
-              key={d}
-              className={`aspect-square flex items-center justify-center rounded text-sm ${
-                signed
-                  ? "bg-amber-500 text-white"
-                  : isToday
-                    ? "ring-2 ring-amber-500"
-                    : "bg-gray-100 text-gray-600"
-              }`}
-            >
-              {d}
+
+      <div className="flex-1 flex flex-col justify-center">
+        <div className="grid grid-cols-7 gap-1 text-center mb-1">
+          {["日", "一", "二", "三", "四", "五", "六"].map((w) => (
+            <div key={w} className="py-1 text-[10px] text-gray-400 font-medium">
+              {w}
             </div>
-          );
-        })}
+          ))}
+        </div>
+        <div className="grid grid-cols-7 gap-1 text-center">
+          {days.map((d, i) => {
+            if (d === null)
+              return <div key={`empty-${i}`} className="aspect-square" />;
+            const dateStr = `${monthKey}-${String(d).padStart(2, "0")}`;
+            const signed = signedSet.has(dateStr);
+            const isToday = d === today;
+            
+            return (
+              <div
+                key={d}
+                className={`aspect-square flex items-center justify-center rounded-lg text-xs font-medium transition-all ${
+                  signed
+                    ? "bg-amber-100 text-amber-600"
+                    : isToday
+                      ? "ring-2 ring-amber-400 text-amber-600 bg-amber-50"
+                      : "bg-gray-50 text-gray-400"
+                }`}
+              >
+                {d}
+              </div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
