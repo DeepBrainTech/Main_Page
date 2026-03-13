@@ -77,8 +77,11 @@ import { useEffect, useMemo, useRef, useState } from "react";
    const t = useTranslations("test.memory");
  
    const [phase, setPhase] = useState<"intro" | "practice" | "formal" | "result">("intro");
-   const [practiceIndex, setPracticeIndex] = useState(0);
-   const [practiceCompleted, setPracticeCompleted] = useState(false);
+   const [practiceMode, setPracticeMode] = useState<NBackMode>("grid");
+   const [practiceLevel, setPracticeLevel] = useState(1);
+   const [practiceRunning, setPracticeRunning] = useState(false);
+   const [practiceStream, setPracticeStream] = useState<string[]>([]);
+   const [practiceCurrent, setPracticeCurrent] = useState<string | null>(null);
    const [currentIndex, setCurrentIndex] = useState(0);
    const [correctCount, setCorrectCount] = useState(0);
    const [rawScore, setRawScore] = useState(0);
@@ -89,30 +92,11 @@ import { useEffect, useMemo, useRef, useState } from "react";
   const [isFormalRunning, setIsFormalRunning] = useState(false);
   const [hasClickedMatch, setHasClickedMatch] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
- 
-   const practiceItems: NBackItem[] = useMemo(
-     () => [
-       generateSequence(1, "grid", true),
-       generateSequence(1, "letter", false),
-       generateSequence(2, "grid", true),
-     ],
-     []
-   );
+  const practiceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
  
    const formalItems: NBackItem[] = useMemo(() => buildFormalItems(), []);
  
   const totalQuestions = formalItems.length;
-
-  const handlePracticeAnswer = (answerIsMatch: boolean) => {
-    const item = practiceItems[practiceIndex];
-    if (answerIsMatch === item.isMatch) {
-      setPracticeCompleted(true);
-    }
-    const next = practiceIndex + 1;
-    if (next < practiceItems.length) {
-      setPracticeIndex(next);
-    }
-  };
 
   const handleFormalMatchClick = () => {
     if (!isFormalRunning) return;
@@ -171,6 +155,48 @@ import { useEffect, useMemo, useRef, useState } from "react";
     onComplete,
     totalQuestions,
   ]);
+
+  // 练习阶段：按顺序自动播放刺激流
+  useEffect(() => {
+    if (phase !== "practice" || !practiceRunning) {
+      if (practiceTimerRef.current) {
+        clearTimeout(practiceTimerRef.current);
+        practiceTimerRef.current = null;
+      }
+      return;
+    }
+    const pool =
+      practiceMode === "letter"
+        ? ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K"]
+        : Array.from({ length: 9 }, (_, i) => String(i));
+    practiceTimerRef.current = setTimeout(() => {
+      setPracticeStream((prev) => {
+        const idx = prev.length;
+        const n = practiceLevel;
+        const canMatch = idx >= n;
+        const shouldMatch = canMatch && Math.random() < 0.35;
+        let next: string;
+        if (shouldMatch) {
+          next = prev[idx - n];
+        } else {
+          const base = pool[Math.floor(Math.random() * pool.length)];
+          const forbid = canMatch ? prev[idx - n] : null;
+          next =
+            forbid && base === forbid
+              ? pool[(pool.indexOf(base) + 1) % pool.length]
+              : base;
+        }
+        setPracticeCurrent(next);
+        return [...prev, next];
+      });
+    }, 900);
+    return () => {
+      if (practiceTimerRef.current) {
+        clearTimeout(practiceTimerRef.current);
+        practiceTimerRef.current = null;
+      }
+    };
+  }, [phase, practiceRunning, practiceMode, practiceLevel, practiceStream.length]);
  
   const renderSequence = (item: NBackItem) => {
     if (item.mode === "grid") {
@@ -220,7 +246,12 @@ import { useEffect, useMemo, useRef, useState } from "react";
          <p className="mb-4 text-sm text-gray-600">{t("nBackIntro3")}</p>
          <button
            type="button"
-           onClick={() => setPhase("practice")}
+           onClick={() => {
+             setPhase("practice");
+             setPracticeStream([]);
+             setPracticeCurrent(null);
+             setPracticeRunning(false);
+           }}
            className="rounded-lg bg-[#5E81AC] px-4 py-2 text-sm font-medium text-white hover:bg-[#4E719C]"
          >
            {t("startPractice")}
@@ -230,7 +261,13 @@ import { useEffect, useMemo, useRef, useState } from "react";
    }
  
    if (phase === "practice") {
-     const item = practiceItems[practiceIndex];
+     const practiceItem: NBackItem = {
+       mode: practiceMode,
+       level: practiceLevel,
+       isMatch: false,
+       history: [],
+       current: practiceCurrent ?? (practiceMode === "grid" ? "0" : "A"),
+     };
      return (
        <div className="rounded-xl bg-white p-6 shadow-md">
          <h4 className="mb-2 font-semibold text-gray-800">{t("nBackPracticeTitle")}</h4>
@@ -238,46 +275,117 @@ import { useEffect, useMemo, useRef, useState } from "react";
            {t("nBackPracticeBadge")}
          </p>
          <p className="mb-4 text-sm text-gray-600">{t("nBackPracticeDesc")}</p>
-         <div className="mb-4">
-           {renderSequence(item)}
-         </div>
-        <p className="mb-3 text-sm font-medium text-gray-700">
-          {t("nBackQuestion", { level: item.level })}
-        </p>
-        <div className="flex flex-wrap gap-3">
-          <button
-            type="button"
-            onClick={() => handlePracticeAnswer(true)}
-            className="rounded-lg bg-[#5E81AC] px-4 py-2 text-sm font-medium text-white hover:bg-[#4E719C]"
-          >
-            {t("answerSame")}
-          </button>
-          <button
-            type="button"
-            onClick={() => handlePracticeAnswer(false)}
-            className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-          >
-            {t("answerDifferent")}
-          </button>
-        </div>
-         <div className="mt-4 flex items-center justify-between text-xs text-gray-500">
-           <span>
-             {t("practiceProgress", { current: practiceIndex + 1, total: practiceItems.length })}
-           </span>
+         {/* 模式：图形 / 字母 */}
+         <div className="mb-3 flex gap-2">
            <button
              type="button"
-            onClick={() => {
-              setCurrentIndex(0);
-              setCorrectCount(0);
-              setHasClickedMatch(false);
-              setPhase("formal");
-            }}
-             disabled={!practiceCompleted}
-             className="rounded-lg px-3 py-1 text-xs font-medium text-white disabled:cursor-not-allowed disabled:bg-gray-300 bg-emerald-500 hover:bg-emerald-600"
+             onClick={() => {
+               setPracticeMode("grid");
+               setPracticeStream([]);
+               setPracticeCurrent(null);
+               setPracticeRunning(false);
+             }}
+             className={`rounded-lg px-3 py-1.5 text-sm font-medium ${
+               practiceMode === "grid"
+                 ? "bg-[#5E81AC] text-white"
+                 : "border border-gray-300 text-gray-600 hover:bg-gray-50"
+             }`}
+           >
+             {t("practiceModeGrid")}
+           </button>
+           <button
+             type="button"
+             onClick={() => {
+               setPracticeMode("letter");
+               setPracticeStream([]);
+               setPracticeCurrent(null);
+               setPracticeRunning(false);
+             }}
+             className={`rounded-lg px-3 py-1.5 text-sm font-medium ${
+               practiceMode === "letter"
+                 ? "bg-[#5E81AC] text-white"
+                 : "border border-gray-300 text-gray-600 hover:bg-gray-50"
+             }`}
+           >
+             {t("practiceModeLetter")}
+           </button>
+         </div>
+         {/* 1~4 back 等级 */}
+         <div className="mb-3 flex gap-2">
+           {[1, 2, 3, 4].map((n) => (
+             <button
+               key={n}
+               type="button"
+               onClick={() => {
+                 setPracticeLevel(n);
+                 setPracticeStream([]);
+                 setPracticeCurrent(null);
+                 setPracticeRunning(false);
+               }}
+               className={`rounded-lg px-3 py-1.5 text-sm font-medium ${
+                 practiceLevel === n
+                   ? "bg-[#5E81AC] text-white"
+                   : "border border-gray-300 text-gray-600 hover:bg-gray-50"
+               }`}
+             >
+               {n}-back
+             </button>
+           ))}
+         </div>
+         <div className="mb-4">
+           {renderSequence(practiceItem)}
+         </div>
+         <p className="mb-3 text-sm font-medium text-gray-700">
+           {t("nBackQuestion", { level: practiceLevel })}
+         </p>
+         <p className="mb-2 text-xs text-gray-500">
+           {t("practiceStreamHint")}
+         </p>
+         <div className="mb-4 flex flex-wrap items-center gap-3">
+           <button
+             type="button"
+             onClick={() => setPracticeRunning((prev) => !prev)}
+             className="rounded-lg bg-[#5E81AC] px-4 py-2 text-sm font-medium text-white hover:bg-[#4E719C]"
+           >
+             {practiceRunning ? t("pausePractice") : t("startPractice")}
+           </button>
+           <button
+             type="button"
+             onClick={() => {
+               setPracticeStream([]);
+               setPracticeCurrent(null);
+               setPracticeRunning(false);
+             }}
+             className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+           >
+             {t("resetPractice")}
+           </button>
+           {practiceRunning && (
+             <button
+               type="button"
+               className="rounded-lg border-2 border-amber-500 bg-amber-50 px-4 py-2 text-sm font-medium text-amber-700 hover:bg-amber-100"
+             >
+               {t("answerSame")}
+             </button>
+           )}
+           <button
+             type="button"
+             onClick={() => {
+               setCurrentIndex(0);
+               setCorrectCount(0);
+               setHasClickedMatch(false);
+               setPhase("formal");
+             }}
+             className="ml-auto rounded-lg bg-emerald-500 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-600"
            >
              {t("startFormal")}
            </button>
          </div>
+         {practiceRunning && (
+           <p className="text-xs text-gray-500">
+             {t("answerSameWhenMatch")}
+           </p>
+         )}
        </div>
      );
    }
