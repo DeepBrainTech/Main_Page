@@ -6,8 +6,7 @@ import type { CognitiveDimensionKey } from "@/types/cognitive";
 import { DEFAULT_RADAR_SCORES } from "@/config/dimensions";
 import { updateCognitiveScores } from "@/services/userApi";
 import RadarChart from "@/components/features/home/RadarChart";
-import SequenceMemory from "./SequenceMemory";
-import GridMemory from "./GridMemory";
+import MemoryNBack from "./MemoryNBack";
 import PatternComplete from "./PatternComplete";
 import MatrixReasoning from "./MatrixReasoning";
 import SchulteGrid from "./SchulteGrid";
@@ -33,7 +32,7 @@ export default function TestRunner({ dimension, onBack }: TestRunnerProps) {
   const [radarScores, setRadarScores] = useState(DEFAULT_RADAR_SCORES);
 
   const testCount =
-    dimension === "memory" || dimension === "logic" || dimension === "focus" ? 2 : 1;
+    dimension === "logic" || dimension === "focus" ? 2 : 1;
 
   const handleComplete = useCallback(
     async (score: number) => {
@@ -63,25 +62,23 @@ export default function TestRunner({ dimension, onBack }: TestRunnerProps) {
   );
 
   const TestRender =
-    dimension === "memory" && testIndex === 0
-      ? () => <SequenceMemory onComplete={handleComplete} />
-      : dimension === "memory" && testIndex === 1
-        ? () => <GridMemory onComplete={handleComplete} />
-        : dimension === "logic" && testIndex === 0
-          ? () => <PatternComplete onComplete={handleComplete} />
-          : dimension === "logic" && testIndex === 1
-            ? () => <MatrixReasoning onComplete={handleComplete} />
-            : dimension === "focus" && testIndex === 0
-              ? () => <SchulteGrid onComplete={handleComplete} />
-              : dimension === "focus" && testIndex === 1
-                ? () => <StroopColor onComplete={handleComplete} />
-                : dimension === "reaction"
-                  ? () => <ReactionClick onComplete={handleComplete} />
-                  : dimension === "strategy"
-                    ? () => <ShortestPath onComplete={handleComplete} />
-                    : dimension === "spatial"
-                      ? () => <ShapeRotation onComplete={handleComplete} />
-                      : () => <div />;
+    dimension === "memory"
+      ? () => <MemoryNBack onComplete={handleComplete} />
+      : dimension === "logic" && testIndex === 0
+        ? () => <PatternComplete onComplete={handleComplete} />
+        : dimension === "logic" && testIndex === 1
+          ? () => <MatrixReasoning onComplete={handleComplete} />
+          : dimension === "focus" && testIndex === 0
+            ? () => <SchulteGrid onComplete={handleComplete} />
+            : dimension === "focus" && testIndex === 1
+              ? () => <StroopColor onComplete={handleComplete} />
+              : dimension === "reaction"
+                ? () => <ReactionClick onComplete={handleComplete} />
+                : dimension === "strategy"
+                  ? () => <ShortestPath onComplete={handleComplete} />
+                  : dimension === "spatial"
+                    ? () => <ShapeRotation onComplete={handleComplete} />
+                    : () => <div />;
 
   if (done) {
     const avg =
