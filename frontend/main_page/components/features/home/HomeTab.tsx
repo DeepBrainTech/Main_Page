@@ -33,6 +33,13 @@ export default function HomeTab({ username = "" }: HomeTabProps) {
   } = useRewards();
   const { scores: radarScores } = useCognitiveScores();
 
+  // 临时经验模型：用于首页经验条效果展示，后续可替换为后端真实 xp 字段。
+  const totalExp = coins + diamonds * 10;
+  const expPerLevel = 120;
+  const level = Math.max(1, Math.floor(totalExp / expPerLevel) + 1);
+  const expCurrent = totalExp % expPerLevel;
+  const expTarget = expPerLevel;
+
   if (rewardsLoading) {
     return (
       <div className="flex justify-center py-12">
@@ -52,7 +59,13 @@ export default function HomeTab({ username = "" }: HomeTabProps) {
         
         {/* 左上：家园 (跨 8 列) */}
         <div className="md:col-span-8 min-h-[200px]">
-          <HomesteadBlock coins={coins} diamonds={diamonds} />
+          <HomesteadBlock
+            coins={coins}
+            diamonds={diamonds}
+            level={level}
+            expCurrent={expCurrent}
+            expTarget={expTarget}
+          />
         </div>
         
         {/* 右上：签到 (跨 4 列) */}

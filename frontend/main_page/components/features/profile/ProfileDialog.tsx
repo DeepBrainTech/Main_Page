@@ -11,15 +11,17 @@ interface ProfileDialogProps {
   username: string;
   /** 邮箱可选，当前接口可能不返回 */
   email?: string;
+  /** 出生日期 YYYY-MM-DD，可选 */
+  dateOfBirth?: string | null;
   onLogout: () => void;
-  /** 资料更新后回调（如刷新 useAuth），用于用户名修改后同步展示 */
+  /** 资料更新后回调（如刷新 useAuth），用于用户名/出生日期修改后同步展示 */
   onProfileUpdate?: () => void;
 }
 
 /**
  * 个人资料弹窗：头像点击后展示，支持修改用户名、语言切换与登出
  */
-export default function ProfileDialog({ open, onClose, username, email, onLogout, onProfileUpdate }: ProfileDialogProps) {
+export default function ProfileDialog({ open, onClose, username, email, dateOfBirth, onLogout, onProfileUpdate }: ProfileDialogProps) {
   const router = useRouter();
   const pathname = usePathname();
   const params = useParams();
@@ -29,6 +31,8 @@ export default function ProfileDialog({ open, onClose, username, email, onLogout
 
   const [editingUsername, setEditingUsername] = useState(false);
   const [editValue, setEditValue] = useState(username);
+  const [editingDateOfBirth, setEditingDateOfBirth] = useState(false);
+  const [editDateValue, setEditDateValue] = useState(dateOfBirth ?? "");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
@@ -37,12 +41,28 @@ export default function ProfileDialog({ open, onClose, username, email, onLogout
     if (open) {
       setEditValue(username);
       setEditingUsername(false);
+      setEditDateValue(dateOfBirth ?? "");
+      setEditingDateOfBirth(false);
       setError("");
       setSuccessMessage("");
     }
-  }, [open, username]);
+  }, [open, username, dateOfBirth]);
 
   const currentLocale = (params?.locale as string) ?? "en";
+  /** 将 YYYY-MM-DD 格式化为仅月日（不显示年份），用于展示 */
+  const formatBirthdayNoYear = (yyyyMmDd: string): string => {
+    const parts = yyyyMmDd.trim().split("-");
+    if (parts.length !== 3) return yyyyMmDd;
+    const [, m, d] = parts;
+    const month = parseInt(m, 10);
+    const day = parseInt(d, 10);
+    if (Number.isNaN(month) || Number.isNaN(day)) return yyyyMmDd;
+    const date = new Date(2000, month - 1, day);
+    return date.toLocaleDateString(currentLocale === "zh" ? "zh-CN" : "en-US", {
+      month: "short",
+      day: "numeric",
+    });
+  };
   const switchLanguage = (newLocale: string) => {
     const newPath = pathname.replace(`/${currentLocale}`, `/${newLocale}`);
     router.push(newPath);
@@ -92,6 +112,49 @@ export default function ProfileDialog({ open, onClose, username, email, onLogout
       onProfileUpdate?.();
     } catch {
       setError(tProfile("usernameUpdateFailed"));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSaveDateOfBirth = async () => {
+    const val = editDateValue.trim();
+    if (!val) {
+      setError(tProfile("dateOfBirthPlaceholder"));
+      return;
+    }
+    if (val === (dateOfBirth ?? "")) {
+      setEditingDateOfBirth(false);
+      return;
+    }
+    setError("");
+    setSaving(true);
+    try {
+      const token = localStorage.getItem("access_token");
+      if (!token) {
+        setError(tProfile("dateOfBirthUpdateFailed"));
+        return;
+      }
+      const res = await fetch(getApiUrl("/api/auth/me"), {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ date_of_birth: val }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        setError(data.detail || tProfile("dateOfBirthUpdateFailed"));
+        return;
+      }
+      const data = await res.json();
+      if (data.access_token) {
+        localStorage.setItem("access_token", data.access_token);
+        localStorage.setItem("token_expires_in", String(data.expires_in ?? 0));
+      }
+      setSuccessMessage(tProfile("dateOfBirthUpdated"));
+      setEditingDateOfBirth(false);
+      onProfileUpdate?.();
+    } catch {
+      setError(tProfile("dateOfBirthUpdateFailed"));
     } finally {
       setSaving(false);
     }
@@ -173,6 +236,46 @@ export default function ProfileDialog({ open, onClose, username, email, onLogout
               <dd className="font-medium text-gray-900">{email || "—"}</dd>
             </div>
           )}
+          <div>
+            <dt className="text-gray-500">{tProfile("dateOfBirth")}</dt>
+            {editingDateOfBirth ? (
+              <dd className="mt-1 flex items-center gap-2">
+                <input
+                  type="date"
+                  value={editDateValue}
+                  onChange={(e) => setEditDateValue(e.target.value)}
+                  className="flex-1 rounded border border-gray-300 px-2 py-1.5 text-gray-900 focus:border-transparent focus:ring-2 focus:ring-[#5E81AC] dark:border-gray-600 dark:bg-zinc-800 dark:text-white"
+                  aria-label={tProfile("dateOfBirthPlaceholder")}
+                />
+                <button
+                  type="button"
+                  onClick={handleSaveDateOfBirth}
+                  disabled={saving}
+                  className="rounded bg-[#5E81AC] px-2 py-1.5 text-xs font-medium text-white hover:bg-[#4a6a8a] disabled:opacity-50"
+                >
+                  {saving ? "..." : tProfile("saveUsername")}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setEditingDateOfBirth(false); setEditDateValue(dateOfBirth ?? ""); setError(""); }}
+                  className="rounded border border-gray-300 px-2 py-1.5 text-xs text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-zinc-700"
+                >
+                  {tCommon("cancel")}
+                </button>
+              </dd>
+            ) : (
+              <dd className="flex items-center justify-between font-medium text-gray-900">
+                <span>{(dateOfBirth && dateOfBirth.trim()) ? formatBirthdayNoYear(dateOfBirth) : "—"}</span>
+                <button
+                  type="button"
+                  onClick={() => setEditingDateOfBirth(true)}
+                  className="text-xs text-[#5E81AC] hover:underline"
+                >
+                  {tProfile("editDateOfBirth")}
+                </button>
+              </dd>
+            )}
+          </div>
         </dl>
 
         <div className="mt-4 space-y-3 border-t border-gray-100 pt-4">

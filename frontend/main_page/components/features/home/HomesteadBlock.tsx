@@ -7,6 +7,9 @@ import AvatarCharacter, { type AvatarConfig } from "./AvatarCharacter";
 interface HomesteadBlockProps {
   coins: number;
   diamonds: number;
+  level: number;
+  expCurrent: number;
+  expTarget: number;
 }
 
 const HAT_OPTIONS = [
@@ -32,10 +35,17 @@ function lerp(a: number, b: number, t: number): number {
 /**
  * 家园：猴子在框内自主移动，点击框内时移动到点击位置
  */
-export default function HomesteadBlock({ coins, diamonds }: HomesteadBlockProps) {
+export default function HomesteadBlock({
+  coins,
+  diamonds,
+  level,
+  expCurrent,
+  expTarget,
+}: HomesteadBlockProps) {
   const tHome = useTranslations("home");
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const expPercent = expTarget > 0 ? Math.round((expCurrent / expTarget) * 100) : 0;
 
   const [avatarConfig, setAvatarConfig] = useState<AvatarConfig>({
     bodyColor: "#1A1A1A",
@@ -177,7 +187,20 @@ export default function HomesteadBlock({ coins, diamonds }: HomesteadBlockProps)
       </div>
 
       <div className="relative z-10 flex flex-col h-full justify-between pointer-events-none">
-        <div className="flex justify-end items-center gap-2 pointer-events-auto">
+        <div className="pointer-events-auto space-y-2">
+          <div className="mx-auto w-full max-w-sm rounded-xl bg-white/65 px-3 py-2 backdrop-blur-sm border border-white/50 shadow-sm">
+            <div className="mb-1.5 flex items-center justify-between text-[11px] font-semibold text-amber-900">
+              <span>{tHome("levelLabel", { level })}</span>
+              <span className="tabular-nums">{tHome("expProgress", { current: expCurrent, target: expTarget })}</span>
+            </div>
+            <div className="h-2 overflow-hidden rounded-full bg-amber-100/90">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-amber-400 to-orange-500 transition-all duration-500"
+                style={{ width: `${expPercent}%` }}
+              />
+            </div>
+          </div>
+          <div className="flex justify-end items-center gap-2">
           <button
             type="button"
             onClick={() => setIsMenuOpen(true)}
@@ -195,6 +218,7 @@ export default function HomesteadBlock({ coins, diamonds }: HomesteadBlockProps)
               <span className="text-lg">💎</span>
               <span className="text-sm font-bold text-sky-800 tabular-nums">{diamonds}</span>
             </div>
+          </div>
           </div>
         </div>
       </div>

@@ -8,6 +8,7 @@ import { getApiUrl } from "@/lib/api-config";
 export interface AuthUserInfo {
   username: string;
   email?: string;
+  date_of_birth?: string | null;
 }
 
 /**
@@ -20,6 +21,7 @@ export function useAuth() {
   const locale = params.locale as string;
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState<string | undefined>(undefined);
+  const [dateOfBirth, setDateOfBirth] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   /** 未填写出生日期时必须先补全才能使用（含已有老用户） */
@@ -38,10 +40,12 @@ export function useAuth() {
         if (res.ok) return res.json();
         throw new Error("Token 无效");
       })
-      .then((data: AuthUserInfo & { id?: number; email?: string; date_of_birth?: string | null } ) => {
+      .then((data: AuthUserInfo) => {
         setUsername(data.username || "");
         setEmail(data.email);
-        setNeedsProfileCompletion(data.date_of_birth == null || data.date_of_birth === undefined);
+        const dob = data.date_of_birth ?? null;
+        setDateOfBirth(dob);
+        setNeedsProfileCompletion(dob == null || dob === undefined);
         setIsAuthenticated(true);
         setLoading(false);
       })
@@ -65,6 +69,7 @@ export function useAuth() {
   return {
     username,
     email,
+    dateOfBirth,
     loading,
     isAuthenticated,
     /** 未填出生日期时为 true，需弹窗补全后再使用 */

@@ -16,7 +16,7 @@ import CompleteProfileDialog from "@/components/features/profile/CompleteProfile
  */
 export default function HomePage() {
   const tCommon = useTranslations("common");
-  const { username, email, loading, needsProfileCompletion, refetch, logout } = useAuth();
+  const { username, email, dateOfBirth, loading, needsProfileCompletion, refetch, logout } = useAuth();
   const {
     handleFogChess,
     handleSudoku,
@@ -55,6 +55,7 @@ export default function HomePage() {
       onTabChange={setActiveTab}
       username={username}
       email={email}
+      dateOfBirth={dateOfBirth}
       onLogout={logout}
       onProfileUpdate={refetch}
     >

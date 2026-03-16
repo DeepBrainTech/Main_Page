@@ -11,6 +11,8 @@ interface AppShellProps {
   onTabChange: (tab: AppTab) => void;
   username: string;
   email?: string;
+  /** 出生日期，格式 YYYY-MM-DD */
+  dateOfBirth?: string | null;
   onLogout: () => void;
   /** 个人资料更新后回调（如刷新用户名展示） */
   onProfileUpdate?: () => void;
@@ -25,6 +27,7 @@ export default function AppShell({
   onTabChange,
   username,
   email,
+  dateOfBirth,
   onLogout,
   onProfileUpdate,
   children,
@@ -98,6 +101,7 @@ export default function AppShell({
         onClose={() => setProfileOpen(false)}
         username={username}
         email={email}
+        dateOfBirth={dateOfBirth}
         onLogout={onLogout}
         onProfileUpdate={onProfileUpdate}
       />
