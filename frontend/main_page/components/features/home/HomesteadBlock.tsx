@@ -238,6 +238,7 @@ export default function HomesteadBlock({
           <div className={`pointer-events-auto ${isWalking ? "avatar-walk" : ""}`}>
             <AvatarCharacter
               config={avatarConfig}
+              level={level}
               direction={direction}
             />
           </div>
