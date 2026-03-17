@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 
 interface ChangeDetectionProps {
   onComplete: (score: number) => void;
+  dateOfBirth?: string | null;
 }
 
 interface Trial {
@@ -27,7 +28,10 @@ interface AggregateStats {
   total: number;
   rtSum: number;
   rtCount: number;
+  correctRtMs: number[];
 }
+
+type AgeBandId = "children" | "teens" | "youngAdults" | "middleAged" | "seniors";
 
 const GRID_CELLS = 16;
 const FORMAL_COUNTS: Record<4 | 6 | 8, number> = {
@@ -42,6 +46,14 @@ const FORMAL_SEED = 20260317;
 const PRACTICE_SEED = 20260318;
 
 const COLORS = ["#EF4444", "#3B82F6", "#22C55E", "#F59E0B", "#8B5CF6", "#06B6D4"];
+
+const AGE_NORMS_K: Record<AgeBandId, [number, number]> = {
+  children: [1.5, 3.2],
+  teens: [3.0, 4.2],
+  youngAdults: [3.5, 4.5],
+  middleAged: [3.0, 3.8],
+  seniors: [1.8, 2.8],
+};
 
 function clampScore(value: number, min: number, max: number) {
   if (value < min) return min;
@@ -164,7 +176,50 @@ function calcK(size: 4 | 6 | 8, stats: SignalStats) {
   return { k, hitRate, faRate, dPrime };
 }
 
-export default function ChangeDetection({ onComplete }: ChangeDetectionProps) {
+function median(values: number[]) {
+  if (values.length === 0) return null;
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid];
+}
+
+function normalizeLinear(value: number, min: number, max: number) {
+  if (max <= min) return 50;
+  return clampScore(((value - min) / (max - min)) * 100, 0, 100);
+}
+
+function parseAge(dateOfBirth?: string | null) {
+  if (!dateOfBirth) return null;
+  const [yearStr, monthStr, dayStr] = dateOfBirth.split("-");
+  const year = Number(yearStr);
+  const month = Number(monthStr);
+  const day = Number(dayStr);
+  if (!year || !month || !day) return null;
+  const now = new Date();
+  let age = now.getFullYear() - year;
+  const monthDiff = now.getMonth() + 1 - month;
+  const dayDiff = now.getDate() - day;
+  if (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0)) age -= 1;
+  return age >= 0 ? age : null;
+}
+
+function resolveAgeBand(age: number | null): AgeBandId | null {
+  if (age == null) return null;
+  if (age >= 7 && age <= 12) return "children";
+  if (age >= 13 && age <= 18) return "teens";
+  if (age >= 19 && age <= 35) return "youngAdults";
+  if (age >= 36 && age <= 60) return "middleAged";
+  if (age >= 65) return "seniors";
+  return null;
+}
+
+function computeAgePercentile(kOverall: number, ageBand: AgeBandId | null) {
+  if (ageBand == null) return null;
+  const [low, high] = AGE_NORMS_K[ageBand];
+  return Math.round(normalizeLinear(kOverall, low, high));
+}
+
+export default function ChangeDetection({ onComplete, dateOfBirth }: ChangeDetectionProps) {
   const t = useTranslations("test.memory");
 
   const practiceTrial = useMemo(() => buildPracticeTrial(PRACTICE_SEED), []);
@@ -197,6 +252,7 @@ export default function ChangeDetection({ onComplete }: ChangeDetectionProps) {
     total: 0,
     rtSum: 0,
     rtCount: 0,
+    correctRtMs: [],
   });
 
   const currentTrial = phase === "practice" ? practiceTrial : formalTrials[Math.min(formalIndex, formalTrials.length - 1)];
@@ -212,6 +268,7 @@ export default function ChangeDetection({ onComplete }: ChangeDetectionProps) {
       total: 0,
       rtSum: 0,
       rtCount: 0,
+      correctRtMs: [],
     };
   };
 
@@ -245,11 +302,30 @@ export default function ChangeDetection({ onComplete }: ChangeDetectionProps) {
     const k6 = calcK(6, aggRef.current.bySize[6]);
     const k8 = calcK(8, aggRef.current.bySize[8]);
 
-    const kOverall = (k4.k + k6.k + k8.k) / 3;
+    const n4 = aggRef.current.bySize[4].hits + aggRef.current.bySize[4].misses + aggRef.current.bySize[4].fa + aggRef.current.bySize[4].cr;
+    const n6 = aggRef.current.bySize[6].hits + aggRef.current.bySize[6].misses + aggRef.current.bySize[6].fa + aggRef.current.bySize[6].cr;
+    const n8 = aggRef.current.bySize[8].hits + aggRef.current.bySize[8].misses + aggRef.current.bySize[8].fa + aggRef.current.bySize[8].cr;
+    const weightedTotal = n4 + n6 + n8;
+    const kOverall =
+      weightedTotal > 0
+        ? (k4.k * n4 + k6.k * n6 + k8.k * n8) / weightedTotal
+        : (k4.k + k6.k + k8.k) / 3;
+
+    const rtMedian = median(aggRef.current.correctRtMs);
+    const kScore = normalizeLinear(kOverall, 0, 5);
+    const rtScore = rtMedian == null ? 50 : clampScore(((1600 - rtMedian) / 1200) * 100, 0, 100);
+    const abilityScore = Math.round(kScore * 0.7 + rtScore * 0.3);
+    const ageBand = resolveAgeBand(parseAge(dateOfBirth));
+    const agePercentile = computeAgePercentile(kOverall, ageBand);
+    const blendedDisplay =
+      agePercentile == null
+        ? abilityScore
+        : Math.round(abilityScore * 0.7 + agePercentile * 0.3);
+
     const computedRaw = Number(kOverall.toFixed(2));
-    const computedAgeNorm = computedRaw;
-    const computedPercentile = Math.round((kOverall / 8) * 100);
-    const computedDisplay = clampScore(computedPercentile, 0, 100);
+    const computedAgeNorm = agePercentile ?? abilityScore;
+    const computedPercentile = abilityScore;
+    const computedDisplay = clampScore(blendedDisplay, 0, 100);
     const rtAvg = aggRef.current.rtCount > 0 ? Math.round(aggRef.current.rtSum / aggRef.current.rtCount) : 0;
 
     setRawScore(computedRaw);
@@ -281,6 +357,7 @@ export default function ChangeDetection({ onComplete }: ChangeDetectionProps) {
     if (rtMs !== null) {
       aggRef.current.rtSum += rtMs;
       aggRef.current.rtCount += 1;
+      if (isCorrect) aggRef.current.correctRtMs.push(rtMs);
     }
   };
 

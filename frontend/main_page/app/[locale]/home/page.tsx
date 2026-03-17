@@ -60,7 +60,7 @@ export default function HomePage() {
       onProfileUpdate={refetch}
     >
       {activeTab === "home" && <HomeTab username={username} />}
-      {activeTab === "test" && <TestTab />}
+      {activeTab === "test" && <TestTab dateOfBirth={dateOfBirth} />}
       {activeTab === "brainGames" && (
         <BrainGamesTab
           onLaunch={{

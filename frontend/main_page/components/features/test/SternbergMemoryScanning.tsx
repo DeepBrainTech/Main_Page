@@ -7,6 +7,7 @@ type SetSize = 3 | 5 | 7;
 
 interface SternbergMemoryScanningProps {
   onComplete: (score: number) => void;
+  dateOfBirth?: string | null;
 }
 
 interface Trial {
@@ -21,7 +22,10 @@ interface AggregateStats {
   total: number;
   rtSum: number;
   rtCount: number;
+  correctRtPairs: Array<{ setSize: SetSize; rtMs: number }>;
 }
+
+type AgeBandId = "children" | "teens" | "youngAdults" | "middleAged" | "seniors";
 
 const SYMBOL_POOL = ["A", "B", "C", "D", "E", "F", "G", "H", "I"];
 const FORMAL_COUNTS: Record<SetSize, number> = {
@@ -29,11 +33,19 @@ const FORMAL_COUNTS: Record<SetSize, number> = {
   5: 8,
   7: 8,
 };
-const MEMORIZE_MS = 5000;
+const MEMORIZE_MS = 4000;
 const DELAY_MS = 800;
 const FEEDBACK_MS = 700;
 const PRACTICE_SEED = 20260319;
 const FORMAL_SEED = 20260320;
+
+const AGE_NORMS_STERNBERG: Record<AgeBandId, { slopeMsPerItem: [number, number]; interceptMs: [number, number] }> = {
+  children: { slopeMsPerItem: [35, 65], interceptMs: [600, 800] },
+  teens: { slopeMsPerItem: [35, 45], interceptMs: [450, 550] },
+  youngAdults: { slopeMsPerItem: [30, 40], interceptMs: [350, 450] },
+  middleAged: { slopeMsPerItem: [35, 50], interceptMs: [400, 550] },
+  seniors: { slopeMsPerItem: [50, 75], interceptMs: [600, 900] },
+};
 
 function clampScore(value: number, min: number, max: number) {
   if (value < min) return min;
@@ -95,7 +107,61 @@ function buildFormalTrials(seed: number): Trial[] {
   return trials;
 }
 
-export default function SternbergMemoryScanning({ onComplete }: SternbergMemoryScanningProps) {
+function normalizeLinear(value: number, min: number, max: number) {
+  if (max <= min) return 50;
+  return clampScore(((value - min) / (max - min)) * 100, 0, 100);
+}
+
+function normalizeReverse(value: number, min: number, max: number) {
+  return 100 - normalizeLinear(value, min, max);
+}
+
+function parseAge(dateOfBirth?: string | null) {
+  if (!dateOfBirth) return null;
+  const [yearStr, monthStr, dayStr] = dateOfBirth.split("-");
+  const year = Number(yearStr);
+  const month = Number(monthStr);
+  const day = Number(dayStr);
+  if (!year || !month || !day) return null;
+  const now = new Date();
+  let age = now.getFullYear() - year;
+  const monthDiff = now.getMonth() + 1 - month;
+  const dayDiff = now.getDate() - day;
+  if (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0)) age -= 1;
+  return age >= 0 ? age : null;
+}
+
+function resolveAgeBand(age: number | null): AgeBandId | null {
+  if (age == null) return null;
+  if (age >= 7 && age <= 12) return "children";
+  if (age >= 13 && age <= 18) return "teens";
+  if (age >= 19 && age <= 35) return "youngAdults";
+  if (age >= 36 && age <= 60) return "middleAged";
+  if (age >= 65) return "seniors";
+  return null;
+}
+
+function regressSlopeIntercept(points: Array<{ setSize: number; rtMs: number }>) {
+  if (points.length < 3) return null;
+  const n = points.length;
+  let sumX = 0;
+  let sumY = 0;
+  let sumXY = 0;
+  let sumX2 = 0;
+  for (const p of points) {
+    sumX += p.setSize;
+    sumY += p.rtMs;
+    sumXY += p.setSize * p.rtMs;
+    sumX2 += p.setSize * p.setSize;
+  }
+  const denominator = n * sumX2 - sumX * sumX;
+  if (Math.abs(denominator) < 1e-6) return null;
+  const slope = (n * sumXY - sumX * sumY) / denominator;
+  const intercept = (sumY - slope * sumX) / n;
+  return { slope, intercept };
+}
+
+export default function SternbergMemoryScanning({ onComplete, dateOfBirth }: SternbergMemoryScanningProps) {
   const t = useTranslations("test.memory");
 
   const practiceTrials = useMemo(() => buildPracticeTrials(PRACTICE_SEED), []);
@@ -127,6 +193,7 @@ export default function SternbergMemoryScanning({ onComplete }: SternbergMemoryS
     total: 0,
     rtSum: 0,
     rtCount: 0,
+    correctRtPairs: [],
   });
 
   const currentPracticeTrial = practiceTrials[Math.min(practiceIndex, practiceTrials.length - 1)];
@@ -139,6 +206,7 @@ export default function SternbergMemoryScanning({ onComplete }: SternbergMemoryS
       total: 0,
       rtSum: 0,
       rtCount: 0,
+      correctRtPairs: [],
     };
   };
 
@@ -173,12 +241,43 @@ export default function SternbergMemoryScanning({ onComplete }: SternbergMemoryS
   const finalizeFormal = () => {
     const accuracy = aggRef.current.total > 0 ? aggRef.current.correct / aggRef.current.total : 0;
     const avgRt = aggRef.current.rtCount > 0 ? aggRef.current.rtSum / aggRef.current.rtCount : 0;
-    const speedScore =
-      avgRt > 0 ? clampScore(((2200 - avgRt) / (2200 - 500)) * 100, 0, 100) : 0;
+    const regression = regressSlopeIntercept(aggRef.current.correctRtPairs);
+    const slopeMs = regression?.slope ?? 55;
+    const interceptMs = regression?.intercept ?? (avgRt > 0 ? avgRt : 750);
+
+    const accuracyScore = accuracy * 100;
+    const slopeScore = normalizeReverse(slopeMs, 25, 90);
+    const interceptScore = normalizeReverse(interceptMs, 300, 1100);
+    const abilityScore = Math.round(accuracyScore * 0.5 + slopeScore * 0.3 + interceptScore * 0.2);
+
+    const ageBand = resolveAgeBand(parseAge(dateOfBirth));
+    const agePercentile =
+      ageBand == null
+        ? null
+        : Math.round(
+            accuracyScore * 0.5 +
+              normalizeReverse(
+                slopeMs,
+                AGE_NORMS_STERNBERG[ageBand].slopeMsPerItem[0],
+                AGE_NORMS_STERNBERG[ageBand].slopeMsPerItem[1]
+              ) *
+                0.3 +
+              normalizeReverse(
+                interceptMs,
+                AGE_NORMS_STERNBERG[ageBand].interceptMs[0],
+                AGE_NORMS_STERNBERG[ageBand].interceptMs[1]
+              ) *
+                0.2
+          );
+
     const computedRaw = aggRef.current.correct;
-    const computedAgeNorm = computedRaw;
-    const computedPercentile = Math.round(accuracy * 70 + speedScore * 30);
-    const computedDisplay = clampScore(computedPercentile, 0, 100);
+    const computedAgeNorm = agePercentile ?? abilityScore;
+    const computedPercentile = abilityScore;
+    const computedDisplay = clampScore(
+      Math.round(abilityScore * 0.7 + (agePercentile ?? abilityScore) * 0.3),
+      0,
+      100
+    );
 
     setRawScore(computedRaw);
     setAgeNormScore(computedAgeNorm);
@@ -199,6 +298,9 @@ export default function SternbergMemoryScanning({ onComplete }: SternbergMemoryS
     if (rtMs !== null) {
       aggRef.current.rtSum += rtMs;
       aggRef.current.rtCount += 1;
+      if (isCorrect && rtMs >= 150 && rtMs <= 3000) {
+        aggRef.current.correctRtPairs.push({ setSize: currentFormalTrial.setSize, rtMs });
+      }
     }
   };
 

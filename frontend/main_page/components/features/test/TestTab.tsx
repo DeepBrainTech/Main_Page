@@ -9,7 +9,11 @@ import TestRunner from "./TestRunner";
 /**
  * 脑力测试 Tab：选择维度后进入 TestRunner
  */
-export default function TestTab() {
+interface TestTabProps {
+  dateOfBirth?: string | null;
+}
+
+export default function TestTab({ dateOfBirth }: TestTabProps) {
   const t = useTranslations("test");
   const tDim = useTranslations("dimensions");
   const [selected, setSelected] = useState<CognitiveDimensionKey | null>(null);
@@ -19,6 +23,7 @@ export default function TestTab() {
       <TestRunner
         dimension={selected}
         onBack={() => setSelected(null)}
+        dateOfBirth={dateOfBirth}
       />
     );
   }

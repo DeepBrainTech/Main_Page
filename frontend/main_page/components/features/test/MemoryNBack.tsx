@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 
 type NBackMode = "grid" | "letter";
@@ -22,16 +22,87 @@ const MATCH_RATE = 0.35;
 const FORMAL_BASE_SEED = 20260316;
 const FIXED_LEVEL = 2;
 const FORMAL_LEVELS: number[] = Array.from({ length: 20 }, () => FIXED_LEVEL);
-const LEVEL_WEIGHTS: Record<number, number> = {
-  1: 1.0,
-  2: 1.3,
-  3: 1.7,
-};
+
 
 function clampScore(value: number, min: number, max: number) {
   if (value < min) return min;
   if (value > max) return max;
   return value;
+}
+
+function percentileToZ(p: number) {
+  const pSafe = Math.min(1 - 1e-10, Math.max(1e-10, p));
+  const a1 = -39.6968302866538;
+  const a2 = 220.946098424521;
+  const a3 = -275.928510446969;
+  const a4 = 138.357751867269;
+  const a5 = -30.6647980661472;
+  const a6 = 2.50662827745924;
+  const b1 = -54.4760987982241;
+  const b2 = 161.585836858041;
+  const b3 = -155.698979859887;
+  const b4 = 66.8013118877197;
+  const b5 = -13.2806815528857;
+  const c1 = -0.00778489400243029;
+  const c2 = -0.322396458041136;
+  const c3 = -2.40075827716184;
+  const c4 = -2.54973253934373;
+  const c5 = 4.37466414146497;
+  const c6 = 2.93816398269878;
+  const d1 = 0.00778469570904146;
+  const d2 = 0.32246712907004;
+  const d3 = 2.445134137143;
+  const d4 = 3.75440866190742;
+
+  if (pSafe < 0.02425) {
+    const q = Math.sqrt(-2 * Math.log(pSafe));
+    return (
+      (((((c1 * q + c2) * q + c3) * q + c4) * q + c5) * q + c6) /
+      ((((d1 * q + d2) * q + d3) * q + d4) * q + 1)
+    );
+  }
+
+  if (pSafe > 1 - 0.02425) {
+    const q = Math.sqrt(-2 * Math.log(1 - pSafe));
+    return -(
+      (((((c1 * q + c2) * q + c3) * q + c4) * q + c5) * q + c6) /
+      ((((d1 * q + d2) * q + d3) * q + d4) * q + 1)
+    );
+  }
+
+  const q = pSafe - 0.5;
+  const r = q * q;
+  return (
+    (((((a1 * r + a2) * r + a3) * r + a4) * r + a5) * r + a6) * q /
+    (((((b1 * r + b2) * r + b3) * r + b4) * r + b5) * r + 1)
+  );
+}
+
+function computeDPrime(tp: number, fn: number, fp: number, tn: number) {
+  const targetN = tp + fn;
+  const nonTargetN = fp + tn;
+  const hitRate = targetN > 0 ? (tp + 0.5) / (targetN + 1) : 0.5;
+  const faRate = nonTargetN > 0 ? (fp + 0.5) / (nonTargetN + 1) : 0.5;
+  return percentileToZ(hitRate) - percentileToZ(faRate);
+}
+
+function median(values: number[]) {
+  if (values.length === 0) return null;
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  if (sorted.length % 2 === 0) return (sorted[mid - 1] + sorted[mid]) / 2;
+  return sorted[mid];
+}
+
+function normalizeLinear(value: number, min: number, max: number) {
+  if (max <= min) return 50;
+  return clampScore(((value - min) / (max - min)) * 100, 0, 100);
+}
+
+function computeAbilityScore(dPrime: number, medianRtMs: number | null) {
+  const dPrimeScore = normalizeLinear(dPrime, -1.0, 4.5);
+  const rtScore = medianRtMs == null ? 50 : clampScore(((1400 - medianRtMs) / 950) * 100, 0, 100);
+  return Math.round(dPrimeScore * 0.7 + rtScore * 0.3);
 }
 
 function getPool(mode: NBackMode) {
@@ -78,7 +149,7 @@ function createStimulus(
 export default function MemoryNBack({ onComplete }: MemoryNBackProps) {
   const t = useTranslations("test.memory");
 
-  const [phase, setPhase] = useState<"intro" | "practice" | "formal" | "result">("intro");
+  const [phase, setPhase] = useState<"intro" | "practice" | "formal">("intro");
 
   const [practiceMode, setPracticeMode] = useState<NBackMode>("grid");
   const [practiceRunning, setPracticeRunning] = useState(false);
@@ -96,21 +167,19 @@ export default function MemoryNBack({ onComplete }: MemoryNBackProps) {
   const hasMarkedSameRef = useRef(false);
 
   const [stats, setStats] = useState<FormalStats>({ tp: 0, tn: 0, fp: 0, fn: 0 });
-  const [rawScore, setRawScore] = useState(0);
-  const [ageNormScore, setAgeNormScore] = useState(0);
-  const [percentileLikeScore, setPercentileLikeScore] = useState(0);
-  const [displayScore, setDisplayScore] = useState(0);
 
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const practiceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const formalRandRef = useRef<() => number>(() => Math.random());
+  const trialStartTsRef = useRef<number>(0);
+  const clickTsRef = useRef<number | null>(null);
+  const correctHitRtMsRef = useRef<number[]>([]);
+  const tpRef = useRef(0);
+  const tnRef = useRef(0);
+  const fpRef = useRef(0);
+  const fnRef = useRef(0);
 
   // 正式阶段计分累积器。
-  const scoredCorrectCountRef = useRef(0);
-  const weightedTotalRef = useRef(0);
-  const weightedCorrectRef = useRef(0);
-  const nonMatchScoredRef = useRef(0);
-  const falseAlarmScoredRef = useRef(0);
 
   const totalQuestions = FORMAL_LEVELS.length;
 
@@ -131,21 +200,19 @@ export default function MemoryNBack({ onComplete }: MemoryNBackProps) {
     hasMarkedSameRef.current = false;
 
     setStats({ tp: 0, tn: 0, fp: 0, fn: 0 });
-    setRawScore(0);
-    setAgeNormScore(0);
-    setPercentileLikeScore(0);
-    setDisplayScore(0);
 
     // 固定 seed；不同模式给不同偏移，避免两模式题面完全一致。
     formalRandRef.current = mulberry32(
       FORMAL_BASE_SEED + (practiceMode === "grid" ? 0 : 10007)
     );
 
-    scoredCorrectCountRef.current = 0;
-    weightedTotalRef.current = 0;
-    weightedCorrectRef.current = 0;
-    nonMatchScoredRef.current = 0;
-    falseAlarmScoredRef.current = 0;
+    correctHitRtMsRef.current = [];
+    clickTsRef.current = null;
+    trialStartTsRef.current = 0;
+    tpRef.current = 0;
+    tnRef.current = 0;
+    fpRef.current = 0;
+    fnRef.current = 0;
 
     setIsFormalRunning(false);
     setPhase("formal");
@@ -219,63 +286,40 @@ export default function MemoryNBack({ onComplete }: MemoryNBackProps) {
     setFormalCurrent(generated.current);
     setHasMarkedSame(false);
     hasMarkedSameRef.current = false;
+    clickTsRef.current = null;
+    trialStartTsRef.current = Date.now();
 
     timerRef.current = setTimeout(() => {
       const clickedSame = hasMarkedSameRef.current;
       const isCorrect =
         (clickedSame && generated.isMatch) || (!clickedSame && !generated.isMatch);
 
-      setStats((prev) => {
-        const next = { ...prev };
-        if (clickedSame && generated.isMatch) next.tp += 1;
-        else if (!clickedSame && !generated.isMatch) next.tn += 1;
-        else if (clickedSame && !generated.isMatch) next.fp += 1;
-        else next.fn += 1;
-        return next;
+      if (clickedSame && generated.isMatch) tpRef.current += 1;
+      else if (!clickedSame && !generated.isMatch) tnRef.current += 1;
+      else if (clickedSame && !generated.isMatch) fpRef.current += 1;
+      else fnRef.current += 1;
+      setStats({
+        tp: tpRef.current,
+        tn: tnRef.current,
+        fp: fpRef.current,
+        fn: fnRef.current,
       });
 
-      const weight = LEVEL_WEIGHTS[level];
-      if (isCorrect) scoredCorrectCountRef.current += 1;
-      weightedTotalRef.current += weight;
-      if (isCorrect) weightedCorrectRef.current += weight;
-
-      if (!generated.isMatch) {
-        nonMatchScoredRef.current += 1;
-        if (clickedSame) falseAlarmScoredRef.current += 1;
+      if (isCorrect && generated.isMatch && clickTsRef.current != null) {
+        const rt = clickTsRef.current - trialStartTsRef.current;
+        if (rt >= 50 && rt <= FORMAL_INTERVAL_MS + 200) {
+          correctHitRtMsRef.current.push(rt);
+        }
       }
 
       const isLast = currentIndex + 1 >= totalQuestions;
       if (isLast) {
-        const weightedAccuracy =
-          weightedTotalRef.current > 0
-            ? weightedCorrectRef.current / weightedTotalRef.current
-            : 0;
-        const falseAlarmRate =
-          nonMatchScoredRef.current > 0
-            ? falseAlarmScoredRef.current / nonMatchScoredRef.current
-            : 0;
+        const dPrime = computeDPrime(tpRef.current, fnRef.current, fpRef.current, tnRef.current);
+        const medianRtValue = median(correctHitRtMsRef.current);
+        const computedAbility = computeAbilityScore(dPrime, medianRtValue);
 
-        let penaltyFactor = 1;
-        if (falseAlarmRate > 0.5) penaltyFactor = 0.7;
-        else if (falseAlarmRate > 0.35) penaltyFactor = 0.85;
-
-        const computedRaw = scoredCorrectCountRef.current;
-        const computedAgeNorm = computedRaw;
-        const computedPercentile = Math.round(weightedAccuracy * 100);
-        const computedDisplay = clampScore(
-          Math.round(computedPercentile * penaltyFactor),
-          0,
-          100
-        );
-
-        setRawScore(computedRaw);
-        setAgeNormScore(computedAgeNorm);
-        setPercentileLikeScore(computedPercentile);
-        setDisplayScore(computedDisplay);
-
-        onComplete(computedDisplay);
+        onComplete(computedAbility);
         setIsFormalRunning(false);
-        setPhase("result");
       } else {
         setCurrentIndex((idx) => idx + 1);
       }
@@ -314,8 +358,10 @@ export default function MemoryNBack({ onComplete }: MemoryNBackProps) {
 
   const handleFormalSame = () => {
     if (!isFormalRunning) return;
+    if (hasMarkedSameRef.current) return;
     setHasMarkedSame(true);
     hasMarkedSameRef.current = true;
+    clickTsRef.current = Date.now();
   };
 
   // 空格键作为 Match 快捷键；默认不按键即表示 Different。
@@ -543,35 +589,5 @@ export default function MemoryNBack({ onComplete }: MemoryNBackProps) {
     );
   }
 
-  return (
-    <div className="rounded-xl bg-white p-6 shadow-md">
-      <h4 className="mb-2 font-semibold text-gray-800">{t("nBackResultTitle")}</h4>
-      <p className="mb-4 text-sm text-gray-600">{t("nBackResultDesc")}</p>
-      <div className="grid gap-2 sm:grid-cols-2">
-        <div className="rounded-lg bg-gray-50 p-3">
-          <p className="text-xs text-gray-500">{t("rawScoreLabel")}</p>
-          <p className="text-lg font-semibold text-gray-800">{rawScore}</p>
-        </div>
-        <div className="rounded-lg bg-gray-50 p-3">
-          <p className="text-xs text-gray-500">{t("ageNormScoreLabel")}</p>
-          <p className="text-lg font-semibold text-gray-800">{ageNormScore}</p>
-        </div>
-        <div className="rounded-lg bg-gray-50 p-3">
-          <p className="text-xs text-gray-500">{t("percentileLikeScoreLabel")}</p>
-          <p className="text-lg font-semibold text-gray-800">{percentileLikeScore}</p>
-        </div>
-        <div className="rounded-lg bg-gray-50 p-3">
-          <p className="text-xs text-gray-500">{t("displayScoreLabel")}</p>
-          <p className="text-lg font-semibold text-[#5E81AC]">{displayScore}</p>
-        </div>
-      </div>
-      <div className="mt-3 grid gap-2 sm:grid-cols-2">
-        <p className="text-xs text-gray-500">TP: {stats.tp}</p>
-        <p className="text-xs text-gray-500">TN: {stats.tn}</p>
-        <p className="text-xs text-gray-500">FP: {stats.fp}</p>
-        <p className="text-xs text-gray-500">FN: {stats.fn}</p>
-      </div>
-      <p className="mt-4 text-xs text-gray-500">{t("displayScoreHint")}</p>
-    </div>
-  );
+  return null;
 }

@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useCallback } from "react";
 import { useTranslations } from "next-intl";
@@ -20,6 +20,7 @@ import ShapeRotation from "./ShapeRotation";
 interface TestRunnerProps {
   dimension: CognitiveDimensionKey;
   onBack: () => void;
+  dateOfBirth?: string | null;
 }
 
 interface CompletedRecord {
@@ -27,16 +28,25 @@ interface CompletedRecord {
   score: number;
 }
 
+// 使用与 next-intl useTranslations 兼容的 formatter 类型（仅传 string/number 插值）
+function formatTopPercent(percentile: number, formatter: (key: string, values?: Record<string, string | number>) => string) {
+  const p = Math.round(Math.max(0, Math.min(100, percentile)));
+  const top = Math.max(0, 100 - p);
+  if (top <= 0) return formatter("statsTopPercentBest");
+  return formatter("statsTopPercentFormat", { value: top });
+}
+
 /**
  * 运行当前维度的多个测试，完成后写雷达分数并显示结果
  */
-export default function TestRunner({ dimension, onBack }: TestRunnerProps) {
+export default function TestRunner({ dimension, onBack, dateOfBirth }: TestRunnerProps) {
   const t = useTranslations("test");
   const tCommon = useTranslations("common");
   const [testIndex, setTestIndex] = useState(0);
   const [records, setRecords] = useState<CompletedRecord[]>([]);
   const [done, setDone] = useState(false);
   const [radarScores, setRadarScores] = useState(DEFAULT_RADAR_SCORES);
+  const [showAgePercentile, setShowAgePercentile] = useState(false);
 
   const testLabels =
     dimension === "memory"
@@ -109,9 +119,9 @@ export default function TestRunner({ dimension, onBack }: TestRunnerProps) {
     dimension === "memory" && testIndex === 0
       ? () => <MemoryNBack onComplete={handleComplete} />
       : dimension === "memory" && testIndex === 1
-        ? () => <ChangeDetection onComplete={handleComplete} />
+        ? () => <ChangeDetection onComplete={handleComplete} dateOfBirth={dateOfBirth} />
         : dimension === "memory" && testIndex === 2
-          ? () => <SternbergMemoryScanning onComplete={handleComplete} />
+          ? () => <SternbergMemoryScanning onComplete={handleComplete} dateOfBirth={dateOfBirth} />
         : dimension === "logic" && testIndex === 0
           ? () => <PatternComplete onComplete={handleComplete} />
           : dimension === "logic" && testIndex === 1
@@ -143,10 +153,6 @@ export default function TestRunner({ dimension, onBack }: TestRunnerProps) {
         >
           {tCommon("back")}
         </button>
-        <h3 className="text-xl font-bold text-gray-800">{t("brainIndex")}</h3>
-        <p className="text-gray-600">
-          {t("yourScore")}: {avg}
-        </p>
         <RadarChart scores={radarScores} />
         <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
           <h4 className="mb-3 text-sm font-semibold text-gray-800">{t("dimensionStatsTitle")}</h4>
@@ -156,7 +162,21 @@ export default function TestRunner({ dimension, onBack }: TestRunnerProps) {
                 <tr className="border-b border-gray-200 text-left text-gray-500">
                   <th className="py-2 pr-3 font-medium">{t("statsColIndex")}</th>
                   <th className="py-2 pr-3 font-medium">{t("statsColTest")}</th>
-                  <th className="py-2 font-medium">{t("statsColScore")}</th>
+                  <th className="py-2 pr-3 font-medium">{t("statsColScore")}</th>
+                  <th className="py-2 font-medium">
+                    <div className="inline-flex items-center gap-2">
+                      <span>{t("statsColPeerPercentile")}</span>
+                      {!showAgePercentile && (
+                        <button
+                          type="button"
+                          onClick={() => setShowAgePercentile(true)}
+                          className="rounded border border-gray-300 px-1.5 py-0.5 text-xs font-medium text-gray-600 hover:bg-gray-50"
+                        >
+                          {t("statsViewAction")}
+                        </button>
+                      )}
+                    </div>
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -166,13 +186,19 @@ export default function TestRunner({ dimension, onBack }: TestRunnerProps) {
                     <td className="py-2 pr-3 text-gray-700">
                       {testLabels[item.testIndex] ?? `${t("statsColTest")} ${item.testIndex + 1}`}
                     </td>
-                    <td className="py-2 font-medium text-gray-800">{item.score}</td>
+                    <td className="py-2 pr-3 font-medium text-gray-800">{item.score}</td>
+                    <td className="py-2 text-gray-800">
+                      {showAgePercentile ? formatTopPercent(item.score, t) : "***"}
+                    </td>
                   </tr>
                 ))}
                 <tr className="bg-gray-50">
                   <td className="py-2 pr-3 text-gray-600">-</td>
                   <td className="py-2 pr-3 font-medium text-gray-700">{t("statsAverageRow")}</td>
-                  <td className="py-2 font-semibold text-[#5E81AC]">{avg}</td>
+                  <td className="py-2 pr-3 font-semibold text-[#5E81AC]">{avg}</td>
+                  <td className="py-2 font-semibold text-[#5E81AC]">
+                    {showAgePercentile ? formatTopPercent(avg, t) : "***"}
+                  </td>
                 </tr>
               </tbody>
             </table>
