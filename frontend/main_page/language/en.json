@@ -114,7 +114,7 @@
     "skipTest": "Skip",
     "brainIndex": "Brain Index",
     "memory": {
-      "nBackTitle": "N-back Memory Test",
+      "nBackTitle": "N-back",
       "nBackIntro1": "This test presents a sequence of shapes or letters. You need to decide whether the current stimulus is the same as the one N steps before.",
       "cdTitle": "Change Detection",
       "cdIntro": "A set of colored items is shown briefly, then shown again after a delay. Judge whether any item changed.",

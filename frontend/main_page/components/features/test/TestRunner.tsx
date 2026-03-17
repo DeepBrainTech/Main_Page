@@ -6,16 +6,16 @@ import type { CognitiveDimensionKey } from "@/types/cognitive";
 import { DEFAULT_RADAR_SCORES } from "@/config/dimensions";
 import { updateCognitiveScores } from "@/services/userApi";
 import RadarChart from "@/components/features/home/RadarChart";
-import MemoryNBack from "./MemoryNBack";
-import ChangeDetection from "./ChangeDetection";
-import SternbergMemoryScanning from "./SternbergMemoryScanning";
-import PatternComplete from "./PatternComplete";
-import MatrixReasoning from "./MatrixReasoning";
-import SchulteGrid from "./SchulteGrid";
-import StroopColor from "./StroopColor";
-import ReactionClick from "./ReactionClick";
-import ShortestPath from "./ShortestPath";
-import ShapeRotation from "./ShapeRotation";
+import MemoryNBack from "./memory/MemoryNBack";
+import ChangeDetection from "./memory/ChangeDetection";
+import SternbergMemoryScanning from "./memory/SternbergMemoryScanning";
+import PatternComplete from "./logic/PatternComplete";
+import MatrixReasoning from "./logic/MatrixReasoning";
+import SchulteGrid from "./focus/SchulteGrid";
+import StroopColor from "./focus/StroopColor";
+import ReactionClick from "./reaction/ReactionClick";
+import ShortestPath from "./strategy/ShortestPath";
+import ShapeRotation from "./spatial/ShapeRotation";
 
 interface TestRunnerProps {
   dimension: CognitiveDimensionKey;
