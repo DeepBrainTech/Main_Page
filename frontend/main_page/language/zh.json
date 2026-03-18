@@ -240,8 +240,46 @@
     "focus": {
       "schulteTitle": "舒尔特方格",
       "schulteDesc": "按 1～25 顺序点击",
+      "flankerTitle": "干扰控制（Flanker）",
+      "flankerDesc": "判断中心箭头方向，同时忽略周围干扰项",
+      "flankerPracticeTitle": "干扰控制练习",
+      "flankerShortcutHint": "快捷控制：按 `←` 表示左，按 `→` 表示右",
+      "flankerInstruction": "只需回应中心箭头方向",
+      "flankerLeft": "左",
+      "flankerRight": "右",
+      "flankerType": {
+        "congruent": "同向",
+        "incongruent": "反向",
+        "neutral": "中性"
+      },
+      "schultePracticeTitle": "舒尔特方格练习",
+      "schulteTarget": "当前目标：{current}/{total}",
+      "schulteLevel": "第 {level} 关：{size}",
+      "schulteRetryPractice": "重做练习",
+      "practiceBadge": "练习",
+      "formalBadge": "正式测试",
+      "startPractice": "开始练习",
+      "startFormal": "开始正式测试",
+      "practiceNoAnswer": "先做一道练习题再开始",
+      "practiceFeedbackCorrect": "练习答案正确。",
+      "practiceFeedbackWrong": "练习答案错误。",
+      "formalProgress": "正式进度：{current}/{total}",
+      "submit": "提交",
+      "loading": "加载中...",
       "stroopTitle": "颜色冲突",
-      "stroopDesc": "根据字体颜色选择，忽略文字含义"
+      "stroopDesc": "根据字体颜色选择，忽略文字含义",
+      "stroopPracticeTitle": "颜色冲突练习",
+      "stroopInstruction": "根据墨水颜色作答，忽略文字含义",
+      "stroopWord": {
+        "red": "红色",
+        "green": "绿色",
+        "blue": "蓝色"
+      },
+      "stroopOption": {
+        "red": "红色",
+        "green": "绿色",
+        "blue": "蓝色"
+      }
     },
     "reaction": {
       "title": "反应速度",

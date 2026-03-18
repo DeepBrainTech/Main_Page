@@ -12,8 +12,9 @@ import SternbergMemoryScanning from "./memory/SternbergMemoryScanning";
 import TransitiveInference from "./logic/Transitive_Inference";
 import SyllogisticReasoning from "./logic/SyllogisticReasoning";
 import AnalogicalReasoning from "./logic/AnalogicalReasoning";
-import SchulteGrid from "./focus/SchulteGrid";
+import FlankerTask from "./focus/FlankerTask";
 import StroopColor from "./focus/StroopColor";
+import SchulteGrid from "./focus/SchulteGrid";
 import ReactionClick from "./reaction/ReactionClick";
 import ShortestPath from "./strategy/ShortestPath";
 import ShapeRotation from "./spatial/ShapeRotation";
@@ -55,7 +56,7 @@ export default function TestRunner({ dimension, onBack, dateOfBirth }: TestRunne
       : dimension === "logic"
         ? [t("logic.patternTitle"), t("logic.syllogismTitle"), t("logic.analogyTitle")]
         : dimension === "focus"
-          ? [t("focus.schulteTitle"), t("focus.stroopTitle")]
+          ? [t("focus.flankerTitle"), t("focus.stroopTitle"), t("focus.schulteTitle")]
           : dimension === "reaction"
             ? [t("reaction.title")]
             : dimension === "strategy"
@@ -67,10 +68,10 @@ export default function TestRunner({ dimension, onBack, dateOfBirth }: TestRunne
   const testCount =
     dimension === "memory"
       ? 3
-      : dimension === "logic"
+        : dimension === "logic"
         ? 3
         : dimension === "focus"
-        ? 2
+        ? 3
         : 1;
 
   const finishWithRecords = useCallback(
@@ -132,9 +133,11 @@ export default function TestRunner({ dimension, onBack, dateOfBirth }: TestRunne
             : dimension === "logic" && testIndex === 2
               ? () => <AnalogicalReasoning onComplete={handleComplete} />
             : dimension === "focus" && testIndex === 0
-              ? () => <SchulteGrid onComplete={handleComplete} />
-              : dimension === "focus" && testIndex === 1
-                ? () => <StroopColor onComplete={handleComplete} />
+              ? () => <FlankerTask onComplete={handleComplete} dateOfBirth={dateOfBirth} />
+            : dimension === "focus" && testIndex === 1
+                ? () => <StroopColor onComplete={handleComplete} dateOfBirth={dateOfBirth} />
+                : dimension === "focus" && testIndex === 2
+                  ? () => <SchulteGrid onComplete={handleComplete} />
                 : dimension === "reaction"
                   ? () => <ReactionClick onComplete={handleComplete} />
                   : dimension === "strategy"

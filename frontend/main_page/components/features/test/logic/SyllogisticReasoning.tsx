@@ -315,7 +315,13 @@ export default function SyllogisticReasoning({
     }
   }, [phase, formalIndex]);
 
-  const handleSubmit = () => {
+  useEffect(() => {
+    if ((phase === "practice" || phase === "formal") && selected !== null) {
+      handleSubmit();
+    }
+  }, [phase, selected]);
+
+  function handleSubmit() {
     if (selected === null) return;
     const isCorrect = selected === currentQuestion.answer;
     if (phase === "practice") {
@@ -345,7 +351,7 @@ export default function SyllogisticReasoning({
       setFormalIndex((idx) => idx + 1);
       setSelected(null);
     }
-  };
+  }
 
   if (phase === "intro") {
     return (
@@ -400,15 +406,6 @@ export default function SyllogisticReasoning({
           </button>
         ))}
       </div>
-
-      <button
-        type="button"
-        onClick={handleSubmit}
-        disabled={selected === null}
-        className="mt-4 rounded-lg bg-[#5E81AC] px-4 py-2 text-white disabled:opacity-50"
-      >
-        {t("submit")}
-      </button>
 
       {phase === "practice" && (
         <div className="mt-4 flex items-center justify-between gap-3">
