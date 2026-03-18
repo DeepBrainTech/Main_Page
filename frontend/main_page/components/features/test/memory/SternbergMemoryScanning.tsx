@@ -133,11 +133,11 @@ function parseAge(dateOfBirth?: string | null) {
 
 function resolveAgeBand(age: number | null): AgeBandId | null {
   if (age == null) return null;
-  if (age >= 7 && age <= 12) return "children";
+  if (age >= 8 && age <= 12) return "children";
   if (age >= 13 && age <= 18) return "teens";
-  if (age >= 19 && age <= 35) return "youngAdults";
-  if (age >= 36 && age <= 60) return "middleAged";
-  if (age >= 65) return "seniors";
+  if (age >= 19 && age <= 30) return "youngAdults";
+  if (age >= 60) return "seniors";
+  if (age >= 31 && age <= 59) return "middleAged";
   return null;
 }
 
@@ -168,7 +168,7 @@ export default function SternbergMemoryScanning({ onComplete, dateOfBirth }: Ste
   const formalTrials = useMemo(() => buildFormalTrials(FORMAL_SEED), []);
 
   const [phase, setPhase] = useState<
-    "intro" | "practice" | "formal" | "result"
+    "intro" | "practice" | "formal"
   >("intro");
   const [stage, setStage] = useState<"memorize" | "delay" | "probe" | "feedback">("memorize");
   const [practiceIndex, setPracticeIndex] = useState(0);
@@ -177,13 +177,6 @@ export default function SternbergMemoryScanning({ onComplete, dateOfBirth }: Ste
   const [practiceCorrect, setPracticeCorrect] = useState<boolean | null>(null);
   const [selectedAnswer, setSelectedAnswer] = useState<boolean | null>(null);
   const [memorizeRemainMs, setMemorizeRemainMs] = useState(MEMORIZE_MS);
-
-  const [rawScore, setRawScore] = useState(0);
-  const [ageNormScore, setAgeNormScore] = useState(0);
-  const [percentileLikeScore, setPercentileLikeScore] = useState(0);
-  const [displayScore, setDisplayScore] = useState(0);
-  const [accuracyPct, setAccuracyPct] = useState(0);
-  const [avgRtMs, setAvgRtMs] = useState(0);
 
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -270,25 +263,14 @@ export default function SternbergMemoryScanning({ onComplete, dateOfBirth }: Ste
                 0.2
           );
 
-    const computedRaw = aggRef.current.correct;
-    const computedAgeNorm = agePercentile ?? abilityScore;
-    const computedPercentile = abilityScore;
     const computedDisplay = clampScore(
       Math.round(abilityScore * 0.7 + (agePercentile ?? abilityScore) * 0.3),
       0,
       100
     );
 
-    setRawScore(computedRaw);
-    setAgeNormScore(computedAgeNorm);
-    setPercentileLikeScore(computedPercentile);
-    setDisplayScore(computedDisplay);
-    setAccuracyPct(Math.round(accuracy * 100));
-    setAvgRtMs(avgRt > 0 ? Math.round(avgRt) : 0);
-
     onComplete(computedDisplay);
     setIsFormalRunning(false);
-    setPhase("result");
   };
 
   const recordFormalAnswer = (answer: boolean | null, rtMs: number | null) => {
@@ -548,31 +530,5 @@ export default function SternbergMemoryScanning({ onComplete, dateOfBirth }: Ste
     );
   }
 
-  return (
-    <div className="rounded-xl bg-white p-6 shadow-md">
-      <h4 className="mb-2 font-semibold text-gray-800">{t("sternbergResultTitle")}</h4>
-      <p className="mb-4 text-sm text-gray-600">{t("sternbergResultDesc")}</p>
-      <div className="grid gap-2 sm:grid-cols-2">
-        <div className="rounded-lg bg-gray-50 p-3">
-          <p className="text-xs text-gray-500">{t("rawScoreLabel")}</p>
-          <p className="text-lg font-semibold text-gray-800">{rawScore}</p>
-        </div>
-        <div className="rounded-lg bg-gray-50 p-3">
-          <p className="text-xs text-gray-500">{t("ageNormScoreLabel")}</p>
-          <p className="text-lg font-semibold text-gray-800">{ageNormScore}</p>
-        </div>
-        <div className="rounded-lg bg-gray-50 p-3">
-          <p className="text-xs text-gray-500">{t("percentileLikeScoreLabel")}</p>
-          <p className="text-lg font-semibold text-gray-800">{percentileLikeScore}</p>
-        </div>
-        <div className="rounded-lg bg-gray-50 p-3">
-          <p className="text-xs text-gray-500">{t("displayScoreLabel")}</p>
-          <p className="text-lg font-semibold text-[#5E81AC]">{displayScore}</p>
-        </div>
-      </div>
-      <p className="mt-3 text-xs text-gray-500">{t("sternbergAccuracy", { value: accuracyPct })}</p>
-      <p className="mt-1 text-xs text-gray-500">{t("sternbergAvgRt", { value: avgRtMs })}</p>
-      <p className="mt-2 text-xs text-gray-500">{t("displayScoreHint")}</p>
-    </div>
-  );
+  return null;
 }

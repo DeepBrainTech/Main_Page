@@ -9,8 +9,9 @@ import RadarChart from "@/components/features/home/RadarChart";
 import MemoryNBack from "./memory/MemoryNBack";
 import ChangeDetection from "./memory/ChangeDetection";
 import SternbergMemoryScanning from "./memory/SternbergMemoryScanning";
-import PatternComplete from "./logic/PatternComplete";
-import MatrixReasoning from "./logic/MatrixReasoning";
+import TransitiveInference from "./logic/Transitive_Inference";
+import SyllogisticReasoning from "./logic/SyllogisticReasoning";
+import AnalogicalReasoning from "./logic/AnalogicalReasoning";
 import SchulteGrid from "./focus/SchulteGrid";
 import StroopColor from "./focus/StroopColor";
 import ReactionClick from "./reaction/ReactionClick";
@@ -50,9 +51,9 @@ export default function TestRunner({ dimension, onBack, dateOfBirth }: TestRunne
 
   const testLabels =
     dimension === "memory"
-      ? [t("memory.nBackTitle"), t("memory.cdTitle"), t("memory.sternbergTitle")]
+      ? [t("memory.sternbergTitle"), t("memory.cdTitle"), t("memory.nBackTitle")]
       : dimension === "logic"
-        ? [t("logic.patternTitle"), t("logic.matrixTitle")]
+        ? [t("logic.patternTitle"), t("logic.syllogismTitle"), t("logic.analogyTitle")]
         : dimension === "focus"
           ? [t("focus.schulteTitle"), t("focus.stroopTitle")]
           : dimension === "reaction"
@@ -66,7 +67,9 @@ export default function TestRunner({ dimension, onBack, dateOfBirth }: TestRunne
   const testCount =
     dimension === "memory"
       ? 3
-      : dimension === "logic" || dimension === "focus"
+      : dimension === "logic"
+        ? 3
+        : dimension === "focus"
         ? 2
         : 1;
 
@@ -117,15 +120,17 @@ export default function TestRunner({ dimension, onBack, dateOfBirth }: TestRunne
 
   const TestRender =
     dimension === "memory" && testIndex === 0
-      ? () => <MemoryNBack onComplete={handleComplete} />
+      ? () => <SternbergMemoryScanning onComplete={handleComplete} dateOfBirth={dateOfBirth} />
       : dimension === "memory" && testIndex === 1
         ? () => <ChangeDetection onComplete={handleComplete} dateOfBirth={dateOfBirth} />
         : dimension === "memory" && testIndex === 2
-          ? () => <SternbergMemoryScanning onComplete={handleComplete} dateOfBirth={dateOfBirth} />
+          ? () => <MemoryNBack onComplete={handleComplete} dateOfBirth={dateOfBirth} />
         : dimension === "logic" && testIndex === 0
-          ? () => <PatternComplete onComplete={handleComplete} />
-          : dimension === "logic" && testIndex === 1
-            ? () => <MatrixReasoning onComplete={handleComplete} />
+          ? () => <TransitiveInference onComplete={handleComplete} dateOfBirth={dateOfBirth} />
+        : dimension === "logic" && testIndex === 1
+            ? () => <SyllogisticReasoning onComplete={handleComplete} dateOfBirth={dateOfBirth} />
+            : dimension === "logic" && testIndex === 2
+              ? () => <AnalogicalReasoning onComplete={handleComplete} />
             : dimension === "focus" && testIndex === 0
               ? () => <SchulteGrid onComplete={handleComplete} />
               : dimension === "focus" && testIndex === 1
