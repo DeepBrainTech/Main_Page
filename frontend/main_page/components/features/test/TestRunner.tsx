@@ -139,7 +139,7 @@ export default function TestRunner({ dimension, onBack, dateOfBirth }: TestRunne
                 : dimension === "focus" && testIndex === 2
                   ? () => <SchulteGrid onComplete={handleComplete} />
                 : dimension === "reaction"
-                  ? () => <ReactionClick onComplete={handleComplete} />
+                  ? () => <ReactionClick onComplete={handleComplete} dateOfBirth={dateOfBirth} />
                   : dimension === "strategy"
                     ? () => <ShortestPath onComplete={handleComplete} />
                     : dimension === "spatial"
