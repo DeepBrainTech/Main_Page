@@ -270,7 +270,7 @@ export default function ReactionClick({
 
       <button
         type="button"
-        onClick={handleClick}
+        onPointerDown={handleClick}
         className={`h-48 w-full rounded-xl transition ${screenClass}`}
       >
         <span className="text-xl font-semibold">{screenLabel}</span>
