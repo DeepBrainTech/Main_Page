@@ -3,22 +3,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 
-type Phase = "intro" | "practice" | "formal" | "result";
+type Phase = "intro" | "practice" | "formal";
 type ScreenState = "idle" | "waiting" | "ready" | "tooSoon" | "recorded";
 type AgeBandId = "teens" | "youngAdults" | "midAge" | "olderAdults";
 
 interface AgeNormRange {
   min: number;
   max: number;
-}
-
-interface ReactionSummary {
-  trials: number[];
-  medianRt: number;
-  meanRt: number;
-  bestRt: number;
-  score: number;
-  ageBand: AgeBandId | null;
 }
 
 const FORMAL_TRIAL_COUNT = 3;
@@ -106,7 +97,6 @@ export default function ReactionClick({
   const [formalIndex, setFormalIndex] = useState(0);
   const [trialResults, setTrialResults] = useState<number[]>([]);
   const [practiceResult, setPracticeResult] = useState<number | null>(null);
-  const [summary, setSummary] = useState<ReactionSummary | null>(null);
 
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lockRef = useRef(false);
@@ -142,30 +132,20 @@ export default function ReactionClick({
 
   const finishFormal = (results: number[]) => {
     const medianRt = Math.round(median(results));
-    const meanRt = Math.round(mean(results));
     const bestRt = Math.round(Math.min(...results));
     const medianScore = mapReactionToScore(medianRt, ageBand);
     const bestScore = mapReactionToScore(bestRt, ageBand);
     const stabilityScore = computeStabilityScore(results);
     const finalScore = Math.round(medianScore * 0.7 + bestScore * 0.2 + stabilityScore * 0.1);
-
-    setSummary({
-      trials: results,
-      medianRt,
-      meanRt,
-      bestRt,
-      score: clamp(finalScore, 0, 100),
-      ageBand,
-    });
-    setScreenState("idle");
-    setPhase("result");
+    timerRef.current = setTimeout(() => {
+      onComplete(clamp(finalScore, 0, 100));
+    }, INTER_TRIAL_DELAY_MS);
   };
 
   const startPractice = () => {
     setPracticeResult(null);
     setTrialResults([]);
     setFormalIndex(0);
-    setSummary(null);
     setPhase("practice");
     scheduleRound();
   };
@@ -173,7 +153,6 @@ export default function ReactionClick({
   const startFormal = () => {
     setTrialResults([]);
     setFormalIndex(0);
-    setSummary(null);
     setPhase("formal");
     scheduleRound();
   };
@@ -268,72 +247,6 @@ export default function ReactionClick({
           className="rounded-lg bg-[#5E81AC] px-4 py-2 text-white"
         >
           {t("startPractice")}
-        </button>
-      </div>
-    );
-  }
-
-  if (phase === "result" && summary) {
-    const ageBandLabel =
-      summary.ageBand == null ? t("ageBandUnknown") : t(`ageBand.${summary.ageBand}`);
-
-    return (
-      <div className="rounded-xl bg-white p-6 shadow-md">
-        <h4 className="mb-2 font-semibold text-gray-800">{t("resultTitle")}</h4>
-        <p className="mb-4 text-sm text-gray-600">{t("resultDesc")}</p>
-
-        <div className="mb-4 grid gap-3 md:grid-cols-2">
-          <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
-            <p className="text-xs text-gray-500">{t("finalScore")}</p>
-            <p className="text-3xl font-bold text-[#1f5fae]">{summary.score}</p>
-          </div>
-          <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
-            <p className="text-xs text-gray-500">{t("ageGroupLabel")}</p>
-            <p className="text-lg font-semibold text-gray-800">{ageBandLabel}</p>
-          </div>
-        </div>
-
-        <div className="mb-4 overflow-x-auto">
-          <table className="min-w-full text-sm">
-            <thead>
-              <tr className="border-b border-gray-200 text-left text-gray-500">
-                <th className="py-2 pr-3 font-medium">{t("trialCol")}</th>
-                <th className="py-2 font-medium">{t("rtCol")}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {summary.trials.map((trial, index) => (
-                <tr key={`${trial}-${index}`} className="border-b border-gray-100 last:border-b-0">
-                  <td className="py-2 pr-3 text-gray-700">{t("trialLabel", { index: index + 1 })}</td>
-                  <td className="py-2 text-gray-800">{trial} ms</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        <div className="mb-4 grid gap-3 md:grid-cols-3">
-          <div className="rounded-lg border border-gray-200 p-3">
-            <p className="text-xs text-gray-500">{t("medianLabel")}</p>
-            <p className="text-lg font-semibold text-gray-800">{summary.medianRt} ms</p>
-          </div>
-          <div className="rounded-lg border border-gray-200 p-3">
-            <p className="text-xs text-gray-500">{t("meanLabel")}</p>
-            <p className="text-lg font-semibold text-gray-800">{summary.meanRt} ms</p>
-          </div>
-          <div className="rounded-lg border border-gray-200 p-3">
-            <p className="text-xs text-gray-500">{t("bestLabel")}</p>
-            <p className="text-lg font-semibold text-gray-800">{summary.bestRt} ms</p>
-          </div>
-        </div>
-
-        <p className="mb-4 text-xs text-gray-500">{t("scoreHint")}</p>
-        <button
-          type="button"
-          onClick={() => onComplete(summary.score)}
-          className="rounded-lg bg-emerald-500 px-4 py-2 text-white hover:bg-emerald-600"
-        >
-          {t("finishTest")}
         </button>
       </div>
     );
