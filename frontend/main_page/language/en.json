@@ -312,6 +312,36 @@
       "ageGroupLabel": "Age Group",
       "scoreHint": "Reference ranges: teens 400-560 ms, young adults 190-250 ms, mid-age adults 250-350 ms, older adults 350-500 ms.",
       "finishTest": "Finish Test",
+      "arrowTitle": "Arrow Key Reaction",
+      "arrowPracticeTitle": "Arrow Key Practice",
+      "arrowDesc": "When an arrow appears, press the matching direction key as fast as possible.",
+      "arrowPracticeDesc": "Press the corresponding arrow key (↑ ↓ ← →) when the target appears.",
+      "arrowRulePractice": "Start with practice rounds to get used to the timing.",
+      "arrowRuleFormal": "The formal test includes 5 scored trials.",
+      "arrowRuleNoEarly": "If you press before the arrow appears, that round restarts.",
+      "arrowRuleMatch": "You must press the matching direction key; wrong key restarts the round.",
+      "arrowRuleReference": "Your score is adjusted using age-group reaction-time references.",
+      "arrowWaiting": "Waiting for arrow...",
+      "arrowPressNow": "Press the matching arrow key now!",
+      "arrowWrongKey": "Wrong direction",
+      "arrowReady": "Ready",
+      "arrowPracticeHint": "You can repeat practice rounds before starting the formal test.",
+      "arrowPracticeResult": "Practice reaction time: {value} ms",
+      "pvtTitle": "PVT-style Vigilance RT",
+      "pvtPracticeTitle": "PVT Practice",
+      "pvtDesc": "Watch the black frame and press Space as soon as the white dot appears to measure sustained vigilance and reaction stability.",
+      "pvtPracticeDesc": "Press Space immediately when the white dot appears in the black frame. Practice repeats automatically.",
+      "pvtRulePractice": "Start with practice rounds to adapt to random waiting intervals.",
+      "pvtRuleFormal": "The formal test includes 5 scored trials.",
+      "pvtRuleNoEarly": "Pressing Space before stimulus onset counts as a false start and restarts the round.",
+      "pvtRuleLapse": "Reaction times above the age-band reference upper bound are counted as lapses and reduce the score.",
+      "pvtRuleReference": "Scoring combines age-band norms, stability, and error penalties.",
+      "pvtWaiting": "Stay alert and wait for the white dot...",
+      "pvtPressNow": "White dot on, press Space now!",
+      "pvtReady": "Ready",
+      "pvtPracticeHint": "Keep practicing as needed, then start the formal test.",
+      "pvtPracticeResult": "Practice reaction time: {value} ms",
+      "pvtStats": "lapse: {lapse} · false starts: {falseStart}",
       "ageBand": {
         "teens": "Teenagers (13-19)",
         "youngAdults": "Young Adults (20-30)",
@@ -585,3 +615,5 @@
     }
   }
 }
+
+

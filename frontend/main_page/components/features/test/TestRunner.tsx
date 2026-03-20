@@ -16,6 +16,8 @@ import FlankerTask from "./focus/FlankerTask";
 import StroopColor from "./focus/StroopColor";
 import SchulteGrid from "./focus/SchulteGrid";
 import ReactionClick from "./reaction/ReactionClick";
+import ReactionArrowKey from "./reaction/ReactionArrowKey";
+import ReactionPVT from "./reaction/ReactionPVT";
 import ShortestPath from "./strategy/ShortestPath";
 import ShapeRotation from "./spatial/ShapeRotation";
 
@@ -58,7 +60,7 @@ export default function TestRunner({ dimension, onBack, dateOfBirth }: TestRunne
         : dimension === "focus"
           ? [t("focus.flankerTitle"), t("focus.stroopTitle"), t("focus.schulteTitle")]
           : dimension === "reaction"
-            ? [t("reaction.title")]
+            ? [t("reaction.title"), t("reaction.arrowTitle"), t("reaction.pvtTitle")]
             : dimension === "strategy"
               ? [t("strategy.pathTitle")]
               : dimension === "spatial"
@@ -71,6 +73,8 @@ export default function TestRunner({ dimension, onBack, dateOfBirth }: TestRunne
         : dimension === "logic"
         ? 3
         : dimension === "focus"
+        ? 3
+        : dimension === "reaction"
         ? 3
         : 1;
 
@@ -138,8 +142,12 @@ export default function TestRunner({ dimension, onBack, dateOfBirth }: TestRunne
                 ? () => <StroopColor onComplete={handleComplete} dateOfBirth={dateOfBirth} />
                 : dimension === "focus" && testIndex === 2
                   ? () => <SchulteGrid onComplete={handleComplete} />
-                : dimension === "reaction"
+                : dimension === "reaction" && testIndex === 0
                   ? () => <ReactionClick onComplete={handleComplete} dateOfBirth={dateOfBirth} />
+                : dimension === "reaction" && testIndex === 1
+                    ? () => <ReactionArrowKey onComplete={handleComplete} dateOfBirth={dateOfBirth} />
+                  : dimension === "reaction" && testIndex === 2
+                    ? () => <ReactionPVT onComplete={handleComplete} dateOfBirth={dateOfBirth} />
                   : dimension === "strategy"
                     ? () => <ShortestPath onComplete={handleComplete} />
                     : dimension === "spatial"
