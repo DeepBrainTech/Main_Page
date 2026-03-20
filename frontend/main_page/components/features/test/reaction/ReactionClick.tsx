@@ -12,7 +12,7 @@ interface AgeNormRange {
   max: number;
 }
 
-const FORMAL_TRIAL_COUNT = 3;
+const FORMAL_TRIAL_COUNT = 5;
 const TOO_SOON_FLASH_MS = 900;
 const INTER_TRIAL_DELAY_MS = 800;
 
@@ -287,13 +287,22 @@ export default function ReactionClick({
               </p>
             )}
           </div>
-          <button
-            type="button"
-            onClick={startFormal}
-            className="rounded-lg bg-emerald-500 px-4 py-2 text-white hover:bg-emerald-600"
-          >
-            {t("startFormal")}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={startPractice}
+              className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-gray-700 hover:bg-gray-50"
+            >
+              {t("retryPractice")}
+            </button>
+            <button
+              type="button"
+              onClick={startFormal}
+              className="rounded-lg bg-emerald-500 px-4 py-2 text-white hover:bg-emerald-600"
+            >
+              {t("startFormal")}
+            </button>
+          </div>
         </div>
       )}
     </div>
