@@ -1,4 +1,4 @@
-﻿{
+{
   "common": {
     "welcome": "Welcome to DeepBrain Tech Platform",
     "login": "Login",
@@ -360,6 +360,8 @@
       "title": "Spatial Imagination",
       "desc": "Decide if two shapes are the same after rotation",
       "intro": "You will see two 3D block shapes (A and B). Decide whether they are the same object viewed from a different angle, or if one is a mirror image.",
+      "introSection2d": "Q1-5 · 2D Shapes",
+      "introSection3d": "Q6-10 · 3D Blocks",
       "introTip": "Key tips",
       "introTip1": "Same: B can be rotated in 3D to exactly match A",
       "introTip2": "Different: B is a mirror image of A — no rotation can make them match",
@@ -369,6 +371,10 @@
       "formalTitle": "Spatial Rotation Test",
       "formalBadge": "Formal Test",
       "progress": "Progress {current}/{total}",
+      "mode2d": "2D Shapes",
+      "mode3d": "3D Blocks",
+      "section2d": "2D Shapes Phase",
+      "section3d": "3D Blocks Phase",
       "shapeA": "Shape A",
       "shapeB": "Shape B",
       "question": "Are these the same object?",

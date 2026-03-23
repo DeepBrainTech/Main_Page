@@ -458,8 +458,8 @@ export default function ShapeRotation({ onComplete }: { onComplete: (score: numb
 
   const modeTag = (trial: Trial) =>
     trial.mode === "2d"
-      ? { label: "2D 图形", cls: "bg-blue-50 text-blue-600" }
-      : { label: "3D 积木", cls: "bg-amber-50 text-amber-700" };
+      ? { label: t("mode2d"), cls: "bg-blue-50 text-blue-600" }
+      : { label: t("mode3d"), cls: "bg-amber-50 text-amber-700" };
 
   // ── Intro ──────────────────────────────────────────────────────────────────
   if (phase === "intro") {
@@ -487,7 +487,7 @@ export default function ShapeRotation({ onComplete }: { onComplete: (score: numb
         {/* Mini demos: 2D and 3D examples */}
         <div className="mb-6 grid grid-cols-2 gap-3">
           <div className="rounded-xl border border-gray-100 bg-gray-50 p-3">
-            <p className="mb-2 text-center text-xs font-medium text-blue-500">Q1–5 · 2D 图形</p>
+            <p className="mb-2 text-center text-xs font-medium text-blue-500">{t("introSection2d")}</p>
             <div className="flex items-center justify-center gap-2">
               <div className="flex flex-col items-center gap-0.5">
                 <span className="text-[10px] text-gray-400">A</span>
@@ -505,7 +505,7 @@ export default function ShapeRotation({ onComplete }: { onComplete: (score: numb
             </div>
           </div>
           <div className="rounded-xl border border-gray-100 bg-gray-50 p-3">
-            <p className="mb-2 text-center text-xs font-medium text-amber-600">Q6–10 · 3D 积木</p>
+            <p className="mb-2 text-center text-xs font-medium text-amber-600">{t("introSection3d")}</p>
             <div className="flex items-center justify-center gap-2">
               <div className="flex flex-col items-center gap-0.5">
                 <span className="text-[10px] text-gray-400">A</span>
@@ -573,8 +573,8 @@ export default function ShapeRotation({ onComplete }: { onComplete: (score: numb
 
   // Progress section label (formal only)
   const sectionLabel =
-    !isPractice && trialIdx < 5 ? "2D 图形阶段" :
-    !isPractice                 ? "3D 积木阶段" : "";
+    !isPractice && trialIdx < 5 ? t("section2d") :
+    !isPractice                 ? t("section3d") : "";
 
   return (
     <div className="rounded-xl bg-white p-6 shadow-md">
