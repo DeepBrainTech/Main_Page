@@ -18,7 +18,9 @@ import SchulteGrid from "./focus/SchulteGrid";
 import ReactionClick from "./reaction/ReactionClick";
 import ReactionArrowKey from "./reaction/ReactionArrowKey";
 import ReactionPVT from "./reaction/ReactionPVT";
-import ShortestPath from "./strategy/ShortestPath";
+import HanoiPlanning from "./strategy/HanoiPlanning";
+import LondonPlanning from "./strategy/LondonPlanning";
+import RoutePlanning from "./strategy/RoutePlanning";
 import ShapeRotation from "./spatial/ShapeRotation";
 import PaperFold from "./spatial/PaperFold";
 
@@ -60,10 +62,10 @@ export default function TestRunner({ dimension, onBack, dateOfBirth }: TestRunne
         ? [t("logic.patternTitle"), t("logic.syllogismTitle"), t("logic.analogyTitle")]
         : dimension === "focus"
           ? [t("focus.flankerTitle"), t("focus.stroopTitle"), t("focus.schulteTitle")]
-          : dimension === "reaction"
-            ? [t("reaction.title"), t("reaction.arrowTitle"), t("reaction.pvtTitle")]
+            : dimension === "reaction"
+              ? [t("reaction.title"), t("reaction.arrowTitle"), t("reaction.pvtTitle")]
             : dimension === "strategy"
-              ? [t("strategy.pathTitle")]
+              ? [t("strategy.hanoiTitle"), t("strategy.londonTitle"), t("strategy.routeTitle")]
               : dimension === "spatial"
                 ? [t("spatial.title"), "Paper Folding"]
                 : [];
@@ -76,6 +78,8 @@ export default function TestRunner({ dimension, onBack, dateOfBirth }: TestRunne
         : dimension === "focus"
         ? 3
         : dimension === "reaction"
+        ? 3
+        : dimension === "strategy"
         ? 3
         : dimension === "spatial"
         ? 2
@@ -152,7 +156,11 @@ export default function TestRunner({ dimension, onBack, dateOfBirth }: TestRunne
                   : dimension === "reaction" && testIndex === 2
                     ? () => <ReactionPVT onComplete={handleComplete} dateOfBirth={dateOfBirth} />
                   : dimension === "strategy"
-                    ? () => <ShortestPath onComplete={handleComplete} />
+                    ? testIndex === 0
+                      ? () => <HanoiPlanning onComplete={handleComplete} dateOfBirth={dateOfBirth} />
+                      : testIndex === 1
+                        ? () => <LondonPlanning onComplete={handleComplete} dateOfBirth={dateOfBirth} />
+                        : () => <RoutePlanning onComplete={handleComplete} dateOfBirth={dateOfBirth} />
                     : dimension === "spatial"
                       ? testIndex === 0
                         ? () => <ShapeRotation onComplete={handleComplete} />
