@@ -20,6 +20,7 @@ import ReactionArrowKey from "./reaction/ReactionArrowKey";
 import ReactionPVT from "./reaction/ReactionPVT";
 import ShortestPath from "./strategy/ShortestPath";
 import ShapeRotation from "./spatial/ShapeRotation";
+import PaperFold from "./spatial/PaperFold";
 
 interface TestRunnerProps {
   dimension: CognitiveDimensionKey;
@@ -64,7 +65,7 @@ export default function TestRunner({ dimension, onBack, dateOfBirth }: TestRunne
             : dimension === "strategy"
               ? [t("strategy.pathTitle")]
               : dimension === "spatial"
-                ? [t("spatial.title")]
+                ? [t("spatial.title"), "Paper Folding"]
                 : [];
 
   const testCount =
@@ -76,6 +77,8 @@ export default function TestRunner({ dimension, onBack, dateOfBirth }: TestRunne
         ? 3
         : dimension === "reaction"
         ? 3
+        : dimension === "spatial"
+        ? 2
         : 1;
 
   const finishWithRecords = useCallback(
@@ -151,7 +154,9 @@ export default function TestRunner({ dimension, onBack, dateOfBirth }: TestRunne
                   : dimension === "strategy"
                     ? () => <ShortestPath onComplete={handleComplete} />
                     : dimension === "spatial"
-                      ? () => <ShapeRotation onComplete={handleComplete} />
+                      ? testIndex === 0
+                        ? () => <ShapeRotation onComplete={handleComplete} />
+                        : () => <PaperFold onComplete={handleComplete} />
                       : () => <div />;
 
   if (done) {
