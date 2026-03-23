@@ -4,23 +4,34 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 
 type Phase = "intro" | "practice" | "formal";
-type ScreenState = "idle" | "waiting" | "ready" | "tooSoon" | "recorded";
-type AgeBandId = "teens" | "youngAdults" | "midAge" | "olderAdults";
+type ScreenState = "idle" | "waiting" | "ready" | "tooSoon" | "wrongKey" | "recorded";
+type Direction = "up" | "down" | "left" | "right";
+type AgeBandId = "children" | "teens" | "youngAdults" | "middleAged" | "seniors";
 
 interface AgeNormRange {
   min: number;
   max: number;
 }
 
+const DIRECTIONS: Direction[] = ["up", "down", "left", "right"];
+const DIRECTION_SYMBOLS: Record<Direction, string> = {
+  up: "↑",
+  down: "↓",
+  left: "←",
+  right: "→",
+};
+
 const FORMAL_TRIAL_COUNT = 5;
 const TOO_SOON_FLASH_MS = 900;
+const WRONG_KEY_FLASH_MS = 900;
 const INTER_TRIAL_DELAY_MS = 800;
 
 const AGE_NORMS: Record<AgeBandId, AgeNormRange> = {
-  teens: { min: 400, max: 560 },
-  youngAdults: { min: 190, max: 250 },
-  midAge: { min: 250, max: 350 },
-  olderAdults: { min: 350, max: 500 },
+  children: { min: 810, max: 1010 },
+  teens: { min: 670, max: 670 },
+  youngAdults: { min: 236, max: 570 },
+  middleAged: { min: 479, max: 550 },
+  seniors: { min: 595, max: 700 },
 };
 
 function clamp(value: number, min: number, max: number) {
@@ -47,10 +58,11 @@ function parseAge(dateOfBirth?: string | null) {
 
 function resolveAgeBand(age: number | null): AgeBandId | null {
   if (age == null) return null;
-  if (age >= 13 && age <= 19) return "teens";
-  if (age >= 20 && age <= 30) return "youngAdults";
-  if (age >= 31 && age <= 50) return "midAge";
-  if (age >= 60) return "olderAdults";
+  if (age >= 6 && age <= 14) return "children";
+  if (age >= 15 && age <= 18) return "teens";
+  if (age >= 19 && age <= 30) return "youngAdults";
+  if (age >= 31 && age <= 59) return "middleAged";
+  if (age >= 60) return "seniors";
   return null;
 }
 
@@ -76,15 +88,34 @@ function computeStabilityScore(values: number[]) {
 
 function mapReactionToScore(rtMs: number, ageBand: AgeBandId | null) {
   if (ageBand == null) {
-    return Math.round(100 * clamp((450 - rtMs) / (450 - 220), 0, 1));
+    return Math.round(100 * clamp((700 - rtMs) / (700 - 236), 0, 1));
   }
 
   const norm = AGE_NORMS[ageBand];
+  if (norm.max === norm.min) {
+    if (rtMs <= norm.min) return 100;
+    const normalized = clamp((norm.min + 300 - rtMs) / 300, 0, 1);
+    return Math.round(20 + normalized * 80);
+  }
+
   const normalized = clamp((norm.max - rtMs) / (norm.max - norm.min), 0, 1);
   return Math.round(20 + normalized * 80);
 }
 
-export default function ReactionClick({
+function keyToDirection(key: string): Direction | null {
+  if (key === "ArrowUp") return "up";
+  if (key === "ArrowDown") return "down";
+  if (key === "ArrowLeft") return "left";
+  if (key === "ArrowRight") return "right";
+  return null;
+}
+
+function randomDirection() {
+  const index = Math.floor(Math.random() * DIRECTIONS.length);
+  return DIRECTIONS[index];
+}
+
+export default function ReactionArrowKey({
   onComplete,
   dateOfBirth,
 }: {
@@ -94,6 +125,7 @@ export default function ReactionClick({
   const t = useTranslations("test.reaction");
   const [phase, setPhase] = useState<Phase>("intro");
   const [screenState, setScreenState] = useState<ScreenState>("idle");
+  const [targetDirection, setTargetDirection] = useState<Direction | null>(null);
   const [formalIndex, setFormalIndex] = useState(0);
   const [trialResults, setTrialResults] = useState<number[]>([]);
   const [practiceResult, setPracticeResult] = useState<number | null>(null);
@@ -121,10 +153,13 @@ export default function ReactionClick({
     clearPendingTimer();
     lockRef.current = false;
     startTimeRef.current = null;
+    setTargetDirection(null);
     setScreenState("waiting");
 
     const delay = 2000 + Math.random() * 3000;
     timerRef.current = setTimeout(() => {
+      const direction = randomDirection();
+      setTargetDirection(direction);
       setScreenState("ready");
       startTimeRef.current = performance.now();
     }, delay);
@@ -161,11 +196,23 @@ export default function ReactionClick({
     clearPendingTimer();
     lockRef.current = true;
     startTimeRef.current = null;
+    setTargetDirection(null);
     setScreenState("tooSoon");
     timerRef.current = setTimeout(() => {
       lockRef.current = false;
       if (phase === "practice" || phase === "formal") scheduleRound();
     }, TOO_SOON_FLASH_MS);
+  };
+
+  const flashWrongKey = () => {
+    clearPendingTimer();
+    lockRef.current = true;
+    startTimeRef.current = null;
+    setScreenState("wrongKey");
+    timerRef.current = setTimeout(() => {
+      lockRef.current = false;
+      if (phase === "practice" || phase === "formal") scheduleRound();
+    }, WRONG_KEY_FLASH_MS);
   };
 
   const recordReaction = (rtMs: number) => {
@@ -197,27 +244,40 @@ export default function ReactionClick({
     }, INTER_TRIAL_DELAY_MS);
   };
 
-  const handleClick = () => {
-    if (phase !== "practice" && phase !== "formal") return;
-    if (lockRef.current) return;
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      const inputDirection = keyToDirection(event.key);
+      if (!inputDirection) return;
+      if (phase !== "practice" && phase !== "formal") return;
 
-    if (screenState === "waiting") {
-      flashTooSoon();
-      return;
-    }
+      event.preventDefault();
+      if (lockRef.current) return;
 
-    if (screenState !== "ready" || startTimeRef.current == null) return;
+      if (screenState === "waiting") {
+        flashTooSoon();
+        return;
+      }
 
-    const rtMs = Math.round(Math.max(0, performance.now() - startTimeRef.current));
-    recordReaction(rtMs);
-  };
+      if (screenState !== "ready" || startTimeRef.current == null || targetDirection == null) return;
+      if (inputDirection !== targetDirection) {
+        flashWrongKey();
+        return;
+      }
+
+      const rtMs = Math.round(Math.max(0, performance.now() - startTimeRef.current));
+      recordReaction(rtMs);
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [phase, screenState, targetDirection, trialResults, formalIndex, ageBand]);
 
   const screenClass =
     screenState === "waiting"
       ? "bg-gray-300 text-gray-800"
       : screenState === "ready"
         ? "bg-emerald-500 text-white"
-        : screenState === "tooSoon"
+        : screenState === "tooSoon" || screenState === "wrongKey"
           ? "bg-red-500 text-white"
           : screenState === "recorded"
             ? "bg-sky-500 text-white"
@@ -225,25 +285,28 @@ export default function ReactionClick({
 
   const screenLabel =
     screenState === "waiting"
-      ? t("waiting")
+      ? t("arrowWaiting")
       : screenState === "ready"
-        ? t("clickNow")
+        ? t("arrowPressNow")
         : screenState === "tooSoon"
           ? t("tooSoon")
-          : screenState === "recorded"
-            ? t("recorded")
-            : t("readyToStart");
+          : screenState === "wrongKey"
+            ? t("arrowWrongKey")
+            : screenState === "recorded"
+              ? t("recorded")
+              : t("arrowReady");
 
   if (phase === "intro") {
     return (
       <div className="rounded-xl bg-white p-6 shadow-md">
-        <h4 className="mb-2 font-semibold text-gray-800">{t("title")}</h4>
-        <p className="mb-3 text-sm text-gray-600">{t("desc")}</p>
+        <h4 className="mb-2 font-semibold text-gray-800">{t("arrowTitle")}</h4>
+        <p className="mb-3 text-sm text-gray-600">{t("arrowDesc")}</p>
         <ul className="mb-4 list-disc space-y-1 pl-5 text-sm text-gray-600">
-          <li>{t("rulePractice")}</li>
-          <li>{t("ruleFormal")}</li>
-          <li>{t("ruleNoEarly")}</li>
-          <li>{t("ruleReference")}</li>
+          <li>{t("arrowRulePractice")}</li>
+          <li>{t("arrowRuleFormal")}</li>
+          <li>{t("arrowRuleNoEarly")}</li>
+          <li>{t("arrowRuleMatch")}</li>
+          <li>{t("arrowRuleReference")}</li>
         </ul>
         <button
           type="button"
@@ -259,35 +322,36 @@ export default function ReactionClick({
   return (
     <div className="rounded-xl bg-white p-6 shadow-md">
       <h4 className="mb-2 font-semibold text-gray-800">
-        {phase === "practice" ? t("practiceTitle") : t("title")}
+        {phase === "practice" ? t("arrowPracticeTitle") : t("arrowTitle")}
       </h4>
       <span className="mb-3 inline-flex rounded-full bg-gray-100 px-2 py-1 text-xs text-gray-600">
         {phase === "practice" ? t("practiceBadge") : t("formalBadge")}
       </span>
 
-      {phase === "practice" && <p className="mb-3 text-sm text-gray-600">{t("practiceDesc")}</p>}
+      {phase === "practice" && <p className="mb-3 text-sm text-gray-600">{t("arrowPracticeDesc")}</p>}
       {phase === "formal" && (
         <p className="mb-2 text-xs text-gray-500">
           {t("formalProgress", { current: formalIndex + 1, total: FORMAL_TRIAL_COUNT })}
         </p>
       )}
 
-      <button
-        type="button"
-        onPointerDown={handleClick}
-        className={`h-48 w-full rounded-xl transition ${screenClass}`}
+      <div
+        className={`flex h-48 w-full flex-col items-center justify-center rounded-xl transition ${screenClass}`}
       >
-        <span className="text-xl font-semibold">{screenLabel}</span>
-      </button>
+        <span className="mb-2 text-lg font-semibold">{screenLabel}</span>
+        <span className="text-6xl font-bold leading-none">
+          {screenState === "ready" && targetDirection ? DIRECTION_SYMBOLS[targetDirection] : "·"}
+        </span>
+      </div>
 
       {phase === "practice" && (
         <div className="mt-4 flex items-center justify-between gap-3">
           <div className="text-sm">
             {practiceResult == null ? (
-              <p className="font-semibold text-gray-600">{t("practiceHint")}</p>
+              <p className="font-semibold text-gray-600">{t("arrowPracticeHint")}</p>
             ) : (
               <p className="font-semibold text-emerald-600">
-                {t("practiceResult", { value: practiceResult })}
+                {t("arrowPracticeResult", { value: practiceResult })}
               </p>
             )}
           </div>

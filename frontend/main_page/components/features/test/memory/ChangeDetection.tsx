@@ -31,7 +31,7 @@ interface AggregateStats {
   correctRtMs: number[];
 }
 
-type AgeBandId = "children" | "teens" | "youngAdults" | "middleAged" | "seniors";
+type AgeBandId = "earlyChild" | "olderChild" | "youngAdult" | "middleAged" | "seniors";
 
 const GRID_CELLS = 16;
 const FORMAL_COUNTS: Record<4 | 6 | 8, number> = {
@@ -48,9 +48,9 @@ const PRACTICE_SEED = 20260318;
 const COLORS = ["#EF4444", "#3B82F6", "#22C55E", "#F59E0B", "#8B5CF6", "#06B6D4"];
 
 const AGE_NORMS_K: Record<AgeBandId, [number, number]> = {
-  children: [1.5, 3.2],
-  teens: [3.0, 4.2],
-  youngAdults: [3.5, 4.5],
+  earlyChild: [1.3, 2.8],
+  olderChild: [2.0, 4.2],
+  youngAdult: [3.5, 4.5],
   middleAged: [3.0, 3.8],
   seniors: [1.8, 2.8],
 };
@@ -176,13 +176,6 @@ function calcK(size: 4 | 6 | 8, stats: SignalStats) {
   return { k, hitRate, faRate, dPrime };
 }
 
-function median(values: number[]) {
-  if (values.length === 0) return null;
-  const sorted = [...values].sort((a, b) => a - b);
-  const mid = Math.floor(sorted.length / 2);
-  return sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid];
-}
-
 function normalizeLinear(value: number, min: number, max: number) {
   if (max <= min) return 50;
   return clampScore(((value - min) / (max - min)) * 100, 0, 100);
@@ -205,11 +198,11 @@ function parseAge(dateOfBirth?: string | null) {
 
 function resolveAgeBand(age: number | null): AgeBandId | null {
   if (age == null) return null;
-  if (age >= 7 && age <= 12) return "children";
-  if (age >= 13 && age <= 18) return "teens";
-  if (age >= 19 && age <= 35) return "youngAdults";
-  if (age >= 36 && age <= 60) return "middleAged";
-  if (age >= 65) return "seniors";
+  if (age >= 5 && age <= 9) return "earlyChild";
+  if (age >= 10 && age <= 18) return "olderChild";
+  if (age >= 19 && age <= 30) return "youngAdult";
+  if (age >= 60) return "seniors";
+  if (age >= 31 && age <= 59) return "middleAged";
   return null;
 }
 
@@ -225,19 +218,13 @@ export default function ChangeDetection({ onComplete, dateOfBirth }: ChangeDetec
   const practiceTrial = useMemo(() => buildPracticeTrial(PRACTICE_SEED), []);
   const formalTrials = useMemo(() => buildFormalTrials(FORMAL_SEED), []);
 
-  const [phase, setPhase] = useState<"intro" | "practice" | "formal" | "result">("intro");
+  const [phase, setPhase] = useState<"intro" | "practice" | "formal">("intro");
   const [stage, setStage] = useState<"sample" | "blank" | "probe" | "feedback">("sample");
   const [formalIndex, setFormalIndex] = useState(0);
   const [isFormalRunning, setIsFormalRunning] = useState(false);
   const [practiceCorrect, setPracticeCorrect] = useState<boolean | null>(null);
   const [selectedAnswer, setSelectedAnswer] = useState<boolean | null>(null);
   const [sampleRemainMs, setSampleRemainMs] = useState(SAMPLE_MS);
-
-  const [rawScore, setRawScore] = useState(0);
-  const [ageNormScore, setAgeNormScore] = useState(0);
-  const [percentileLikeScore, setPercentileLikeScore] = useState(0);
-  const [displayScore, setDisplayScore] = useState(0);
-  const [avgRtMs, setAvgRtMs] = useState(0);
 
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -311,32 +298,15 @@ export default function ChangeDetection({ onComplete, dateOfBirth }: ChangeDetec
         ? (k4.k * n4 + k6.k * n6 + k8.k * n8) / weightedTotal
         : (k4.k + k6.k + k8.k) / 3;
 
-    const rtMedian = median(aggRef.current.correctRtMs);
-    const kScore = normalizeLinear(kOverall, 0, 5);
-    const rtScore = rtMedian == null ? 50 : clampScore(((1600 - rtMedian) / 1200) * 100, 0, 100);
-    const abilityScore = Math.round(kScore * 0.7 + rtScore * 0.3);
     const ageBand = resolveAgeBand(parseAge(dateOfBirth));
     const agePercentile = computeAgePercentile(kOverall, ageBand);
-    const blendedDisplay =
+    const computedDisplay =
       agePercentile == null
-        ? abilityScore
-        : Math.round(abilityScore * 0.7 + agePercentile * 0.3);
-
-    const computedRaw = Number(kOverall.toFixed(2));
-    const computedAgeNorm = agePercentile ?? abilityScore;
-    const computedPercentile = abilityScore;
-    const computedDisplay = clampScore(blendedDisplay, 0, 100);
-    const rtAvg = aggRef.current.rtCount > 0 ? Math.round(aggRef.current.rtSum / aggRef.current.rtCount) : 0;
-
-    setRawScore(computedRaw);
-    setAgeNormScore(computedAgeNorm);
-    setPercentileLikeScore(computedPercentile);
-    setDisplayScore(computedDisplay);
-    setAvgRtMs(rtAvg);
+        ? Math.round(normalizeLinear(kOverall, 0, 5))
+        : clampScore(agePercentile, 0, 100);
 
     onComplete(computedDisplay);
     setIsFormalRunning(false);
-    setPhase("result");
   };
 
   const recordFormal = (answerChanged: boolean | null, rtMs: number | null) => {
@@ -559,30 +529,5 @@ export default function ChangeDetection({ onComplete, dateOfBirth }: ChangeDetec
     );
   }
 
-  return (
-    <div className="rounded-xl bg-white p-6 shadow-md">
-      <h4 className="mb-2 font-semibold text-gray-800">{t("cdResultTitle")}</h4>
-      <p className="mb-4 text-sm text-gray-600">{t("cdResultDesc")}</p>
-      <div className="grid gap-2 sm:grid-cols-2">
-        <div className="rounded-lg bg-gray-50 p-3">
-          <p className="text-xs text-gray-500">{t("rawScoreLabel")}</p>
-          <p className="text-lg font-semibold text-gray-800">{rawScore}</p>
-        </div>
-        <div className="rounded-lg bg-gray-50 p-3">
-          <p className="text-xs text-gray-500">{t("ageNormScoreLabel")}</p>
-          <p className="text-lg font-semibold text-gray-800">{ageNormScore}</p>
-        </div>
-        <div className="rounded-lg bg-gray-50 p-3">
-          <p className="text-xs text-gray-500">{t("percentileLikeScoreLabel")}</p>
-          <p className="text-lg font-semibold text-gray-800">{percentileLikeScore}</p>
-        </div>
-        <div className="rounded-lg bg-gray-50 p-3">
-          <p className="text-xs text-gray-500">{t("displayScoreLabel")}</p>
-          <p className="text-lg font-semibold text-[#5E81AC]">{displayScore}</p>
-        </div>
-      </div>
-      <p className="mt-3 text-xs text-gray-500">{t("cdAvgRt", { value: avgRtMs })}</p>
-      <p className="mt-2 text-xs text-gray-500">{t("displayScoreHint")}</p>
-    </div>
-  );
+  return null;
 }

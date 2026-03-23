@@ -9,11 +9,15 @@ import RadarChart from "@/components/features/home/RadarChart";
 import MemoryNBack from "./memory/MemoryNBack";
 import ChangeDetection from "./memory/ChangeDetection";
 import SternbergMemoryScanning from "./memory/SternbergMemoryScanning";
-import PatternComplete from "./logic/PatternComplete";
-import MatrixReasoning from "./logic/MatrixReasoning";
-import SchulteGrid from "./focus/SchulteGrid";
+import TransitiveInference from "./logic/Transitive_Inference";
+import SyllogisticReasoning from "./logic/SyllogisticReasoning";
+import AnalogicalReasoning from "./logic/AnalogicalReasoning";
+import FlankerTask from "./focus/FlankerTask";
 import StroopColor from "./focus/StroopColor";
+import SchulteGrid from "./focus/SchulteGrid";
 import ReactionClick from "./reaction/ReactionClick";
+import ReactionArrowKey from "./reaction/ReactionArrowKey";
+import ReactionPVT from "./reaction/ReactionPVT";
 import ShortestPath from "./strategy/ShortestPath";
 import ShapeRotation from "./spatial/ShapeRotation";
 
@@ -50,13 +54,13 @@ export default function TestRunner({ dimension, onBack, dateOfBirth }: TestRunne
 
   const testLabels =
     dimension === "memory"
-      ? [t("memory.nBackTitle"), t("memory.cdTitle"), t("memory.sternbergTitle")]
+      ? [t("memory.sternbergTitle"), t("memory.cdTitle"), t("memory.nBackTitle")]
       : dimension === "logic"
-        ? [t("logic.patternTitle"), t("logic.matrixTitle")]
+        ? [t("logic.patternTitle"), t("logic.syllogismTitle"), t("logic.analogyTitle")]
         : dimension === "focus"
-          ? [t("focus.schulteTitle"), t("focus.stroopTitle")]
+          ? [t("focus.flankerTitle"), t("focus.stroopTitle"), t("focus.schulteTitle")]
           : dimension === "reaction"
-            ? [t("reaction.title")]
+            ? [t("reaction.title"), t("reaction.arrowTitle"), t("reaction.pvtTitle")]
             : dimension === "strategy"
               ? [t("strategy.pathTitle")]
               : dimension === "spatial"
@@ -66,8 +70,12 @@ export default function TestRunner({ dimension, onBack, dateOfBirth }: TestRunne
   const testCount =
     dimension === "memory"
       ? 3
-      : dimension === "logic" || dimension === "focus"
-        ? 2
+        : dimension === "logic"
+        ? 3
+        : dimension === "focus"
+        ? 3
+        : dimension === "reaction"
+        ? 3
         : 1;
 
   const finishWithRecords = useCallback(
@@ -117,21 +125,29 @@ export default function TestRunner({ dimension, onBack, dateOfBirth }: TestRunne
 
   const TestRender =
     dimension === "memory" && testIndex === 0
-      ? () => <MemoryNBack onComplete={handleComplete} />
+      ? () => <SternbergMemoryScanning onComplete={handleComplete} dateOfBirth={dateOfBirth} />
       : dimension === "memory" && testIndex === 1
         ? () => <ChangeDetection onComplete={handleComplete} dateOfBirth={dateOfBirth} />
         : dimension === "memory" && testIndex === 2
-          ? () => <SternbergMemoryScanning onComplete={handleComplete} dateOfBirth={dateOfBirth} />
+          ? () => <MemoryNBack onComplete={handleComplete} dateOfBirth={dateOfBirth} />
         : dimension === "logic" && testIndex === 0
-          ? () => <PatternComplete onComplete={handleComplete} />
-          : dimension === "logic" && testIndex === 1
-            ? () => <MatrixReasoning onComplete={handleComplete} />
+          ? () => <TransitiveInference onComplete={handleComplete} dateOfBirth={dateOfBirth} />
+        : dimension === "logic" && testIndex === 1
+            ? () => <SyllogisticReasoning onComplete={handleComplete} dateOfBirth={dateOfBirth} />
+            : dimension === "logic" && testIndex === 2
+              ? () => <AnalogicalReasoning onComplete={handleComplete} />
             : dimension === "focus" && testIndex === 0
-              ? () => <SchulteGrid onComplete={handleComplete} />
-              : dimension === "focus" && testIndex === 1
-                ? () => <StroopColor onComplete={handleComplete} />
-                : dimension === "reaction"
-                  ? () => <ReactionClick onComplete={handleComplete} />
+              ? () => <FlankerTask onComplete={handleComplete} dateOfBirth={dateOfBirth} />
+            : dimension === "focus" && testIndex === 1
+                ? () => <StroopColor onComplete={handleComplete} dateOfBirth={dateOfBirth} />
+                : dimension === "focus" && testIndex === 2
+                  ? () => <SchulteGrid onComplete={handleComplete} />
+                : dimension === "reaction" && testIndex === 0
+                  ? () => <ReactionClick onComplete={handleComplete} dateOfBirth={dateOfBirth} />
+                : dimension === "reaction" && testIndex === 1
+                    ? () => <ReactionArrowKey onComplete={handleComplete} dateOfBirth={dateOfBirth} />
+                  : dimension === "reaction" && testIndex === 2
+                    ? () => <ReactionPVT onComplete={handleComplete} dateOfBirth={dateOfBirth} />
                   : dimension === "strategy"
                     ? () => <ShortestPath onComplete={handleComplete} />
                     : dimension === "spatial"

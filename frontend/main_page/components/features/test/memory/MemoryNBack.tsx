@@ -7,6 +7,7 @@ type NBackMode = "grid" | "letter";
 
 interface MemoryNBackProps {
   onComplete: (score: number) => void;
+  dateOfBirth?: string | null;
 }
 
 interface FormalStats {
@@ -16,12 +17,26 @@ interface FormalStats {
   fn: number;
 }
 
+type AgeBandId = "children" | "teens" | "youngAdults" | "middleAged" | "seniors";
+
 const PRACTICE_INTERVAL_MS = 2000;
 const FORMAL_INTERVAL_MS = 2000;
 const MATCH_RATE = 0.35;
 const FORMAL_BASE_SEED = 20260316;
 const FIXED_LEVEL = 2;
 const FORMAL_LEVELS: number[] = Array.from({ length: 20 }, () => FIXED_LEVEL);
+
+const AGE_NORMS_NBACK: Record<
+  AgeBandId,
+  { accuracyPct: [number, number]; dPrime: [number, number]; rtMs: [number, number] }
+> = {
+  // 来自你提供的研究参数；Seniors 按产品要求调整为 60+。
+  children: { accuracyPct: [65, 75], dPrime: [1.0, 1.8], rtMs: [800, 1100] }, // 7-12
+  teens: { accuracyPct: [80, 90], dPrime: [2.5, 3.2], rtMs: [650, 850] }, // 13-18
+  youngAdults: { accuracyPct: [90, 95], dPrime: [3.5, 4.5], rtMs: [550, 750] }, // 19-35
+  middleAged: { accuracyPct: [80, 88], dPrime: [2.5, 3.5], rtMs: [700, 900] }, // 36-59
+  seniors: { accuracyPct: [60, 75], dPrime: [1.2, 2.0], rtMs: [900, 1200] }, // 60+
+};
 
 
 function clampScore(value: number, min: number, max: number) {
@@ -99,10 +114,53 @@ function normalizeLinear(value: number, min: number, max: number) {
   return clampScore(((value - min) / (max - min)) * 100, 0, 100);
 }
 
+function normalizeReverse(value: number, min: number, max: number) {
+  return 100 - normalizeLinear(value, min, max);
+}
+
 function computeAbilityScore(dPrime: number, medianRtMs: number | null) {
   const dPrimeScore = normalizeLinear(dPrime, -1.0, 4.5);
   const rtScore = medianRtMs == null ? 50 : clampScore(((1400 - medianRtMs) / 950) * 100, 0, 100);
   return Math.round(dPrimeScore * 0.7 + rtScore * 0.3);
+}
+
+function parseAge(dateOfBirth?: string | null) {
+  if (!dateOfBirth) return null;
+  const [yearStr, monthStr, dayStr] = dateOfBirth.split("-");
+  const year = Number(yearStr);
+  const month = Number(monthStr);
+  const day = Number(dayStr);
+  if (!year || !month || !day) return null;
+  const now = new Date();
+  let age = now.getFullYear() - year;
+  const monthDiff = now.getMonth() + 1 - month;
+  const dayDiff = now.getDate() - day;
+  if (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0)) age -= 1;
+  return age >= 0 ? age : null;
+}
+
+function resolveAgeBand(age: number | null): AgeBandId | null {
+  if (age == null) return null;
+  if (age >= 7 && age <= 12) return "children";
+  if (age >= 13 && age <= 18) return "teens";
+  if (age >= 19 && age <= 35) return "youngAdults";
+  if (age >= 60) return "seniors";
+  if (age >= 36 && age <= 59) return "middleAged";
+  return null;
+}
+
+function computeAgePercentile(
+  accuracyPct: number,
+  dPrime: number,
+  medianRtMs: number | null,
+  ageBand: AgeBandId | null
+) {
+  if (ageBand == null) return null;
+  const norm = AGE_NORMS_NBACK[ageBand];
+  const accuracyScore = normalizeLinear(accuracyPct, norm.accuracyPct[0], norm.accuracyPct[1]);
+  const dPrimeScore = normalizeLinear(dPrime, norm.dPrime[0], norm.dPrime[1]);
+  const rtScore = medianRtMs == null ? 50 : normalizeReverse(medianRtMs, norm.rtMs[0], norm.rtMs[1]);
+  return Math.round(accuracyScore * 0.2 + dPrimeScore * 0.5 + rtScore * 0.3);
 }
 
 function getPool(mode: NBackMode) {
@@ -146,7 +204,7 @@ function createStimulus(
   return { current: candidate, isMatch: false };
 }
 
-export default function MemoryNBack({ onComplete }: MemoryNBackProps) {
+export default function MemoryNBack({ onComplete, dateOfBirth }: MemoryNBackProps) {
   const t = useTranslations("test.memory");
 
   const [phase, setPhase] = useState<"intro" | "practice" | "formal">("intro");
@@ -316,9 +374,17 @@ export default function MemoryNBack({ onComplete }: MemoryNBackProps) {
       if (isLast) {
         const dPrime = computeDPrime(tpRef.current, fnRef.current, fpRef.current, tnRef.current);
         const medianRtValue = median(correctHitRtMsRef.current);
-        const computedAbility = computeAbilityScore(dPrime, medianRtValue);
+        const total = tpRef.current + tnRef.current + fpRef.current + fnRef.current;
+        const accuracyPct = total > 0 ? ((tpRef.current + tnRef.current) / total) * 100 : 0;
+        const abilityScore = computeAbilityScore(dPrime, medianRtValue);
+        const ageBand = resolveAgeBand(parseAge(dateOfBirth));
+        const agePercentile = computeAgePercentile(accuracyPct, dPrime, medianRtValue, ageBand);
+        const computedDisplay =
+          agePercentile == null
+            ? abilityScore
+            : Math.round(abilityScore * 0.7 + agePercentile * 0.3);
 
-        onComplete(computedAbility);
+        onComplete(clampScore(computedDisplay, 0, 100));
         setIsFormalRunning(false);
       } else {
         setCurrentIndex((idx) => idx + 1);
@@ -339,6 +405,7 @@ export default function MemoryNBack({ onComplete }: MemoryNBackProps) {
     currentIndex,
     formalHistory,
     formalFixedMode,
+    dateOfBirth,
     onComplete,
     totalQuestions,
   ]);

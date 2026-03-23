@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 
 type Phase = "intro" | "practice" | "formal";
 type ScreenState = "idle" | "waiting" | "ready" | "tooSoon" | "recorded";
-type AgeBandId = "teens" | "youngAdults" | "midAge" | "olderAdults";
+type AgeBandId = "children" | "teens" | "youngAdults" | "middleAged" | "seniors";
 
 interface AgeNormRange {
   min: number;
@@ -15,12 +15,16 @@ interface AgeNormRange {
 const FORMAL_TRIAL_COUNT = 5;
 const TOO_SOON_FLASH_MS = 900;
 const INTER_TRIAL_DELAY_MS = 800;
+const WAIT_MIN_MS = 2000;
+const WAIT_MAX_MS = 15000;
+const MAX_PENALTY = 25;
 
 const AGE_NORMS: Record<AgeBandId, AgeNormRange> = {
-  teens: { min: 400, max: 560 },
-  youngAdults: { min: 190, max: 250 },
-  midAge: { min: 250, max: 350 },
-  olderAdults: { min: 350, max: 500 },
+  children: { min: 325, max: 544 },
+  teens: { min: 270, max: 450 },
+  youngAdults: { min: 200, max: 300 },
+  middleAged: { min: 300, max: 450 },
+  seniors: { min: 450, max: 800 },
 };
 
 function clamp(value: number, min: number, max: number) {
@@ -47,10 +51,11 @@ function parseAge(dateOfBirth?: string | null) {
 
 function resolveAgeBand(age: number | null): AgeBandId | null {
   if (age == null) return null;
-  if (age >= 13 && age <= 19) return "teens";
-  if (age >= 20 && age <= 30) return "youngAdults";
-  if (age >= 31 && age <= 50) return "midAge";
-  if (age >= 60) return "olderAdults";
+  if (age >= 6 && age <= 11) return "children";
+  if (age >= 12 && age <= 18) return "teens";
+  if (age >= 19 && age <= 35) return "youngAdults";
+  if (age >= 36 && age <= 64) return "middleAged";
+  if (age >= 65) return "seniors";
   return null;
 }
 
@@ -71,12 +76,12 @@ function computeStabilityScore(values: number[]) {
   const avg = mean(values);
   const variance = values.reduce((sum, value) => sum + (value - avg) ** 2, 0) / values.length;
   const std = Math.sqrt(variance);
-  return Math.round(100 * clamp((120 - std) / 120, 0, 1));
+  return Math.round(100 * clamp((180 - std) / 180, 0, 1));
 }
 
 function mapReactionToScore(rtMs: number, ageBand: AgeBandId | null) {
   if (ageBand == null) {
-    return Math.round(100 * clamp((450 - rtMs) / (450 - 220), 0, 1));
+    return Math.round(100 * clamp((800 - rtMs) / (800 - 200), 0, 1));
   }
 
   const norm = AGE_NORMS[ageBand];
@@ -84,7 +89,12 @@ function mapReactionToScore(rtMs: number, ageBand: AgeBandId | null) {
   return Math.round(20 + normalized * 80);
 }
 
-export default function ReactionClick({
+function resolveLapseThreshold(ageBand: AgeBandId | null) {
+  if (ageBand == null) return 800;
+  return AGE_NORMS[ageBand].max;
+}
+
+export default function ReactionPVT({
   onComplete,
   dateOfBirth,
 }: {
@@ -97,12 +107,15 @@ export default function ReactionClick({
   const [formalIndex, setFormalIndex] = useState(0);
   const [trialResults, setTrialResults] = useState<number[]>([]);
   const [practiceResult, setPracticeResult] = useState<number | null>(null);
+  const [formalLapseCount, setFormalLapseCount] = useState(0);
+  const [formalFalseStartCount, setFormalFalseStartCount] = useState(0);
 
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lockRef = useRef(false);
   const startTimeRef = useRef<number | null>(null);
 
   const ageBand = useMemo(() => resolveAgeBand(parseAge(dateOfBirth)), [dateOfBirth]);
+  const lapseThreshold = useMemo(() => resolveLapseThreshold(ageBand), [ageBand]);
 
   useEffect(() => {
     return () => {
@@ -123,7 +136,7 @@ export default function ReactionClick({
     startTimeRef.current = null;
     setScreenState("waiting");
 
-    const delay = 2000 + Math.random() * 3000;
+    const delay = WAIT_MIN_MS + Math.random() * (WAIT_MAX_MS - WAIT_MIN_MS);
     timerRef.current = setTimeout(() => {
       setScreenState("ready");
       startTimeRef.current = performance.now();
@@ -133,12 +146,15 @@ export default function ReactionClick({
   const finishFormal = (results: number[]) => {
     const medianRt = Math.round(median(results));
     const bestRt = Math.round(Math.min(...results));
-    const medianScore = mapReactionToScore(medianRt, ageBand);
+    const speedScore = mapReactionToScore(medianRt, ageBand);
     const bestScore = mapReactionToScore(bestRt, ageBand);
     const stabilityScore = computeStabilityScore(results);
-    const finalScore = Math.round(medianScore * 0.7 + bestScore * 0.2 + stabilityScore * 0.1);
+    const rawScore = Math.round(speedScore * 0.7 + bestScore * 0.15 + stabilityScore * 0.15);
+    const lapseCount = results.filter((value) => value > lapseThreshold).length;
+    const penalty = clamp(lapseCount * 4 + formalFalseStartCount * 3, 0, MAX_PENALTY);
+    const finalScore = clamp(rawScore - penalty, 0, 100);
     timerRef.current = setTimeout(() => {
-      onComplete(clamp(finalScore, 0, 100));
+      onComplete(finalScore);
     }, INTER_TRIAL_DELAY_MS);
   };
 
@@ -146,6 +162,8 @@ export default function ReactionClick({
     setPracticeResult(null);
     setTrialResults([]);
     setFormalIndex(0);
+    setFormalLapseCount(0);
+    setFormalFalseStartCount(0);
     setPhase("practice");
     scheduleRound();
   };
@@ -153,6 +171,8 @@ export default function ReactionClick({
   const startFormal = () => {
     setTrialResults([]);
     setFormalIndex(0);
+    setFormalLapseCount(0);
+    setFormalFalseStartCount(0);
     setPhase("formal");
     scheduleRound();
   };
@@ -162,6 +182,9 @@ export default function ReactionClick({
     lockRef.current = true;
     startTimeRef.current = null;
     setScreenState("tooSoon");
+    if (phase === "formal") {
+      setFormalFalseStartCount((value) => value + 1);
+    }
     timerRef.current = setTimeout(() => {
       lockRef.current = false;
       if (phase === "practice" || phase === "formal") scheduleRound();
@@ -184,6 +207,9 @@ export default function ReactionClick({
 
     const nextResults = [...trialResults, rtMs];
     setTrialResults(nextResults);
+    if (rtMs > lapseThreshold) {
+      setFormalLapseCount((value) => value + 1);
+    }
 
     if (formalIndex + 1 >= FORMAL_TRIAL_COUNT) {
       finishFormal(nextResults);
@@ -197,53 +223,51 @@ export default function ReactionClick({
     }, INTER_TRIAL_DELAY_MS);
   };
 
-  const handleClick = () => {
-    if (phase !== "practice" && phase !== "formal") return;
-    if (lockRef.current) return;
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.code !== "Space") return;
+      if (phase !== "practice" && phase !== "formal") return;
 
-    if (screenState === "waiting") {
-      flashTooSoon();
-      return;
-    }
+      event.preventDefault();
+      if (lockRef.current) return;
 
-    if (screenState !== "ready" || startTimeRef.current == null) return;
+      if (screenState === "waiting") {
+        flashTooSoon();
+        return;
+      }
 
-    const rtMs = Math.round(Math.max(0, performance.now() - startTimeRef.current));
-    recordReaction(rtMs);
-  };
+      if (screenState !== "ready" || startTimeRef.current == null) return;
 
-  const screenClass =
-    screenState === "waiting"
-      ? "bg-gray-300 text-gray-800"
-      : screenState === "ready"
-        ? "bg-emerald-500 text-white"
-        : screenState === "tooSoon"
-          ? "bg-red-500 text-white"
-          : screenState === "recorded"
-            ? "bg-sky-500 text-white"
-            : "bg-gray-200 text-gray-700";
+      const rtMs = Math.round(Math.max(0, performance.now() - startTimeRef.current));
+      recordReaction(rtMs);
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [phase, screenState, trialResults, formalIndex, formalFalseStartCount, ageBand]);
 
   const screenLabel =
     screenState === "waiting"
-      ? t("waiting")
+      ? t("pvtWaiting")
       : screenState === "ready"
-        ? t("clickNow")
+        ? t("pvtPressNow")
         : screenState === "tooSoon"
           ? t("tooSoon")
           : screenState === "recorded"
             ? t("recorded")
-            : t("readyToStart");
+            : t("pvtReady");
 
   if (phase === "intro") {
     return (
       <div className="rounded-xl bg-white p-6 shadow-md">
-        <h4 className="mb-2 font-semibold text-gray-800">{t("title")}</h4>
-        <p className="mb-3 text-sm text-gray-600">{t("desc")}</p>
+        <h4 className="mb-2 font-semibold text-gray-800">{t("pvtTitle")}</h4>
+        <p className="mb-3 text-sm text-gray-600">{t("pvtDesc")}</p>
         <ul className="mb-4 list-disc space-y-1 pl-5 text-sm text-gray-600">
-          <li>{t("rulePractice")}</li>
-          <li>{t("ruleFormal")}</li>
-          <li>{t("ruleNoEarly")}</li>
-          <li>{t("ruleReference")}</li>
+          <li>{t("pvtRulePractice")}</li>
+          <li>{t("pvtRuleFormal")}</li>
+          <li>{t("pvtRuleNoEarly")}</li>
+          <li>{t("pvtRuleLapse")}</li>
+          <li>{t("pvtRuleReference")}</li>
         </ul>
         <button
           type="button"
@@ -259,35 +283,47 @@ export default function ReactionClick({
   return (
     <div className="rounded-xl bg-white p-6 shadow-md">
       <h4 className="mb-2 font-semibold text-gray-800">
-        {phase === "practice" ? t("practiceTitle") : t("title")}
+        {phase === "practice" ? t("pvtPracticeTitle") : t("pvtTitle")}
       </h4>
       <span className="mb-3 inline-flex rounded-full bg-gray-100 px-2 py-1 text-xs text-gray-600">
         {phase === "practice" ? t("practiceBadge") : t("formalBadge")}
       </span>
 
-      {phase === "practice" && <p className="mb-3 text-sm text-gray-600">{t("practiceDesc")}</p>}
+      {phase === "practice" && <p className="mb-3 text-sm text-gray-600">{t("pvtPracticeDesc")}</p>}
       {phase === "formal" && (
-        <p className="mb-2 text-xs text-gray-500">
-          {t("formalProgress", { current: formalIndex + 1, total: FORMAL_TRIAL_COUNT })}
-        </p>
+        <div className="mb-2 flex items-center justify-between gap-2 text-xs text-gray-500">
+          <p>{t("formalProgress", { current: formalIndex + 1, total: FORMAL_TRIAL_COUNT })}</p>
+          <p>{t("pvtStats", { lapse: formalLapseCount, falseStart: formalFalseStartCount })}</p>
+        </div>
       )}
 
-      <button
-        type="button"
-        onPointerDown={handleClick}
-        className={`h-48 w-full rounded-xl transition ${screenClass}`}
+      <div className="mb-2 rounded-lg bg-black p-4">
+        <div className="flex h-40 w-full items-center justify-center rounded border border-gray-700">
+          <span className="text-6xl leading-none text-white">
+            {screenState === "ready" ? "●" : " "}
+          </span>
+        </div>
+      </div>
+      <div
+        className={`flex h-12 w-full items-center justify-center rounded-lg text-sm font-semibold ${
+          screenState === "tooSoon"
+            ? "bg-red-500 text-white"
+            : screenState === "recorded"
+              ? "bg-sky-500 text-white"
+              : "bg-gray-100 text-gray-700"
+        }`}
       >
-        <span className="text-xl font-semibold">{screenLabel}</span>
-      </button>
+        <span>{screenLabel}</span>
+      </div>
 
       {phase === "practice" && (
         <div className="mt-4 flex items-center justify-between gap-3">
           <div className="text-sm">
             {practiceResult == null ? (
-              <p className="font-semibold text-gray-600">{t("practiceHint")}</p>
+              <p className="font-semibold text-gray-600">{t("pvtPracticeHint")}</p>
             ) : (
               <p className="font-semibold text-emerald-600">
-                {t("practiceResult", { value: practiceResult })}
+                {t("pvtPracticeResult", { value: practiceResult })}
               </p>
             )}
           </div>
