@@ -16,7 +16,7 @@ SHOP_ITEMS: dict[str, dict[str, Any]] = {
     "chess_tourmaster_hint": {
         "name": "Chess Tourmaster_hint",
         "games": ["chess-tourmaster"],
-        "cost": {"coins": 5, "diamonds": 0, "flowers": 6},
+        "cost": {"coins": 5, "diamonds": 0, "flowers": 0},
     },
     "homestead_scene_forest": {
         "name": "homestead_scene_forest",
