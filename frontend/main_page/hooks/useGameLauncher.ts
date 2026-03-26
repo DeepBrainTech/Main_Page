@@ -67,7 +67,15 @@ export function useGameLauncher() {
       console.log(`[${config.gameKey}] 使用游戏 URL:`, gameUrl);
 
       // 构建完整 URL
-      const url = `${gameUrl}#token=${encodeURIComponent(gameToken)}&locale=${encodeURIComponent(locale)}&coins=${encodeURIComponent(String(assets.coins ?? 0))}&diamonds=${encodeURIComponent(String(assets.diamonds ?? 0))}&flowers=${encodeURIComponent(String(assets.flowers ?? 0))}`;
+      const portalApi = getApiUrl("");
+      const url =
+        `${gameUrl}#token=${encodeURIComponent(gameToken)}` +
+        `&portal_token=${encodeURIComponent(accessToken)}` +
+        `&portal_api=${encodeURIComponent(portalApi)}` +
+        `&locale=${encodeURIComponent(locale)}` +
+        `&coins=${encodeURIComponent(String(assets.coins ?? 0))}` +
+        `&diamonds=${encodeURIComponent(String(assets.diamonds ?? 0))}` +
+        `&flowers=${encodeURIComponent(String(assets.flowers ?? 0))}`;
 
       // 打开游戏
       if (config.openInNewTab) {
