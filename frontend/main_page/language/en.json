@@ -60,8 +60,20 @@
     },
     "labels": {
       "accessories": "Headwear",
-      "scene": "Scene"
+      "scene": "Scene",
+      "outfits": "Outfits"
     },
+    "outfits": {
+      "default": "Basic",
+      "explorer": "Explorer",
+      "royal": "Royal"
+    },
+    "outfitOwned": "Owned",
+    "outfitBuyWithCoins": "{count} coins",
+    "outfitRedeemFailed": "Redeem failed, please try again",
+    "itemOwned": "Owned",
+    "itemBuyWithCoins": "{count} coins",
+    "itemRedeemFailed": "Redeem failed, please check your coins",
     "scenes": {
       "island": "Island",
       "forest": "Forest",
@@ -69,6 +81,7 @@
     },
     "coins": "Coins",
     "diamonds": "Diamonds",
+    "flowers": "Flowers",
     "levelLabel": "Lv.{level}",
     "expProgress": "EXP {current}/{target}",
     "checkIn": "Check-in",
@@ -91,6 +104,7 @@
     "monthlyChessTourmaster20": "Complete first 20 games of Chess Tourmaster",
     "rewardCoins": "+{count} coins",
     "rewardDiamonds": "+{count} diamonds",
+    "rewardFlowers": "+{count} flowers",
     "statusCompleted": "Completed"
   },
   "test": {

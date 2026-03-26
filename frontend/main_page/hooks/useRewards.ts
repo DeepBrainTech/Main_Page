@@ -11,7 +11,7 @@ export interface CheckInState {
 }
 
 /**
- * 金币/钻石、签到、任务进度：全部从后端 API 获取，无 localStorage
+ * 金币/钻石/鲜花、签到、任务进度：全部从后端 API 获取，无 localStorage
  */
 export function useRewards() {
   const [data, setData] = useState<RewardsData | null>(null);
@@ -37,6 +37,7 @@ export function useRewards() {
 
   const coins = data?.coins ?? 0;
   const diamonds = data?.diamonds ?? 0;
+  const flowers = data?.flowers ?? 0;
   const checkIn: CheckInState = data
     ? {
         dates: data.check_in_dates ?? [],
@@ -79,6 +80,7 @@ export function useRewards() {
     error,
     coins,
     diamonds,
+    flowers,
     checkIn,
     hasCheckedInToday,
     doCheckIn,

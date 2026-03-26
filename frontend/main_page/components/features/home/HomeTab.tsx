@@ -21,6 +21,7 @@ export default function HomeTab({ username = "" }: HomeTabProps) {
     loading: rewardsLoading,
     coins,
     diamonds,
+    flowers,
     checkIn,
     hasCheckedInToday,
     doCheckIn,
@@ -30,11 +31,12 @@ export default function HomeTab({ username = "" }: HomeTabProps) {
     taskClaimedToday,
     monthlyClaimed,
     claimTaskReward,
+    refresh,
   } = useRewards();
   const { scores: radarScores } = useCognitiveScores();
 
   // 临时经验模型：用于首页经验条效果展示，后续可替换为后端真实 xp 字段。
-  const totalExp = coins + diamonds * 10;
+  const totalExp = coins + diamonds * 10 + flowers * 3;
   const expPerLevel = 120;
   const level = Math.max(1, Math.floor(totalExp / expPerLevel) + 1);
   const expCurrent = totalExp % expPerLevel;
@@ -62,9 +64,11 @@ export default function HomeTab({ username = "" }: HomeTabProps) {
           <HomesteadBlock
             coins={coins}
             diamonds={diamonds}
+            flowers={flowers}
             level={level}
             expCurrent={expCurrent}
             expTarget={expTarget}
+            onAssetsChanged={refresh}
           />
         </div>
         

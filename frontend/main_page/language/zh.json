@@ -60,8 +60,20 @@
     },
     "labels": {
       "accessories": "头饰",
-      "scene": "场景"
+      "scene": "场景",
+      "outfits": "套装"
     },
+    "outfits": {
+      "default": "基础",
+      "explorer": "探险",
+      "royal": "华服"
+    },
+    "outfitOwned": "已拥有",
+    "outfitBuyWithCoins": "{count} 金币兑换",
+    "outfitRedeemFailed": "兑换失败，请稍后再试",
+    "itemOwned": "已拥有",
+    "itemBuyWithCoins": "{count} 金币",
+    "itemRedeemFailed": "兑换失败，请检查金币是否足够",
     "scenes": {
       "island": "海岛",
       "forest": "森林",
@@ -69,6 +81,7 @@
     },
     "coins": "金币",
     "diamonds": "钻石",
+    "flowers": "鲜花",
     "levelLabel": "Lv.{level}",
     "expProgress": "EXP {current}/{target}",
     "checkIn": "签到",
@@ -91,6 +104,7 @@
     "monthlyChessTourmaster20": "通关前 20 局棋境之旅",
     "rewardCoins": "+{count} 金币",
     "rewardDiamonds": "+{count} 钻石",
+    "rewardFlowers": "+{count} 鲜花",
     "statusCompleted": "已完成"
   },
   "test": {

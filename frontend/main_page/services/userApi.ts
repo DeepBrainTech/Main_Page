@@ -25,6 +25,7 @@ function getAuthHeaders(): HeadersInit {
 export interface RewardsData {
   coins: number;
   diamonds: number;
+  flowers: number;
   check_in_dates: string[];
   has_checked_in_today: boolean;
   current_streak: number;
@@ -61,14 +62,14 @@ export async function fetchRewards(): Promise<RewardsData> {
 }
 
 /** 签到 */
-export async function postCheckIn(): Promise<{ coins: number; diamonds: number }> {
+export async function postCheckIn(): Promise<{ coins: number; diamonds: number; flowers: number }> {
   const res = await fetch(getApiUrl("/api/user/check-in"), {
     method: "POST",
     headers: getAuthHeaders(),
   });
   if (!res.ok) throw new Error("check_in_failed");
   const json = await res.json();
-  return json?.data ?? { coins: 0, diamonds: 0 };
+  return json?.data ?? { coins: 0, diamonds: 0, flowers: 0 };
 }
 
 /** 获取六维认知分数 */
@@ -93,7 +94,7 @@ export async function updateCognitiveScores(scores: Partial<CognitiveScoresData>
 }
 
 /** 领取任务奖励 */
-export async function claimTask(taskId: string): Promise<{ coins: number; diamonds: number }> {
+export async function claimTask(taskId: string): Promise<{ coins: number; diamonds: number; flowers: number }> {
   const res = await fetch(getApiUrl(`/api/user/tasks/claim?task_id=${encodeURIComponent(taskId)}`), {
     method: "POST",
     headers: getAuthHeaders(),
@@ -103,7 +104,67 @@ export async function claimTask(taskId: string): Promise<{ coins: number; diamon
     throw new Error(j?.detail ?? "claim_failed");
   }
   const json = await res.json();
-  return json?.data ?? { coins: 0, diamonds: 0 };
+  return json?.data ?? { coins: 0, diamonds: 0, flowers: 0 };
+}
+
+/** 获取统一资产余额（金币/钻石/鲜花） */
+export async function fetchAssets(): Promise<{ coins: number; diamonds: number; flowers: number }> {
+  const res = await fetch(getApiUrl("/api/user/assets"), { headers: getAuthHeaders() });
+  if (!res.ok) throw new Error("fetch_assets_failed");
+  const json = await res.json();
+  return json?.data ?? { coins: 0, diamonds: 0, flowers: 0 };
+}
+
+/** 道具兑换 */
+export async function fetchShopItems(gameMode?: string): Promise<Record<string, {
+  name: string;
+  games: string[];
+  cost: { coins: number; diamonds: number; flowers: number };
+}>> {
+  const query = new URLSearchParams();
+  if (gameMode) query.set("game_mode", gameMode);
+  const suffix = query.toString() ? `?${query.toString()}` : "";
+  const res = await fetch(getApiUrl(`/api/user/shop/items${suffix}`), { headers: getAuthHeaders() });
+  if (!res.ok) throw new Error("fetch_shop_items_failed");
+  const json = await res.json();
+  return (json?.data?.items ?? {}) as Record<string, {
+    name: string;
+    games: string[];
+    cost: { coins: number; diamonds: number; flowers: number };
+  }>;
+}
+
+/** 获取道具背包 */
+export async function fetchShopInventory(): Promise<Array<{ item_id: string; quantity: number }>> {
+  const res = await fetch(getApiUrl("/api/user/shop/inventory"), { headers: getAuthHeaders() });
+  if (!res.ok) throw new Error("fetch_inventory_failed");
+  const json = await res.json();
+  return (json?.data?.items ?? []) as Array<{ item_id: string; quantity: number }>;
+}
+
+/** 道具兑换 */
+export async function redeemShopItem(itemId: string, gameMode?: string): Promise<{
+  item_id: string;
+  item_name: string;
+  games: string[];
+  game_mode: string | null;
+  cost: { coins: number; diamonds: number; flowers: number };
+  inventory_quantity: number;
+  assets: { coins: number; diamonds: number; flowers: number };
+}> {
+  const query = new URLSearchParams({ item_id: itemId });
+  if (gameMode) query.set("game_mode", gameMode);
+  const res = await fetch(getApiUrl(`/api/user/shop/redeem?${query.toString()}`), {
+    method: "POST",
+    headers: getAuthHeaders(),
+  });
+  if (!res.ok) {
+    const j = await res.json().catch(() => ({}));
+    throw new Error(j?.detail ?? "redeem_failed");
+  }
+  const json = await res.json();
+  if (!json?.data) throw new Error("redeem_failed");
+  return json.data;
 }
 
 /** 排行榜 type=total|memory|logic|focus|reaction|strategy|spatial */

@@ -1,0 +1,63 @@
+"""
+商店道具配置。
+
+约定：
+- `games` 为可使用该道具的游戏模式列表；
+- 包含 `"all"` 表示全游戏可用；
+- 价格统一由后端配置并校验，游戏端只负责展示。
+"""
+
+from __future__ import annotations
+
+from typing import Any
+
+
+SHOP_ITEMS: dict[str, dict[str, Any]] = {
+    "chess_tourmaster_hint": {
+        "name": "Chess Tourmaster_hint",
+        "games": ["chess-tourmaster"],
+        "cost": {"coins": 5, "diamonds": 0, "flowers": 6},
+    },
+    "homestead_scene_forest": {
+        "name": "homestead_scene_forest",
+        "games": ["homestead"],
+        "cost": {"coins": 20, "diamonds": 0, "flowers": 0},
+    },
+    "homestead_scene_city": {
+        "name": "homestead_scene_city",
+        "games": ["homestead"],
+        "cost": {"coins": 20, "diamonds": 0, "flowers": 0},
+    },
+    "homestead_headwear_cap": {
+        "name": "homestead_headwear_cap",
+        "games": ["homestead"],
+        "cost": {"coins": 20, "diamonds": 0, "flowers": 0},
+    },
+    "homestead_headwear_beanie": {
+        "name": "homestead_headwear_beanie",
+        "games": ["homestead"],
+        "cost": {"coins": 20, "diamonds": 0, "flowers": 0},
+    },
+    "homestead_headwear_crown": {
+        "name": "homestead_headwear_crown",
+        "games": ["homestead"],
+        "cost": {"coins": 20, "diamonds": 0, "flowers": 0},
+    },
+}
+
+
+def is_item_available_for_game(item: dict[str, Any], game_mode: str | None) -> bool:
+    """判断道具是否可用于指定游戏。"""
+    if not game_mode:
+        return True
+    games = item.get("games", [])
+    return "all" in games or game_mode in games
+
+
+def get_shop_items_by_game(game_mode: str | None) -> dict[str, dict[str, Any]]:
+    """按游戏模式过滤可展示的道具列表。"""
+    return {
+        item_id: item
+        for item_id, item in SHOP_ITEMS.items()
+        if is_item_available_for_game(item, game_mode)
+    }

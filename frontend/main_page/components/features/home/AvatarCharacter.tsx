@@ -5,6 +5,7 @@ import { useState } from "react";
 export interface AvatarConfig {
   bodyColor: string;
   hatType: "none" | "cap" | "beanie" | "crown";
+  outfitType: "default" | "explorer" | "royal";
 }
 
 interface AvatarCharacterProps {
@@ -34,6 +35,17 @@ export default function AvatarCharacter({ config, level, onClick, direction = "r
         return "\uD83E\uDDF6";
       case "crown":
         return "\uD83D\uDC51";
+      default:
+        return null;
+    }
+  })();
+
+  const outfitEmoji = (() => {
+    switch (config.outfitType) {
+      case "explorer":
+        return "🧥";
+      case "royal":
+        return "👘";
       default:
         return null;
     }
@@ -69,6 +81,19 @@ export default function AvatarCharacter({ config, level, onClick, direction = "r
           }}
         >
           {hatEmoji}
+        </div>
+      )}
+
+      {outfitEmoji && (
+        <div
+          className="absolute text-2xl drop-shadow pointer-events-none"
+          style={{
+            left: "50%",
+            top: "62%",
+            transform: "translate(-50%, -50%)",
+          }}
+        >
+          {outfitEmoji}
         </div>
       )}
 

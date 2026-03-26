@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, Header
 from sqlalchemy.orm import Session
 
 from database import get_db
-from models import User, UserGameReward, UserGamePlayByDay
+from models import User, UserGameReward, UserGamePlayByDay, UserRewards
 from schemas import APIResponse
 from auth import (
     get_current_active_user,
@@ -92,9 +92,31 @@ def _get_or_create_reward_record(db: Session, user_id: int, game_mode: str) -> U
     return record
 
 
+def _get_or_create_user_rewards(db: Session, user_id: int) -> UserRewards:
+    row = db.query(UserRewards).filter(UserRewards.user_id == user_id).first()
+    if row:
+        return row
+    row = UserRewards(user_id=user_id)
+    db.add(row)
+    db.flush()
+    return row
+
+
+def _get_asset_balances(db: Session, user_id: int) -> dict:
+    rewards = db.query(UserRewards).filter(UserRewards.user_id == user_id).first()
+    if rewards is None:
+        return {"coins": 0, "diamonds": 0, "flowers": 0}
+    return {
+        "coins": rewards.coins,
+        "diamonds": rewards.diamonds,
+        "flowers": rewards.flowers,
+    }
+
+
 def _record_play_and_claim_if_ready(db: Session, user: User, game_mode: str) -> tuple[UserGameReward, dict, int]:
     now = datetime.utcnow()
     record = _get_or_create_reward_record(db, user.id, game_mode)
+    account_rewards = _get_or_create_user_rewards(db, user.id)
 
     record.click_count += 1
     record.last_played_at = now
@@ -103,9 +125,11 @@ def _record_play_and_claim_if_ready(db: Session, user: User, game_mode: str) -> 
     if record.last_claimed_at is None or (now - record.last_claimed_at) >= REWARD_COOLDOWN:
         awarded_flowers = DAILY_REWARD_FLOWERS
         record.flowers_earned += awarded_flowers
+        account_rewards.flowers += awarded_flowers
         record.last_claimed_at = now
 
     db.add(record)
+    db.add(account_rewards)
     db.commit()
     db.refresh(record)
 
@@ -114,8 +138,7 @@ def _record_play_and_claim_if_ready(db: Session, user: User, game_mode: str) -> 
 
 
 def _total_flowers_for_user(db: Session, user_id: int) -> int:
-    rewards = db.query(UserGameReward).filter(UserGameReward.user_id == user_id).all()
-    return sum(item.flowers_earned for item in rewards)
+    return _get_asset_balances(db, user_id)["flowers"]
 
 
 def _build_token_response(
@@ -125,6 +148,7 @@ def _build_token_response(
     reward_status: dict,
     flowers_awarded: int,
     total_flowers: int,
+    assets: dict,
 ) -> APIResponse:
     return APIResponse(
         success=True,
@@ -135,6 +159,7 @@ def _build_token_response(
             "flowers_awarded": flowers_awarded,
             "reward_status": reward_status,
             "total_flowers": total_flowers,
+            "assets": assets,
             "user": {
                 "id": current_user.id,
                 "username": current_user.username,
@@ -165,6 +190,7 @@ async def issue_fogchess_token(
     token = create_fogchess_token(claims)
     _, reward_status, flowers_awarded = _record_play_and_claim_if_ready(db, current_user, "fogchess")
     total_flowers = _total_flowers_for_user(db, current_user.id)
+    assets = _get_asset_balances(db, current_user.id)
     return _build_token_response(
         current_user=current_user,
         game_token=token,
@@ -172,6 +198,7 @@ async def issue_fogchess_token(
         reward_status=reward_status,
         flowers_awarded=flowers_awarded,
         total_flowers=total_flowers,
+        assets=assets,
     )
 
 
@@ -197,6 +224,7 @@ async def issue_sudoku_token(
     token = create_sudoku_token(claims)
     _, reward_status, flowers_awarded = _record_play_and_claim_if_ready(db, current_user, "sudoku")
     total_flowers = _total_flowers_for_user(db, current_user.id)
+    assets = _get_asset_balances(db, current_user.id)
     return _build_token_response(
         current_user=current_user,
         game_token=token,
@@ -204,6 +232,7 @@ async def issue_sudoku_token(
         reward_status=reward_status,
         flowers_awarded=flowers_awarded,
         total_flowers=total_flowers,
+        assets=assets,
     )
 
 
@@ -229,6 +258,7 @@ async def issue_quantumgo_token(
     token = create_quantumgo_token(claims)
     _, reward_status, flowers_awarded = _record_play_and_claim_if_ready(db, current_user, "quantumgo")
     total_flowers = _total_flowers_for_user(db, current_user.id)
+    assets = _get_asset_balances(db, current_user.id)
     return _build_token_response(
         current_user=current_user,
         game_token=token,
@@ -236,6 +266,7 @@ async def issue_quantumgo_token(
         reward_status=reward_status,
         flowers_awarded=flowers_awarded,
         total_flowers=total_flowers,
+        assets=assets,
     )
 
 
@@ -263,6 +294,7 @@ async def issue_chessmater_token(
     token = create_chessmater_token(claims)
     _, reward_status, flowers_awarded = _record_play_and_claim_if_ready(db, current_user, "chessmater")
     total_flowers = _total_flowers_for_user(db, current_user.id)
+    assets = _get_asset_balances(db, current_user.id)
     return _build_token_response(
         current_user=current_user,
         game_token=token,
@@ -270,6 +302,7 @@ async def issue_chessmater_token(
         reward_status=reward_status,
         flowers_awarded=flowers_awarded,
         total_flowers=total_flowers,
+        assets=assets,
     )
 
 
@@ -296,6 +329,7 @@ async def issue_tourmaster_token(
     token = create_tourmaster_token(claims)
     _, reward_status, flowers_awarded = _record_play_and_claim_if_ready(db, current_user, "chess-tourmaster")
     total_flowers = _total_flowers_for_user(db, current_user.id)
+    assets = _get_asset_balances(db, current_user.id)
     return _build_token_response(
         current_user=current_user,
         game_token=token,
@@ -303,6 +337,7 @@ async def issue_tourmaster_token(
         reward_status=reward_status,
         flowers_awarded=flowers_awarded,
         total_flowers=total_flowers,
+        assets=assets,
     )
 
 
@@ -321,6 +356,7 @@ async def track_sudoku_play(
             "flowers_awarded": flowers_awarded,
             "reward_status": reward_status,
             "total_flowers": total_flowers,
+            "assets": _get_asset_balances(db, current_user.id),
             "server_time": datetime.utcnow().isoformat(),
         },
     )
@@ -359,7 +395,8 @@ async def get_reward_status(
         success=True,
         message="ok",
         data={
-            "total_flowers": sum(item.flowers_earned for item in rewards),
+            "total_flowers": _total_flowers_for_user(db, current_user.id),
+            "assets": _get_asset_balances(db, current_user.id),
             "rewards": statuses,
             "server_time": now.isoformat(),
         },

@@ -3,13 +3,16 @@
 import { useState, useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
 import AvatarCharacter, { type AvatarConfig } from "./AvatarCharacter";
+import { fetchShopItems, fetchShopInventory, redeemShopItem } from "@/services/userApi";
 
 interface HomesteadBlockProps {
   coins: number;
   diamonds: number;
+  flowers: number;
   level: number;
   expCurrent: number;
   expTarget: number;
+  onAssetsChanged?: () => Promise<void> | void;
 }
 
 const HAT_OPTIONS = [
@@ -27,6 +30,17 @@ const SCENE_OPTIONS: { id: SceneType; icon: string; labelKey: SceneType }[] = [
   { id: "city", icon: "🌆", labelKey: "city" },
 ];
 
+const SCENE_ITEM_MAP: Partial<Record<SceneType, string>> = {
+  forest: "homestead_scene_forest",
+  city: "homestead_scene_city",
+};
+
+const HEADWEAR_ITEM_MAP: Partial<Record<AvatarConfig["hatType"], string>> = {
+  cap: "homestead_headwear_cap",
+  beanie: "homestead_headwear_beanie",
+  crown: "homestead_headwear_crown",
+};
+
 /** 平滑插值 */
 function lerp(a: number, b: number, t: number): number {
   return a + (b - a) * t;
@@ -38,9 +52,11 @@ function lerp(a: number, b: number, t: number): number {
 export default function HomesteadBlock({
   coins,
   diamonds,
+  flowers,
   level,
   expCurrent,
   expTarget,
+  onAssetsChanged,
 }: HomesteadBlockProps) {
   const tHome = useTranslations("home");
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -50,22 +66,26 @@ export default function HomesteadBlock({
   const [avatarConfig, setAvatarConfig] = useState<AvatarConfig>({
     bodyColor: "#1A1A1A",
     hatType: "none",
+    outfitType: "default",
   });
+  const [ownedItemIds, setOwnedItemIds] = useState<Set<string>>(new Set());
+  const [itemCoinCosts, setItemCoinCosts] = useState<Record<string, number>>({});
+  const [pendingItemId, setPendingItemId] = useState<string | null>(null);
 
   const [scene, setScene] = useState<SceneType>("island");
+  const HOME_POSITION = { x: 50, y: 82 };
 
   // 活动区边界（百分比）
   const BOUNDS = { xMin: 12, xMax: 88, yMin: 18, yMax: 86 };
-  const ARRIVED_THRESHOLD = 1.8;
 
   // 当前显示位置（平滑后的）
-  const [position, setPosition] = useState({ x: 50, y: 50 });
+  const [position, setPosition] = useState(HOME_POSITION);
   const [direction, setDirection] = useState<"left" | "right">("right");
   const [isWalking, setIsWalking] = useState(false);
 
-  const targetRef = useRef({ x: 50, y: 50 });
-  const positionRef = useRef({ x: 50, y: 50 });
-  const arrivedTimerRef = useRef<number | null>(null);
+  const targetRef = useRef(HOME_POSITION);
+  const positionRef = useRef(HOME_POSITION);
+  const returnCenterTimerRef = useRef<number | null>(null);
 
   // 点击框内：猴子移动到点击位置
   const handleContainerClick = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -78,13 +98,18 @@ export default function HomesteadBlock({
       x: Math.max(BOUNDS.xMin, Math.min(BOUNDS.xMax, x)),
       y: Math.max(BOUNDS.yMin, Math.min(BOUNDS.yMax, y)),
     };
-    if (arrivedTimerRef.current) {
-      window.clearTimeout(arrivedTimerRef.current);
-      arrivedTimerRef.current = null;
+    if (returnCenterTimerRef.current) {
+      window.clearTimeout(returnCenterTimerRef.current);
+      returnCenterTimerRef.current = null;
     }
+    // 点击后 2 秒自动回到中间
+    returnCenterTimerRef.current = window.setTimeout(() => {
+      returnCenterTimerRef.current = null;
+      targetRef.current = HOME_POSITION;
+    }, 2000);
   };
 
-  // 每帧向目标移动；到达后过一段时间随机新目标（自主溜达）
+  // 每帧向目标移动：默认居中，点击后移动到点击点，随后按定时器回中间
   useEffect(() => {
     const WALK_THRESHOLD = 1.2;
 
@@ -97,19 +122,6 @@ export default function HomesteadBlock({
       const dx = target.x - pos.x;
       const dy = target.y - pos.y;
       const distance = Math.sqrt(dx * dx + dy * dy);
-
-      if (distance < ARRIVED_THRESHOLD) {
-        // 到达：安排一段时间后随机下一个目标
-        if (!arrivedTimerRef.current) {
-          arrivedTimerRef.current = window.setTimeout(() => {
-            arrivedTimerRef.current = null;
-            targetRef.current = {
-              x: BOUNDS.xMin + Math.random() * (BOUNDS.xMax - BOUNDS.xMin),
-              y: BOUNDS.yMin + Math.random() * (BOUNDS.yMax - BOUNDS.yMin),
-            };
-          }, 800 + Math.random() * 2200);
-        }
-      }
 
       let t: number;
       if (distance > 25) t = 0.035;
@@ -129,21 +141,91 @@ export default function HomesteadBlock({
       rafId = requestAnimationFrame(tick);
     };
 
-    // 初始随机目标，让猴子自己先动起来
-    targetRef.current = {
-      x: BOUNDS.xMin + Math.random() * (BOUNDS.xMax - BOUNDS.xMin),
-      y: BOUNDS.yMin + Math.random() * (BOUNDS.yMax - BOUNDS.yMin),
-    };
+    // 初始固定在中心
+    targetRef.current = HOME_POSITION;
 
     rafId = requestAnimationFrame(tick);
     return () => {
       cancelAnimationFrame(rafId);
-      if (arrivedTimerRef.current) window.clearTimeout(arrivedTimerRef.current);
+      if (returnCenterTimerRef.current) window.clearTimeout(returnCenterTimerRef.current);
     };
   }, []);
 
+  useEffect(() => {
+    if (!isMenuOpen) return;
+    const timer = window.setTimeout(() => {
+      setIsMenuOpen(false);
+    }, 5000);
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [isMenuOpen]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadShopState = async () => {
+      try {
+        const [items, inventory] = await Promise.all([
+          fetchShopItems("homestead"),
+          fetchShopInventory(),
+        ]);
+        if (cancelled) return;
+
+        const costs: Record<string, number> = {};
+        Object.entries(items).forEach(([itemId, item]) => {
+          costs[itemId] = item.cost?.coins ?? 0;
+        });
+        setItemCoinCosts(costs);
+        setOwnedItemIds(new Set(inventory.filter((row) => row.quantity > 0).map((row) => row.item_id)));
+      } catch {
+        // 商店状态读取失败时保持基础功能可用
+      }
+    };
+
+    loadShopState();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const getItemMeta = (itemId?: string) => {
+    if (!itemId) return { owned: true, costCoins: 0 };
+    return {
+      owned: ownedItemIds.has(itemId),
+      costCoins: itemCoinCosts[itemId] ?? 0,
+    };
+  };
+
+  const ensureOwned = async (itemId?: string): Promise<boolean> => {
+    if (!itemId) return true;
+    if (ownedItemIds.has(itemId)) return true;
+    try {
+      setPendingItemId(itemId);
+      await redeemShopItem(itemId, "homestead");
+      setOwnedItemIds((prev) => {
+        const next = new Set(prev);
+        next.add(itemId);
+        return next;
+      });
+      await onAssetsChanged?.();
+      return true;
+    } catch {
+      alert(tHome("itemRedeemFailed"));
+      return false;
+    } finally {
+      setPendingItemId(null);
+    }
+  };
+
   const handleHatSelect = (hatType: AvatarConfig["hatType"]) => {
-    setAvatarConfig((prev) => ({ ...prev, hatType }));
+    const itemId = HEADWEAR_ITEM_MAP[hatType];
+    void (async () => {
+      const ok = await ensureOwned(itemId);
+      if (!ok) return;
+      setAvatarConfig((prev) => ({ ...prev, hatType }));
+    })();
+    setIsMenuOpen(false);
   };
 
   return (
@@ -218,6 +300,10 @@ export default function HomesteadBlock({
               <span className="text-lg">💎</span>
               <span className="text-sm font-bold text-sky-800 tabular-nums">{diamonds}</span>
             </div>
+            <div className="flex items-center gap-1.5 rounded-full bg-white/60 backdrop-blur-sm px-3 py-1.5 border border-white/40 shadow-sm">
+              <span className="text-lg">🌸</span>
+              <span className="text-sm font-bold text-pink-700 tabular-nums">{flowers}</span>
+            </div>
           </div>
           </div>
         </div>
@@ -267,16 +353,34 @@ export default function HomesteadBlock({
             <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">{tHome("labels.scene")}</h4>
             <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
               {SCENE_OPTIONS.map((s) => (
-                <button
-                  key={s.id}
-                  onClick={() => setScene(s.id)}
-                  className={`flex flex-col items-center justify-center min-w-[60px] p-2 rounded-xl border-2 transition-all ${
-                    scene === s.id ? "border-amber-400 bg-amber-50" : "border-transparent bg-gray-50 hover:bg-gray-100"
-                  }`}
-                >
-                  <span className="text-2xl mb-1">{s.icon}</span>
-                  <span className="text-[10px] font-medium text-gray-600">{tHome(`scenes.${s.labelKey}`)}</span>
-                </button>
+                (() => {
+                  const itemId = SCENE_ITEM_MAP[s.id];
+                  const meta = getItemMeta(itemId);
+                  const isPending = !!itemId && pendingItemId === itemId;
+                  return (
+                    <button
+                      key={s.id}
+                      onClick={() => {
+                        void (async () => {
+                          const ok = await ensureOwned(itemId);
+                          if (!ok) return;
+                          setScene(s.id);
+                        })();
+                        setIsMenuOpen(false);
+                      }}
+                      disabled={isPending}
+                      className={`flex flex-col items-center justify-center min-w-[72px] p-2 rounded-xl border-2 transition-all ${
+                        scene === s.id ? "border-amber-400 bg-amber-50" : "border-transparent bg-gray-50 hover:bg-gray-100"
+                      } ${isPending ? "opacity-60 cursor-wait" : ""}`}
+                    >
+                      <span className="text-2xl mb-1">{s.icon}</span>
+                      <span className="text-[10px] font-medium text-gray-600">{tHome(`scenes.${s.labelKey}`)}</span>
+                      <span className="mt-1 text-[10px] font-semibold text-amber-700">
+                        {meta.owned ? tHome("itemOwned") : tHome("itemBuyWithCoins", { count: meta.costCoins })}
+                      </span>
+                    </button>
+                  );
+                })()
               ))}
             </div>
           </div>
@@ -284,16 +388,27 @@ export default function HomesteadBlock({
             <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">{tHome("labels.accessories")}</h4>
             <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
               {HAT_OPTIONS.map((hat) => (
-                <button
-                  key={hat.id}
-                  onClick={() => handleHatSelect(hat.id)}
-                  className={`flex flex-col items-center justify-center min-w-[60px] p-2 rounded-xl border-2 transition-all ${
-                    avatarConfig.hatType === hat.id ? "border-amber-400 bg-amber-50" : "border-transparent bg-gray-50 hover:bg-gray-100"
-                  }`}
-                >
-                  <span className="text-2xl mb-1">{hat.icon}</span>
-                  <span className="text-[10px] font-medium text-gray-600">{tHome(`hats.${hat.labelKey}`)}</span>
-                </button>
+                (() => {
+                  const itemId = HEADWEAR_ITEM_MAP[hat.id];
+                  const meta = getItemMeta(itemId);
+                  const isPending = !!itemId && pendingItemId === itemId;
+                  return (
+                    <button
+                      key={hat.id}
+                      onClick={() => handleHatSelect(hat.id)}
+                      disabled={isPending}
+                      className={`flex flex-col items-center justify-center min-w-[72px] p-2 rounded-xl border-2 transition-all ${
+                        avatarConfig.hatType === hat.id ? "border-amber-400 bg-amber-50" : "border-transparent bg-gray-50 hover:bg-gray-100"
+                      } ${isPending ? "opacity-60 cursor-wait" : ""}`}
+                    >
+                      <span className="text-2xl mb-1">{hat.icon}</span>
+                      <span className="text-[10px] font-medium text-gray-600">{tHome(`hats.${hat.labelKey}`)}</span>
+                      <span className="mt-1 text-[10px] font-semibold text-amber-700">
+                        {meta.owned ? tHome("itemOwned") : tHome("itemBuyWithCoins", { count: meta.costCoins })}
+                      </span>
+                    </button>
+                  );
+                })()
               ))}
             </div>
           </div>

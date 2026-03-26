@@ -52,6 +52,7 @@ export function useGameLauncher() {
 
       const data = await response.json();
       const gameToken = data?.data?.game_token;
+      const assets = data?.data?.assets ?? { coins: 0, diamonds: 0, flowers: 0 };
       if (!gameToken) {
         throw new Error("无效的游戏令牌响应");
       }
@@ -66,7 +67,7 @@ export function useGameLauncher() {
       console.log(`[${config.gameKey}] 使用游戏 URL:`, gameUrl);
 
       // 构建完整 URL
-      const url = `${gameUrl}#token=${encodeURIComponent(gameToken)}&locale=${encodeURIComponent(locale)}`;
+      const url = `${gameUrl}#token=${encodeURIComponent(gameToken)}&locale=${encodeURIComponent(locale)}&coins=${encodeURIComponent(String(assets.coins ?? 0))}&diamonds=${encodeURIComponent(String(assets.diamonds ?? 0))}&flowers=${encodeURIComponent(String(assets.flowers ?? 0))}`;
 
       // 打开游戏
       if (config.openInNewTab) {

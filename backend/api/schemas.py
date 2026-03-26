@@ -140,6 +140,7 @@ class RewardsState(BaseModel):
     """用户奖励与签到状态"""
     coins: int = 0
     diamonds: int = 0
+    flowers: int = 0
     check_in_dates: list[str] = []  # 本月已签到日期 YYYY-MM-DD
     has_checked_in_today: bool = False
     current_streak: int = 0

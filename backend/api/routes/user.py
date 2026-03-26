@@ -9,9 +9,19 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func, desc
 
 from database import get_db
-from models import User, UserRewards, UserCheckIn, UserTaskClaim, UserCognitiveScores, UserGameReward, UserGamePlayByDay
+from models import (
+    User,
+    UserRewards,
+    UserCheckIn,
+    UserTaskClaim,
+    UserCognitiveScores,
+    UserGameReward,
+    UserGamePlayByDay,
+    UserItemInventory,
+)
 from schemas import APIResponse, RewardsState, CognitiveScoresBody, CognitiveScoresResponse, LeaderboardEntry
 from auth import get_current_active_user
+from config.shop_items import SHOP_ITEMS, get_shop_items_by_game, is_item_available_for_game
 
 router = APIRouter(prefix="/api/user", tags=["用户"])
 
@@ -128,6 +138,15 @@ def _monthly_claimed(db: Session, user_id: int, month_ym: str) -> bool:
     ).first() is not None
 
 
+def _balances_dict(rewards: UserRewards) -> dict:
+    """统一返回三种资产余额"""
+    return {
+        "coins": rewards.coins,
+        "diamonds": rewards.diamonds,
+        "flowers": rewards.flowers,
+    }
+
+
 @router.get("/rewards", response_model=APIResponse)
 async def get_rewards(
     current_user: User = Depends(get_current_active_user),
@@ -160,6 +179,7 @@ async def get_rewards(
         data={
             "coins": rewards.coins,
             "diamonds": rewards.diamonds,
+            "flowers": rewards.flowers,
             "check_in_dates": check_in_dates,
             "has_checked_in_today": today_iso in sorted_dates,
             "current_streak": streak,
@@ -169,6 +189,30 @@ async def get_rewards(
             "task_claimed_today": task_claimed,
             "monthly_claimed": monthly_claimed,
         },
+    )
+
+
+@router.get("/assets", response_model=APIResponse)
+async def get_assets(
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+):
+    """获取统一资产余额（金币/钻石/鲜花），供官网与游戏端读取。"""
+    rewards = _get_or_create_rewards(db, current_user.id)
+    return APIResponse(success=True, message="ok", data=_balances_dict(rewards))
+
+
+@router.get("/shop/items", response_model=APIResponse)
+async def get_shop_items(
+    game_mode: str | None = Query(None, description="可选：按游戏模式过滤道具"),
+    current_user: User = Depends(get_current_active_user),
+):
+    """获取可兑换道具配置。"""
+    _ = current_user
+    return APIResponse(
+        success=True,
+        message="ok",
+        data={"items": get_shop_items_by_game(game_mode), "game_mode": game_mode},
     )
 
 
@@ -186,7 +230,7 @@ async def do_check_in(
         UserCheckIn.user_id == current_user.id, UserCheckIn.check_in_date == today
     ).first()
     if existing:
-        return APIResponse(success=True, message="already_checked_in", data={"coins": 0, "diamonds": 0})
+        return APIResponse(success=True, message="already_checked_in", data={"coins": 0, "diamonds": 0, "flowers": 0})
 
     db.add(UserCheckIn(user_id=current_user.id, check_in_date=today))
     rewards = _get_or_create_rewards(db, current_user.id)
@@ -211,7 +255,7 @@ async def do_check_in(
     return APIResponse(
         success=True,
         message="ok",
-        data={"coins": coins_awarded, "diamonds": diamonds_awarded},
+        data={"coins": coins_awarded, "diamonds": diamonds_awarded, "flowers": 0},
     )
 
 
@@ -316,4 +360,138 @@ async def claim_task(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="invalid_task_id")
     db.commit()
     db.refresh(rewards)
-    return APIResponse(success=True, message="ok", data={"coins": rewards.coins, "diamonds": rewards.diamonds})
+    return APIResponse(success=True, message="ok", data=_balances_dict(rewards))
+
+
+@router.get("/shop/inventory", response_model=APIResponse)
+async def get_inventory(
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+):
+    """获取当前用户道具背包。"""
+    rows = (
+        db.query(UserItemInventory)
+        .filter(UserItemInventory.user_id == current_user.id)
+        .order_by(UserItemInventory.item_id.asc())
+        .all()
+    )
+    return APIResponse(
+        success=True,
+        message="ok",
+        data={
+            "items": [
+                {"item_id": r.item_id, "quantity": r.quantity}
+                for r in rows
+            ]
+        },
+    )
+
+
+@router.post("/shop/redeem", response_model=APIResponse)
+async def redeem_item(
+    item_id: str = Query(..., description="道具 ID，如 avatar_hat_crown"),
+    game_mode: str | None = Query(None, description="可选：当前游戏模式，用于校验道具可用范围"),
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+):
+    """兑换道具：服务端校验并扣减金币/钻石/鲜花，成功后写入背包。"""
+    item = SHOP_ITEMS.get(item_id)
+    if not item:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="invalid_item_id")
+    if not is_item_available_for_game(item, game_mode):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="item_not_available_for_game")
+
+    rewards = _get_or_create_rewards(db, current_user.id)
+    cost = item["cost"]
+
+    if rewards.coins < cost["coins"] or rewards.diamonds < cost["diamonds"] or rewards.flowers < cost["flowers"]:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="insufficient_assets")
+
+    rewards.coins -= cost["coins"]
+    rewards.diamonds -= cost["diamonds"]
+    rewards.flowers -= cost["flowers"]
+
+    inventory_row = (
+        db.query(UserItemInventory)
+        .filter(
+            UserItemInventory.user_id == current_user.id,
+            UserItemInventory.item_id == item_id,
+        )
+        .first()
+    )
+    if inventory_row is None:
+        inventory_row = UserItemInventory(
+            user_id=current_user.id,
+            item_id=item_id,
+            quantity=1,
+        )
+        db.add(inventory_row)
+    else:
+        inventory_row.quantity += 1
+        db.add(inventory_row)
+
+    db.add(rewards)
+    db.commit()
+    db.refresh(rewards)
+    db.refresh(inventory_row)
+
+    return APIResponse(
+        success=True,
+        message="ok",
+        data={
+            "item_id": item_id,
+            "item_name": item["name"],
+            "games": item.get("games", []),
+            "game_mode": game_mode,
+            "cost": cost,
+            "inventory_quantity": inventory_row.quantity,
+            "assets": _balances_dict(rewards),
+        },
+    )
+
+
+@router.post("/shop/consume", response_model=APIResponse)
+async def consume_item(
+    item_id: str = Query(..., description="道具 ID，如 chess_tourmaster_hint"),
+    count: int = Query(1, ge=1, le=99, description="消耗数量，默认 1"),
+    game_mode: str | None = Query(None, description="可选：当前游戏模式，用于校验道具可用范围"),
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+):
+    """消耗道具：服务端校验库存并扣减数量。"""
+    item = SHOP_ITEMS.get(item_id)
+    if not item:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="invalid_item_id")
+    if not is_item_available_for_game(item, game_mode):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="item_not_available_for_game")
+
+    inventory_row = (
+        db.query(UserItemInventory)
+        .filter(
+            UserItemInventory.user_id == current_user.id,
+            UserItemInventory.item_id == item_id,
+        )
+        .first()
+    )
+    if inventory_row is None or inventory_row.quantity < count:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="insufficient_inventory")
+
+    inventory_row.quantity -= count
+    remain = inventory_row.quantity
+    if inventory_row.quantity <= 0:
+        db.delete(inventory_row)
+        remain = 0
+    else:
+        db.add(inventory_row)
+    db.commit()
+
+    return APIResponse(
+        success=True,
+        message="ok",
+        data={
+            "item_id": item_id,
+            "consumed_count": count,
+            "inventory_quantity": remain,
+            "game_mode": game_mode,
+        },
+    )

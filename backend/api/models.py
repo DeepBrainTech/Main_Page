@@ -122,13 +122,14 @@ class UserGamePlayByDay(Base):
 
 
 class UserRewards(Base):
-    """用户金币/钻石与签到、任务领取状态"""
+    """用户金币/钻石/鲜花与签到、任务领取状态"""
     __tablename__ = "user_rewards"
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, unique=True, index=True)
     coins = Column(Integer, default=0)
     diamonds = Column(Integer, default=0)
+    flowers = Column(Integer, default=0)
     last_streak_award_start = Column(String(10), nullable=True)  # 最近一次 7 日连续签到发钻石的起始日 YYYY-MM-DD
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -154,6 +155,19 @@ class UserTaskClaim(Base):
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     task_id = Column(String(50), nullable=False, index=True)
     claimed_date = Column(String(10), nullable=False, index=True)  # YYYY-MM-DD 或 YYYY-MM 每月任务
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class UserItemInventory(Base):
+    """用户道具背包（用于兑换后的道具持有量）"""
+    __tablename__ = "user_item_inventories"
+    __table_args__ = (UniqueConstraint("user_id", "item_id", name="uq_user_item_inventory"),)
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    item_id = Column(String(100), nullable=False, index=True)
+    quantity = Column(Integer, default=0, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
