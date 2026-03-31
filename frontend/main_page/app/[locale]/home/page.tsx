@@ -6,6 +6,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useGameLauncher } from "@/hooks/useGameLauncher";
 import AppShell, { type AppTab } from "@/components/layout/AppShell";
 import HomeTab from "@/components/features/home/HomeTab";
+import LearningTab from "@/components/features/learning/LearningTab";
 import TestTab from "@/components/features/test/TestTab";
 import BrainGamesTab from "@/components/features/brain-games/BrainGamesTab";
 import LeaderboardTab from "@/components/features/leaderboard/LeaderboardTab";
@@ -60,6 +61,7 @@ export default function HomePage() {
       onProfileUpdate={refetch}
     >
       {activeTab === "home" && <HomeTab username={username} />}
+      {activeTab === "learning" && <LearningTab />}
       {activeTab === "test" && <TestTab dateOfBirth={dateOfBirth} />}
       {activeTab === "brainGames" && (
         <BrainGamesTab

@@ -20,6 +20,7 @@
   },
   "nav": {
     "home": "主页",
+    "learning": "学习",
     "test": "认知测试",
     "brainGames": "脑力训练游戏",
     "leaderboard": "排行榜",
@@ -500,6 +501,12 @@
     "subtitle": "按认知维度选择游戏",
     "play": "开始游戏",
     "noData": "暂无游戏"
+  },
+  "learning": {
+    "title": "Learning",
+    "subtitle": "Choose by cognitive dimension",
+    "math": "Math",
+    "mentalMath": "mental math"
   },
   "profile": {
     "title": "个人信息",

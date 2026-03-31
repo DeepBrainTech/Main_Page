@@ -4,7 +4,7 @@ import { useTranslations } from "next-intl";
 import ProfileDialog from "@/components/features/profile/ProfileDialog";
 import { useState } from "react";
 
-export type AppTab = "home" | "test" | "brainGames" | "leaderboard";
+export type AppTab = "home" | "learning" | "test" | "brainGames" | "leaderboard";
 
 interface AppShellProps {
   activeTab: AppTab;
@@ -38,6 +38,7 @@ export default function AppShell({
 
   const tabs: { key: AppTab; label: string }[] = [
     { key: "home", label: tNav("home") },
+    { key: "learning", label: tNav("learning") },
     { key: "test", label: tNav("test") },
     { key: "brainGames", label: tNav("brainGames") },
     { key: "leaderboard", label: tNav("leaderboard") },

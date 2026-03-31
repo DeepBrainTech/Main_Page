@@ -20,6 +20,7 @@
   },
   "nav": {
     "home": "Home",
+    "learning": "Learning",
     "test": "Cognitive Test",
     "brainGames": "Brain Games",
     "leaderboard": "Leaderboard",
@@ -500,6 +501,12 @@
     "subtitle": "Choose by cognitive dimension",
     "play": "Play",
     "noData": "No games yet"
+  },
+  "learning": {
+    "title": "Learning",
+    "subtitle": "Choose by cognitive dimension",
+    "math": "Math",
+    "mentalMath": "mental math"
   },
   "profile": {
     "title": "Profile",
