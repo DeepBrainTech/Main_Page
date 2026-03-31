@@ -505,8 +505,8 @@
   "learning": {
     "title": "Learning",
     "subtitle": "Choose by cognitive dimension",
-    "math": "Math",
-    "mentalMath": "mental math"
+    "math": "数学",
+    "mentalMath": "心算"
   },
   "profile": {
     "title": "个人信息",
