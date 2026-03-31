@@ -506,7 +506,16 @@
     "title": "Learning",
     "subtitle": "Choose by cognitive dimension",
     "math": "数学",
-    "mentalMath": "心算"
+    "mentalMath": "心算",
+    "menuButtonLabel": "打开导航菜单",
+    "mentalMathCategories": {
+      "assessment": "评估（Assessment）",
+      "makingWhole": "整类（Making Whole）",
+      "breakIntoParts": "拆分计算类（Break into Parts）",
+      "rearrange": "重排组合类（Rearrange）",
+      "roundAndAdjust": "近似修正类（Round & Adjust）",
+      "leftToRightFlow": "流式计算类（Left-to-Right / Flow）"
+    }
   },
   "profile": {
     "title": "个人信息",

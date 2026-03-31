@@ -506,7 +506,16 @@
     "title": "Learning",
     "subtitle": "Choose by cognitive dimension",
     "math": "Math",
-    "mentalMath": "Mental Math"
+    "mentalMath": "Mental Math",
+    "menuButtonLabel": "Open navigation menu",
+    "mentalMathCategories": {
+      "assessment": "Assessment",
+      "makingWhole": "Making Whole",
+      "breakIntoParts": "Break into Parts",
+      "rearrange": "Rearrange",
+      "roundAndAdjust": "Round & Adjust",
+      "leftToRightFlow": "Left-to-Right / Flow"
+    }
   },
   "profile": {
     "title": "Profile",
