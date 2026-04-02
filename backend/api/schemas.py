@@ -178,6 +178,37 @@ class LeaderboardEntry(BaseModel):
     score: int
 
 
+class AssessmentTopicStatIn(BaseModel):
+    topic_key: str
+    total: int = 0
+    correct: int = 0
+    accuracy: int = 0
+
+
+class AssessmentAnswerIn(BaseModel):
+    topic_key: str
+    question_text: str
+    user_answer: Optional[str] = None
+    correct_answer: Optional[str] = None
+    is_correct: bool = False
+    is_timeout: bool = False
+    time_spent_ms: int = 0
+
+
+class AssessmentSessionCreate(BaseModel):
+    subject: str = Field(..., min_length=1, max_length=50)
+    started_at: datetime
+    finished_at: datetime
+    duration_seconds: int = 0
+    total_questions: int = 0
+    correct_count: int = 0
+    accuracy: int = 0
+    strongest_area: Optional[str] = None
+    weakest_area: Optional[str] = None
+    topic_stats: List[AssessmentTopicStatIn] = []
+    answers: List[AssessmentAnswerIn] = []
+
+
 # ========== API 响应 ==========
 class APIResponse(BaseModel):
     """通用 API 响应"""

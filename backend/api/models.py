@@ -184,3 +184,50 @@ class UserCognitiveScores(Base):
     strategy = Column(Integer, default=0)
     spatial = Column(Integer, default=0)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class UserAssessmentSession(Base):
+    __tablename__ = "user_assessment_sessions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    subject = Column(String(50), nullable=False, index=True)
+    started_at = Column(DateTime, nullable=False)
+    finished_at = Column(DateTime, nullable=False)
+    duration_seconds = Column(Integer, default=0, nullable=False)
+    total_questions = Column(Integer, default=0, nullable=False)
+    correct_count = Column(Integer, default=0, nullable=False)
+    accuracy = Column(Integer, default=0, nullable=False)
+    strongest_area = Column(String(100), nullable=True)
+    weakest_area = Column(String(100), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class UserAssessmentTopicStat(Base):
+    __tablename__ = "user_assessment_topic_stats"
+    __table_args__ = (
+        UniqueConstraint("session_id", "topic_key", name="uq_assessment_session_topic"),
+    )
+
+    id = Column(Integer, primary_key=True, index=True)
+    session_id = Column(Integer, ForeignKey("user_assessment_sessions.id"), nullable=False, index=True)
+    topic_key = Column(String(120), nullable=False, index=True)
+    total = Column(Integer, default=0, nullable=False)
+    correct = Column(Integer, default=0, nullable=False)
+    accuracy = Column(Integer, default=0, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class UserAssessmentAnswer(Base):
+    __tablename__ = "user_assessment_answers"
+
+    id = Column(Integer, primary_key=True, index=True)
+    session_id = Column(Integer, ForeignKey("user_assessment_sessions.id"), nullable=False, index=True)
+    topic_key = Column(String(120), nullable=False, index=True)
+    question_text = Column(Text, nullable=False)
+    user_answer = Column(String(50), nullable=True)
+    correct_answer = Column(String(50), nullable=True)
+    is_correct = Column(Boolean, default=False, nullable=False)
+    is_timeout = Column(Boolean, default=False, nullable=False)
+    time_spent_ms = Column(Integer, default=0, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)

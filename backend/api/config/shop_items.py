@@ -43,6 +43,31 @@ SHOP_ITEMS: dict[str, dict[str, Any]] = {
         "games": ["homestead"],
         "cost": {"coins": 20, "diamonds": 0, "flowers": 0},
     },
+    "learning_mental_math_making_whole": {
+        "name": "learning_mental_math_making_whole",
+        "games": ["learning-mental-math"],
+        "cost": {"coins": 20, "diamonds": 0, "flowers": 0},
+    },
+    "learning_mental_math_break_into_parts": {
+        "name": "learning_mental_math_break_into_parts",
+        "games": ["learning-mental-math"],
+        "cost": {"coins": 20, "diamonds": 0, "flowers": 0},
+    },
+    "learning_mental_math_rearrange": {
+        "name": "learning_mental_math_rearrange",
+        "games": ["learning-mental-math"],
+        "cost": {"coins": 20, "diamonds": 0, "flowers": 0},
+    },
+    "learning_mental_math_round_and_adjust": {
+        "name": "learning_mental_math_round_and_adjust",
+        "games": ["learning-mental-math"],
+        "cost": {"coins": 20, "diamonds": 0, "flowers": 0},
+    },
+    "learning_mental_math_left_to_right_flow": {
+        "name": "learning_mental_math_left_to_right_flow",
+        "games": ["learning-mental-math"],
+        "cost": {"coins": 20, "diamonds": 0, "flowers": 0},
+    },
 }
 
 
