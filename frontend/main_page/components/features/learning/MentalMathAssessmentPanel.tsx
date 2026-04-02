@@ -499,6 +499,35 @@ export default function MentalMathAssessmentPanel() {
               <div className="absolute left-1/2 top-1/2 h-16 w-16 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white" />
             </div>
           </div>
+          <div className="mt-3 space-y-1.5 text-xs text-gray-700">
+            <div className="flex items-center justify-between">
+              <span className="inline-flex items-center gap-2">
+                <span className="h-2 w-2 rounded-full bg-green-600" />
+                {t("assessment.correct")}
+              </span>
+              <span>
+                {correctCount} ({totalQuestions > 0 ? Math.round((correctCount / totalQuestions) * 100) : 0}%)
+              </span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="inline-flex items-center gap-2">
+                <span className="h-2 w-2 rounded-full bg-red-500" />
+                {t("assessment.incorrect")}
+              </span>
+              <span>
+                {Math.max(0, incorrectCount)} ({totalQuestions > 0 ? Math.round((Math.max(0, incorrectCount) / totalQuestions) * 100) : 0}%)
+              </span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="inline-flex items-center gap-2">
+                <span className="h-2 w-2 rounded-full bg-amber-500" />
+                {t("assessment.timeout")}
+              </span>
+              <span>
+                {timeoutCount} ({totalQuestions > 0 ? Math.round((timeoutCount / totalQuestions) * 100) : 0}%)
+              </span>
+            </div>
+          </div>
         </div>
       </div>
 
