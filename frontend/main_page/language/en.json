@@ -48,6 +48,7 @@
     "chessMater": "ChessMater",
     "chessTourmaster": "Chess Tourmaster",
     "intercontinentalChess": "Intercontinental Chess",
+    "dashDotSimulator": "Dash & Dot Simulator",
     "flowersCount": "Flowers: {count}",
     "failedToStartGame": "Failed to start game",
     "homesteadPlaceholder": "Avatar placeholder; outfits coming later",

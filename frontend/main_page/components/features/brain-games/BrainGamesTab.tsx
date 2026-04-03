@@ -68,9 +68,10 @@ export default function BrainGamesTab({ onLaunch }: BrainGamesTabProps) {
               ) : (
                 <div className="flex flex-wrap gap-4">
                   {games.map((entry) => {
-                    const imageSrc =
-                      GAME_COVER_MAP[entry.key] ??
-                      `/brain-games/${entry.key}.gif`; // 其他游戏走 public 静态路径
+                    const imageSrc = entry.skipCover
+                      ? null
+                      : (GAME_COVER_MAP[entry.key] ??
+                        `/brain-games/${entry.key}.gif`); // 其他游戏走 public 静态路径
 
                     return (
                       <div
@@ -79,14 +80,16 @@ export default function BrainGamesTab({ onLaunch }: BrainGamesTabProps) {
                         className="flex w-40 cursor-pointer flex-col items-center rounded-lg bg-white p-2 shadow-sm transition-shadow hover:shadow-md"
                       >
                         <div className="mb-2 h-24 w-full overflow-hidden rounded-md bg-gray-200">
-                          <Image
-                            src={imageSrc}
-                            alt={tHome(entry.nameKey)}
-                            width={160}
-                            height={96}
-                            className="h-full w-full object-cover"
-                            unoptimized
-                          />
+                          {imageSrc ? (
+                            <Image
+                              src={imageSrc}
+                              alt={tHome(entry.nameKey)}
+                              width={160}
+                              height={96}
+                              className="h-full w-full object-cover"
+                              unoptimized
+                            />
+                          ) : null}
                         </div>
                         <span className="text-sm font-medium text-gray-800 text-center">
                           {tHome(entry.nameKey)}

@@ -11,6 +11,8 @@ export interface GameEntry {
   /** 启动方法：由 useGameLauncher 提供 */
   launchKey: "chessMater" | "chessTourmaster" | "sudoku" | "quantumGo" | "fogChess" | "external";
   externalUrl?: string;
+  /** 为 true 时不使用封面图，仅占位背景（稍后补图时可删） */
+  skipCover?: boolean;
 }
 
 export const GAMES_BY_DIMENSION: Record<CognitiveDimensionKey, GameEntry[]> = {
@@ -38,5 +40,11 @@ export const GAMES_BY_DIMENSION: Record<CognitiveDimensionKey, GameEntry[]> = {
   ],
   spatial: [
     { key: "chessmater", nameKey: "chessMater", launchKey: "chessMater" },
+    {
+      key: "dash-dot-simulator",
+      nameKey: "dashDotSimulator",
+      launchKey: "external",
+      externalUrl: "https://dash-dot-simulator.deepbraintechnology.com/",
+    },
   ],
 };
