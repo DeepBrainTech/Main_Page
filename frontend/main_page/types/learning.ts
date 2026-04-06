@@ -24,4 +24,4 @@ export interface MentalMathQuestion {
 
 export type MentalMathQuestionMap = Record<MentalMathSecretKey, MentalMathQuestion[]>;
 
-export type MentalMathPracticePhase = "ready" | "inProgress" | "questionResult" | "summary";
+export type MentalMathPracticePhase = "ready" | "inProgress" | "questionResult" | "milestone" | "summary";

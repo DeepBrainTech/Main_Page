@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { MentalMathPracticePhase, MentalMathQuestion } from "@/types/learning";
 
 function calculateExpression(expression: string): number {
@@ -21,47 +21,100 @@ function calculateExpression(expression: string): number {
   }, numbers[0]);
 }
 
-export function useMentalMathPractice(questions: MentalMathQuestion[]) {
+interface UseMentalMathPracticeOptions {
+  generateQuestion: () => MentalMathQuestion | null;
+  milestoneSize?: number;
+}
+
+export function useMentalMathPractice(options: UseMentalMathPracticeOptions) {
+  const { generateQuestion, milestoneSize = 10 } = options;
   const [phase, setPhase] = useState<MentalMathPracticePhase>("ready");
+  const [currentQuestion, setCurrentQuestion] = useState<MentalMathQuestion | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [inputAnswer, setInputAnswer] = useState("");
+  const [answeredCount, setAnsweredCount] = useState(0);
   const [correctCount, setCorrectCount] = useState(0);
+  const [currentStreak, setCurrentStreak] = useState(0);
+  const [bestStreak, setBestStreak] = useState(0);
   const [lastSubmittedAnswer, setLastSubmittedAnswer] = useState<number | null>(null);
   const [lastCorrectAnswer, setLastCorrectAnswer] = useState<number | null>(null);
   const [lastIsCorrect, setLastIsCorrect] = useState(false);
+  const [lastQuestionDurationSeconds, setLastQuestionDurationSeconds] = useState(0);
   const [totalDurationSeconds, setTotalDurationSeconds] = useState(0);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const [totalAnsweredSeconds, setTotalAnsweredSeconds] = useState(0);
+  const [questionStartAt, setQuestionStartAt] = useState<number | null>(null);
   const [sessionStartAt, setSessionStartAt] = useState<number | null>(null);
 
-  const currentQuestion = questions[currentIndex];
-  const totalQuestions = questions.length;
+  const totalQuestions = answeredCount;
+  const accuracy = answeredCount > 0 ? Math.round((correctCount / answeredCount) * 100) : 0;
+  const averageSecondsPerQuestion = answeredCount > 0 ? Math.max(1, Math.round(totalAnsweredSeconds / answeredCount)) : 0;
 
   const canSubmit = useMemo(() => /^-?\d+$/.test(inputAnswer.trim()), [inputAnswer]);
 
-  const reset = () => {
-    setPhase("ready");
-    setCurrentIndex(0);
+  useEffect(() => {
+    if (!sessionStartAt) {
+      return;
+    }
+    if (phase === "ready" || phase === "summary") {
+      return;
+    }
+    const timer = window.setInterval(() => {
+      setElapsedSeconds(Math.max(1, Math.round((Date.now() - sessionStartAt) / 1000)));
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [phase, sessionStartAt]);
+
+  const openNextQuestion = () => {
+    const nextQuestion = generateQuestion();
+    if (!nextQuestion) {
+      setPhase("summary");
+      return;
+    }
+    setCurrentQuestion(nextQuestion);
     setInputAnswer("");
-    setCorrectCount(0);
     setLastSubmittedAnswer(null);
     setLastCorrectAnswer(null);
     setLastIsCorrect(false);
+    setLastQuestionDurationSeconds(0);
+    setCurrentIndex((index) => index + 1);
+    setQuestionStartAt(Date.now());
+    setPhase("inProgress");
+  };
+
+  const reset = () => {
+    setPhase("ready");
+    setCurrentQuestion(null);
+    setCurrentIndex(0);
+    setInputAnswer("");
+    setAnsweredCount(0);
+    setCorrectCount(0);
+    setCurrentStreak(0);
+    setBestStreak(0);
+    setLastSubmittedAnswer(null);
+    setLastCorrectAnswer(null);
+    setLastIsCorrect(false);
+    setLastQuestionDurationSeconds(0);
     setTotalDurationSeconds(0);
+    setElapsedSeconds(0);
+    setTotalAnsweredSeconds(0);
+    setQuestionStartAt(null);
     setSessionStartAt(null);
   };
 
   const start = () => {
-    if (totalQuestions === 0) {
+    reset();
+    const now = Date.now();
+    setSessionStartAt(now);
+    setQuestionStartAt(now);
+    const firstQuestion = generateQuestion();
+    if (!firstQuestion) {
+      setPhase("summary");
       return;
     }
+    setCurrentQuestion(firstQuestion);
+    setCurrentIndex(1);
     setPhase("inProgress");
-    setCurrentIndex(0);
-    setInputAnswer("");
-    setCorrectCount(0);
-    setLastSubmittedAnswer(null);
-    setLastCorrectAnswer(null);
-    setLastIsCorrect(false);
-    setTotalDurationSeconds(0);
-    setSessionStartAt(Date.now());
   };
 
   const submitCurrentAnswer = () => {
@@ -72,49 +125,74 @@ export function useMentalMathPractice(questions: MentalMathQuestion[]) {
     const submittedAnswer = Number(inputAnswer.trim());
     const correctAnswer = calculateExpression(currentQuestion.expression);
     const isCorrect = submittedAnswer === correctAnswer;
+    const now = Date.now();
+    const elapsed = sessionStartAt ? Math.max(1, Math.round((now - sessionStartAt) / 1000)) : 0;
+    const questionSeconds = questionStartAt ? Math.max(1, Math.round((now - questionStartAt) / 1000)) : 0;
 
     setLastSubmittedAnswer(submittedAnswer);
     setLastCorrectAnswer(correctAnswer);
     setLastIsCorrect(isCorrect);
+    setLastQuestionDurationSeconds(questionSeconds);
+    setElapsedSeconds(elapsed);
+    setAnsweredCount((count) => count + 1);
+    setTotalAnsweredSeconds((seconds) => seconds + questionSeconds);
     if (isCorrect) {
       setCorrectCount((count) => count + 1);
+      setCurrentStreak((streak) => {
+        const nextStreak = streak + 1;
+        setBestStreak((best) => Math.max(best, nextStreak));
+        return nextStreak;
+      });
+    } else {
+      setCurrentStreak(0);
     }
     setPhase("questionResult");
   };
 
   const next = () => {
-    const isLastQuestion = currentIndex >= totalQuestions - 1;
-    if (isLastQuestion) {
-      const durationMs = sessionStartAt ? Date.now() - sessionStartAt : 0;
-      setTotalDurationSeconds(Math.max(1, Math.round(durationMs / 1000)));
-      setPhase("summary");
+    const answered = answeredCount;
+    if (answered > 0 && answered % milestoneSize === 0) {
+      setPhase("milestone");
       return;
     }
+    openNextQuestion();
+  };
 
-    setCurrentIndex((index) => index + 1);
-    setInputAnswer("");
-    setLastSubmittedAnswer(null);
-    setLastCorrectAnswer(null);
-    setLastIsCorrect(false);
-    setPhase("inProgress");
+  const continuePractice = () => {
+    openNextQuestion();
+  };
+
+  const finishSession = () => {
+    const durationMs = sessionStartAt ? Date.now() - sessionStartAt : 0;
+    setTotalDurationSeconds(Math.max(1, Math.round(durationMs / 1000)));
+    setPhase("summary");
   };
 
   return {
     phase,
     currentIndex,
     currentQuestion,
+    answeredCount,
     totalQuestions,
     inputAnswer,
     setInputAnswer,
     canSubmit,
     correctCount,
+    accuracy,
+    currentStreak,
+    bestStreak,
+    averageSecondsPerQuestion,
+    elapsedSeconds,
     lastSubmittedAnswer,
     lastCorrectAnswer,
     lastIsCorrect,
+    lastQuestionDurationSeconds,
     totalDurationSeconds,
     start,
     submitCurrentAnswer,
     next,
+    continuePractice,
+    finishSession,
     reset,
   };
 }

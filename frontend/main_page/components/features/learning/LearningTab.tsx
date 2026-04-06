@@ -4,7 +4,10 @@ import Image from "next/image";
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import MentalMathAssessmentPanel from "@/components/features/learning/MentalMathAssessmentPanel";
-import { MENTAL_MATH_SECRET_ORDER, MENTAL_MATH_SECRET_QUESTIONS } from "@/config/mental-math-questions";
+import {
+  generateMentalMathQuestion,
+  MENTAL_MATH_SECRET_ORDER,
+} from "@/config/mental-math-questions";
 import { MENTAL_MATH_CATEGORY_ITEM_IDS, MENTAL_MATH_SHOP_GAME_MODE } from "@/config/mental-math-shop";
 import { useMentalMathPractice } from "@/hooks/useMentalMathPractice";
 import {
@@ -64,8 +67,10 @@ export default function LearningTab() {
     "roundAndAdjust",
     "leftToRightFlow",
   ] as const;
-  const questions = selectedSecretKey ? MENTAL_MATH_SECRET_QUESTIONS[selectedSecretKey] : [];
-  const practice = useMentalMathPractice(questions);
+  const practice = useMentalMathPractice({
+    generateQuestion: () => (selectedSecretKey ? generateMentalMathQuestion(selectedSecretKey) : null),
+    milestoneSize: 10,
+  });
 
   useEffect(() => {
     if (!showMentalMathCategories) {
@@ -481,11 +486,32 @@ export default function LearningTab() {
                 {(practice.phase === "inProgress" || practice.phase === "questionResult") &&
                   practice.currentQuestion && (
                   <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+                      <div className="rounded-lg border border-gray-200 bg-white px-3 py-2">
+                        <p className="text-xs text-gray-500">{t("practice.questionNumber")}</p>
+                        <p className="text-sm font-semibold text-gray-800">{practice.currentIndex}</p>
+                      </div>
+                      <div className="rounded-lg border border-gray-200 bg-white px-3 py-2">
+                        <p className="text-xs text-gray-500">{t("practice.accuracy")}</p>
+                        <p className="text-sm font-semibold text-gray-800">{practice.accuracy}%</p>
+                      </div>
+                      <div className="rounded-lg border border-gray-200 bg-white px-3 py-2">
+                        <p className="text-xs text-gray-500">{t("practice.avgTime")}</p>
+                        <p className="text-sm font-semibold text-gray-800">
+                          {t("practice.seconds", { value: practice.averageSecondsPerQuestion })}
+                        </p>
+                      </div>
+                      <div className="rounded-lg border border-gray-200 bg-white px-3 py-2">
+                        <p className="text-xs text-gray-500">{t("practice.currentStreak")}</p>
+                        <p className="text-sm font-semibold text-gray-800">{practice.currentStreak}</p>
+                      </div>
+                      <div className="rounded-lg border border-gray-200 bg-white px-3 py-2">
+                        <p className="text-xs text-gray-500">{t("practice.elapsed")}</p>
+                        <p className="text-sm font-semibold text-gray-800">{formatDuration(practice.elapsedSeconds)}</p>
+                      </div>
+                    </div>
                     <p className="text-sm font-medium text-gray-600">
-                      {t("practice.progress", {
-                        current: practice.currentIndex + 1,
-                        total: practice.totalQuestions,
-                      })}
+                      {t("practice.progressNow", { current: practice.currentIndex })}
                     </p>
                     <h4 className="text-2xl font-semibold text-gray-800">{practice.currentQuestion.expression}</h4>
                     <div className="flex flex-col gap-3 sm:max-w-xs">
@@ -516,6 +542,15 @@ export default function LearningTab() {
                       >
                         {practice.phase === "questionResult" ? t("practice.nextQuestion") : t("practice.submit")}
                       </button>
+                      {practice.phase === "inProgress" && (
+                        <button
+                          type="button"
+                          onClick={practice.finishSession}
+                          className="rounded-lg border border-gray-300 px-4 py-2 font-medium text-gray-700 transition hover:bg-gray-100"
+                        >
+                          {t("practice.finishSession")}
+                        </button>
+                      )}
                     </div>
                     {practice.phase === "questionResult" && (
                       <div className="space-y-2 rounded-lg border border-gray-200 bg-white p-4">
@@ -532,20 +567,56 @@ export default function LearningTab() {
                         <p className="text-gray-700">
                           {t("practice.correctAnswer", { answer: practice.lastCorrectAnswer ?? "-" })}
                         </p>
+                        <p className="text-gray-700">
+                          {t("practice.questionTime", { duration: practice.lastQuestionDurationSeconds })}
+                        </p>
                       </div>
                     )}
                   </div>
                 )}
 
+                {practice.phase === "milestone" && (
+                  <div className="space-y-4">
+                    <h4 className="text-xl font-semibold text-gray-800">{t("practice.milestoneTitle")}</h4>
+                    <p className="text-gray-700">{t("practice.milestoneHint", { total: practice.answeredCount })}</p>
+                    <p className="text-gray-700">
+                      {t("practice.score", { score: practice.correctCount, total: practice.answeredCount })}
+                    </p>
+                    <p className="text-gray-700">{t("practice.accuracyLine", { value: practice.accuracy })}</p>
+                    <p className="text-gray-700">
+                      {t("practice.avgTimeLine", { value: practice.averageSecondsPerQuestion })}
+                    </p>
+                    <div className="flex flex-wrap gap-3">
+                      <button
+                        type="button"
+                        onClick={practice.continuePractice}
+                        className="rounded-lg bg-blue-600 px-4 py-2 font-medium text-white transition hover:bg-blue-700"
+                      >
+                        {t("practice.continuePractice")}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={practice.finishSession}
+                        className="rounded-lg border border-gray-300 px-4 py-2 font-medium text-gray-700 transition hover:bg-gray-100"
+                      >
+                        {t("practice.finishSession")}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
                 {practice.phase === "summary" && (
                   <div className="space-y-4">
-                    <h4 className="text-xl font-semibold text-gray-800">{t("practice.summaryTitle")}</h4>
+                    <h4 className="text-xl font-semibold text-gray-800">{t("practice.sessionSummaryTitle")}</h4>
                     <p className="text-gray-700">
-                      {t("practice.score", { score: practice.correctCount, total: practice.totalQuestions })}
+                      {t("practice.score", { score: practice.correctCount, total: practice.answeredCount })}
                     </p>
+                    <p className="text-gray-700">{t("practice.accuracyLine", { value: practice.accuracy })}</p>
                     <p className="text-gray-700">
                       {t("practice.totalTime", { duration: formatDuration(practice.totalDurationSeconds) })}
                     </p>
+                    <p className="text-gray-700">{t("practice.avgTimeLine", { value: practice.averageSecondsPerQuestion })}</p>
+                    <p className="text-gray-700">{t("practice.bestStreak", { value: practice.bestStreak })}</p>
                     <div className="flex flex-wrap gap-3">
                       <button
                         type="button"
