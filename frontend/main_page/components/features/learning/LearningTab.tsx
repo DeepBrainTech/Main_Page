@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import MentalMathAssessmentPanel from "@/components/features/learning/MentalMathAssessmentPanel";
 import {
@@ -39,6 +39,8 @@ export default function LearningTab() {
   const [secretMediaUrls, setSecretMediaUrls] = useState<string[]>([]);
   const [secretMediaLoading, setSecretMediaLoading] = useState(false);
   const [secretMediaError, setSecretMediaError] = useState<string | null>(null);
+  const answerInputRef = useRef<HTMLInputElement | null>(null);
+  const nextButtonRef = useRef<HTMLButtonElement | null>(null);
 
   const categoryKeys = [
     "assessment",
@@ -273,6 +275,27 @@ export default function LearningTab() {
     assetsBalance.coins >= unlockCost.coins &&
     assetsBalance.diamonds >= unlockCost.diamonds &&
     assetsBalance.flowers >= unlockCost.flowers;
+
+  useEffect(() => {
+    if (practice.phase !== "inProgress") {
+      return;
+    }
+    const timer = window.requestAnimationFrame(() => {
+      answerInputRef.current?.focus();
+      answerInputRef.current?.select();
+    });
+    return () => window.cancelAnimationFrame(timer);
+  }, [practice.phase, practice.currentIndex]);
+
+  useEffect(() => {
+    if (practice.phase !== "questionResult") {
+      return;
+    }
+    const timer = window.requestAnimationFrame(() => {
+      nextButtonRef.current?.focus();
+    });
+    return () => window.cancelAnimationFrame(timer);
+  }, [practice.phase, practice.currentIndex]);
 
   return (
     <div className="space-y-6">
@@ -513,45 +536,55 @@ export default function LearningTab() {
                     <p className="text-sm font-medium text-gray-600">
                       {t("practice.progressNow", { current: practice.currentIndex })}
                     </p>
-                    <h4 className="text-2xl font-semibold text-gray-800">{practice.currentQuestion.expression}</h4>
-                    <div className="flex flex-col gap-3 sm:max-w-xs">
-                      <input
-                        type="text"
-                        inputMode="numeric"
-                        value={practice.inputAnswer}
-                        disabled={practice.phase === "questionResult"}
-                        onChange={(event) => {
-                          const value = event.target.value.trim();
-                          if (/^-?\d*$/.test(value)) {
-                            practice.setInputAnswer(value);
-                          }
-                        }}
-                        onKeyDown={(event) => {
-                          if (event.key === "Enter") {
-                            practice.submitCurrentAnswer();
-                          }
-                        }}
-                        placeholder={t("practice.answerPlaceholder")}
-                        className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-800 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                      />
-                      <button
-                        type="button"
-                        onClick={practice.phase === "questionResult" ? practice.next : practice.submitCurrentAnswer}
-                        disabled={practice.phase === "inProgress" && !practice.canSubmit}
-                        className="rounded-lg bg-blue-600 px-4 py-2 font-medium text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-300"
-                      >
-                        {practice.phase === "questionResult" ? t("practice.nextQuestion") : t("practice.submit")}
-                      </button>
-                      {practice.phase === "inProgress" && (
+                    <form
+                      onSubmit={(event) => {
+                        event.preventDefault();
+                        if (practice.phase === "questionResult") {
+                          practice.next();
+                          return;
+                        }
+                        practice.submitCurrentAnswer();
+                      }}
+                      className="space-y-3"
+                    >
+                      <div className="flex flex-wrap items-center gap-3 text-2xl font-semibold text-gray-800">
+                        <span>{practice.currentQuestion.expression.replace("= ?", "").trim()} =</span>
+                        <input
+                          ref={answerInputRef}
+                          type="text"
+                          inputMode="numeric"
+                          value={practice.inputAnswer}
+                          disabled={practice.phase === "questionResult"}
+                          onChange={(event) => {
+                            const value = event.target.value.trim();
+                            if (/^-?\d*$/.test(value)) {
+                              practice.setInputAnswer(value);
+                            }
+                          }}
+                          placeholder={t("practice.answerPlaceholder")}
+                          className="w-72 max-w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-xl font-semibold text-gray-800 placeholder:text-base placeholder:font-medium outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                        />
+                      </div>
+                      <div className="flex flex-col gap-3 sm:max-w-xs">
                         <button
-                          type="button"
-                          onClick={practice.finishSession}
-                          className="rounded-lg border border-gray-300 px-4 py-2 font-medium text-gray-700 transition hover:bg-gray-100"
+                          ref={practice.phase === "questionResult" ? nextButtonRef : null}
+                          type="submit"
+                          disabled={practice.phase === "inProgress" && !practice.canSubmit}
+                          className="rounded-lg bg-blue-600 px-4 py-2 font-medium text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-300"
                         >
-                          {t("practice.finishSession")}
+                          {practice.phase === "questionResult" ? t("practice.nextQuestion") : t("practice.submit")}
                         </button>
-                      )}
-                    </div>
+                        {practice.phase === "inProgress" && (
+                          <button
+                            type="button"
+                            onClick={practice.finishSession}
+                            className="rounded-lg border border-gray-300 px-4 py-2 font-medium text-gray-700 transition hover:bg-gray-100"
+                          >
+                            {t("practice.finishSession")}
+                          </button>
+                        )}
+                      </div>
+                    </form>
                     {practice.phase === "questionResult" && (
                       <div className="space-y-2 rounded-lg border border-gray-200 bg-white p-4">
                         <p
