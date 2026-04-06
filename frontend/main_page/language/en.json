@@ -509,6 +509,9 @@
     "math": "Math",
     "mentalMath": "Mental Math",
     "menuButtonLabel": "Open navigation menu",
+    "navigation": {
+      "backOneLevel": "← Back"
+    },
     "mentalMathCategories": {
       "assessment": "Assessment",
       "makingWhole": "Making Whole",
@@ -548,6 +551,8 @@
       "milestoneHint": "You have completed {total} questions.",
       "continuePractice": "Continue Practice",
       "finishSession": "Finish Session",
+      "showSecretTip": "View Secret Tip",
+      "hideSecretTip": "Hide Secret Tip",
       "answerPlaceholder": "Enter your answer",
       "submit": "Submit",
       "correct": "Correct",

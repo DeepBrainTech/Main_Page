@@ -39,6 +39,7 @@ export default function LearningTab() {
   const [secretMediaUrls, setSecretMediaUrls] = useState<string[]>([]);
   const [secretMediaLoading, setSecretMediaLoading] = useState(false);
   const [secretMediaError, setSecretMediaError] = useState<string | null>(null);
+  const [showSecretTipCard, setShowSecretTipCard] = useState(false);
   const answerInputRef = useRef<HTMLInputElement | null>(null);
   const nextButtonRef = useRef<HTMLButtonElement | null>(null);
 
@@ -184,6 +185,7 @@ export default function LearningTab() {
     setShowMakingWholeSecrets(false);
     setSelectedMentalMathCategory(null);
     setSelectedSecretKey(null);
+    setShowSecretTipCard(false);
     practice.reset();
   };
 
@@ -191,11 +193,13 @@ export default function LearningTab() {
     setShowMakingWholeSecrets(false);
     setSelectedMentalMathCategory(null);
     setSelectedSecretKey(null);
+    setShowSecretTipCard(false);
     practice.reset();
   };
 
   const handleSelectSecret = (key: MentalMathSecretKey) => {
     setSelectedSecretKey(key);
+    setShowSecretTipCard(false);
     practice.reset();
   };
 
@@ -326,39 +330,29 @@ export default function LearningTab() {
           </>
         ) : (
           <>
-            <div className="mb-4 inline-flex items-center gap-2 text-2xl font-semibold text-gray-800">
+            <div className="mb-4 flex flex-wrap items-center gap-2 text-xl font-semibold text-gray-800">
               <button
                 type="button"
                 onClick={handleBackToMath}
-                className="transition hover:text-blue-700"
+                className="text-blue-700 transition hover:text-blue-800"
               >
                 {t("math")}
               </button>
-              <span className="text-gray-400">-</span>
+              <span className="text-gray-400">&gt;</span>
               {!showMakingWholeSecrets ? (
                 !selectedMentalMathCategory ? (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (selectedMentalMathCategory) {
-                        setSelectedMentalMathCategory(null);
-                      }
-                    }}
-                    className="transition hover:text-blue-700"
-                  >
-                    {t("mentalMath")}
-                  </button>
+                  <span className="font-semibold text-gray-900">{t("mentalMath")}</span>
                 ) : (
                   <>
                     <button
                       type="button"
                       onClick={() => setSelectedMentalMathCategory(null)}
-                      className="transition hover:text-blue-700"
+                      className="text-blue-700 transition hover:text-blue-800"
                     >
                       {t("mentalMath")}
                     </button>
-                    <span className="text-gray-400">-</span>
-                    <span>{t(`mentalMathCategories.${selectedMentalMathCategory}`)}</span>
+                    <span className="text-gray-400">&gt;</span>
+                    <span className="font-semibold text-gray-900">{t(`mentalMathCategories.${selectedMentalMathCategory}`)}</span>
                   </>
                 )
               ) : (
@@ -366,27 +360,28 @@ export default function LearningTab() {
                   <button
                     type="button"
                     onClick={handleBackToMentalMath}
-                    className="transition hover:text-blue-700"
+                    className="text-blue-700 transition hover:text-blue-800"
                   >
                     {t("mentalMath")}
                   </button>
-                  <span className="text-gray-400">-</span>
+                  <span className="text-gray-400">&gt;</span>
                   {!selectedSecretKey ? (
-                    <span>{t("mentalMathCategories.makingWhole")}</span>
+                    <span className="font-semibold text-gray-900">{t("mentalMathCategories.makingWhole")}</span>
                   ) : (
                     <>
                       <button
                         type="button"
                         onClick={() => {
                           setSelectedSecretKey(null);
+                          setShowSecretTipCard(false);
                           practice.reset();
                         }}
-                        className="transition hover:text-blue-700"
+                        className="text-blue-700 transition hover:text-blue-800"
                       >
                         {t("mentalMathCategories.makingWhole")}
                       </button>
-                      <span className="text-gray-400">-</span>
-                      <span>{t(`makingWholeSecrets.${selectedSecretKey}`)}</span>
+                      <span className="text-gray-400">&gt;</span>
+                      <span className="font-semibold text-gray-900">{t(`makingWholeSecrets.${selectedSecretKey}`)}</span>
                     </>
                   )}
                 </>
@@ -468,6 +463,46 @@ export default function LearningTab() {
               )
             ) : (
               <div className="rounded-xl bg-gray-50 p-5">
+                {practice.phase !== "ready" && (
+                  <div className="mb-4 rounded-lg border border-gray-200 bg-white p-3">
+                    <button
+                      type="button"
+                      onClick={() => setShowSecretTipCard((prev) => !prev)}
+                      className="rounded-md border border-gray-300 px-3 py-1 text-sm font-medium text-gray-700 transition hover:bg-gray-100"
+                    >
+                      {showSecretTipCard ? t("practice.hideSecretTip") : t("practice.showSecretTip")}
+                    </button>
+                    {showSecretTipCard && (
+                      <div className="mt-3 space-y-3">
+                        {secretMediaLoading && (
+                          <p className="text-sm text-gray-500">{t("media.loading")}</p>
+                        )}
+                        {!secretMediaLoading && secretMediaError && (
+                          <p className="text-sm text-red-600">{t("media.loadFailed")}</p>
+                        )}
+                        {!secretMediaLoading && !secretMediaError && secretMediaUrls.length > 0 && (
+                          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                            {secretMediaUrls.map((url, index) => (
+                              <div
+                                key={`tip-${selectedSecretKey}-${index}`}
+                                className="overflow-hidden rounded-xl border border-gray-200 bg-white"
+                              >
+                                <Image
+                                  src={url}
+                                  alt={`${t(`makingWholeSecrets.${selectedSecretKey}`)} ${index + 1}`}
+                                  width={720}
+                                  height={405}
+                                  unoptimized
+                                  className="h-auto w-full object-contain"
+                                />
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
                 {practice.phase === "ready" && (
                   <div className="space-y-4">
                     <h4 className="text-xl font-semibold text-gray-800">{t(`makingWholeSecrets.${selectedSecretKey}`)}</h4>

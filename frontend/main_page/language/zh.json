@@ -509,6 +509,9 @@
     "math": "数学",
     "mentalMath": "心算",
     "menuButtonLabel": "打开导航菜单",
+    "navigation": {
+      "backOneLevel": "← 返回上一级"
+    },
     "mentalMathCategories": {
       "assessment": "评估（Assessment）",
       "makingWhole": "整类（Making Whole）",
@@ -548,6 +551,8 @@
       "milestoneHint": "你已完成 {total} 题。",
       "continuePractice": "继续练习",
       "finishSession": "结束本轮",
+      "showSecretTip": "查看秘诀",
+      "hideSecretTip": "收起秘诀",
       "answerPlaceholder": "请输入答案",
       "submit": "提交",
       "correct": "回答正确",
