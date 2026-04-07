@@ -95,7 +95,7 @@ export function useGameLauncher() {
       gameKey: "fogchess",
       apiEndpoint: "/api/games/fogchess/token",
       // 直接读取环境变量，如果没有设置则使用默认线上地址
-      gameUrl: process.env.NEXT_PUBLIC_FOGCHESS_URL || "https://fogchess-frontend.onrender.com",
+      gameUrl: process.env.NEXT_PUBLIC_FOGCHESS_URL || "https://fogchess.deepbraintechnology.com",
       openInNewTab: false,
     });
   };
