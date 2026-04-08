@@ -78,22 +78,22 @@ export const LANDING_GAME_CATEGORIES: GameCategoryItem[] = [
 export const LANDING_BENEFIT_STORIES: BenefitStoryItem[] = [
   {
     key: "executiveFunction",
-    image: "/images/6.jpg",
+    image: "/landing/play_smarter/1.png",
     cardClass: "bg-[#FDE2E4]",
   },
   {
     key: "problemSolving",
-    image: "/images/2.jpg",
+    image: "/landing/play_smarter/2.png",
     cardClass: "bg-[#DDF4E7]",
   },
   {
     key: "imagination",
-    image: "/images/3.jpg",
+    image: "/landing/play_smarter/3.png",
     cardClass: "bg-[#DBEAFE]",
   },
   {
     key: "mentalLongevity",
-    image: "/images/4.jpg",
+    image: "/landing/play_smarter/4.png",
     cardClass: "bg-[#E5E7EB]",
   },
 ];

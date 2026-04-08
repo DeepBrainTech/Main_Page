@@ -24,9 +24,18 @@ export default function BenefitStorySection({ items }: BenefitStorySectionProps)
           </h3>
         </div>
 
-        <div className="grid grid-cols-1 gap-8 min-[480px]:grid-cols-2">
-          {items.map((item) => (
-            <BenefitStoryCard key={item.key} item={item} />
+        <div className="grid grid-cols-1 auto-rows-fr items-stretch gap-8 min-[480px]:grid-cols-2">
+          {items.map((item, index) => (
+            <div
+              key={item.key}
+              className={
+                index % 2 === 0
+                  ? "h-full min-[480px]:justify-self-end"
+                  : "h-full min-[480px]:justify-self-start"
+              }
+            >
+              <BenefitStoryCard item={item} />
+            </div>
           ))}
         </div>
       </div>
