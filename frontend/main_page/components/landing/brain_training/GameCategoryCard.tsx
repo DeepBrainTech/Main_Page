@@ -17,20 +17,18 @@ export default function GameCategoryCard({
   const t = useTranslations("beforeloginV2.gameCategories.items");
 
   return (
-    <article>
-      <div className="overflow-hidden rounded-2xl border-[3px] border-[#b6d5e9] bg-white shadow-md">
-        <div className="relative">
-          <Image
-            src={item.image}
-            alt={t(`${item.key}.title`)}
-            width={640}
-            height={360}
-            className="h-44 w-full object-cover"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-slate-900/30 via-slate-900/10 to-transparent" />
-          <h3 className="absolute bottom-3 left-3 text-2xl font-black uppercase tracking-wide text-white [text-shadow:_0_2px_4px_rgb(0_0_0_/_0.6)]">
-            {t(`${item.key}.title`)}
-          </h3>
+    <article className="mx-auto w-full max-w-[648px]">
+      <div className="w-full overflow-hidden rounded-[45px] border-0 shadow-none">
+        <div className="relative aspect-[648/370] w-full">
+          <div className="absolute inset-[4%]">
+            <Image
+              src={item.image}
+              alt={t(`${item.key}.title`)}
+              fill
+              sizes="(max-width: 768px) 90vw, (max-width: 1280px) 45vw, 648px"
+              className="object-contain object-center"
+            />
+          </div>
         </div>
       </div>
 

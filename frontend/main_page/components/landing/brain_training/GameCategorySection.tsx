@@ -18,14 +18,11 @@ export default function GameCategorySection({
 
   return (
     <section className="px-4 py-14 sm:px-6 lg:px-8">
-      <div className="mx-auto w-full max-w-5xl">
+      <div className="mx-auto w-full max-w-4xl">
         <div className="mb-8 text-center">
-          <h2 className="text-3xl font-black uppercase tracking-[0.12em] text-[#0B4F84] sm:text-4xl">
+          <h2 className="text-center justify-start text-sky-700 text-6xl font-normal font-['Titan_One'] leading-[49.79px] tracking-[8px]">
             {t("eyebrow")}
           </h2>
-          <p className="mt-2 text-xs font-semibold text-[#0B4F84] sm:text-sm">
-            {t("subtitle")}
-          </p>
         </div>
 
         <div className="grid grid-cols-1 gap-x-4 gap-y-8 min-[480px]:grid-cols-2">

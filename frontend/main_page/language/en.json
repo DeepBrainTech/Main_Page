@@ -974,7 +974,7 @@
           "description": "Develop attentional control and reduce distraction cost."
         },
         "reasoning": {
-          "title": "Reasoning Games",
+          "title": "Memory Games",
           "description": "Practice multi-step inference and flexible problem solving."
         }
       }
@@ -1003,7 +1003,6 @@
     },
     "finalCta": {
       "title": "Ready to Train Your Brain With Purpose?",
-      "subtitle": "Join DeepBrain Tech and start your personalized cognitive journey today.",
       "primaryCta": "Create Account",
       "secondaryCta": "Already Have an Account"
     },
@@ -1014,7 +1013,7 @@
       "contact": "Contact",
       "privacy": "Privacy",
       "terms": "Terms",
-      "copyright": "? 2026 DeepBrain Tech. All rights reserved."
+      "copyright": "© 2026 DeepBrain Tech. All rights reserved."
     }
   }
 }

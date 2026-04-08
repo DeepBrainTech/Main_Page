@@ -10,7 +10,6 @@ import {
   AudienceSection,
   GameCategorySection,
   BenefitStorySection,
-  FinalCtaSection,
   LandingFooter,
 } from "@/components/landing";
 import {
@@ -78,7 +77,6 @@ export default function Home() {
             onPlayClick={goLogin}
           />
           <BenefitStorySection items={LANDING_BENEFIT_STORIES} />
-          <FinalCtaSection onPrimaryClick={goRegister} onSecondaryClick={goLogin} />
         </main>
 
         <LandingFooter />

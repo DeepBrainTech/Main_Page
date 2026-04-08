@@ -36,37 +36,37 @@ export const LANDING_AUDIENCES: AudienceItem[] = [
 export const LANDING_GAME_CATEGORIES: GameCategoryItem[] = [
   {
     key: "spatial",
-    image: "/images/game-cognigo.jpg",
+    image: "/landing/brain_training/spatial.png",
     badgeClass: "bg-[#2D6A4F]",
     badgeTextClass: "text-white",
   },
   {
     key: "strategy",
-    image: "/images/game-chess-master.jpg",
+    image: "/landing/brain_training/strategy.png",
     badgeClass: "bg-[#BC4749]",
     badgeTextClass: "text-white",
   },
   {
     key: "reaction",
-    image: "/images/game-fog-of-war.jpg",
+    image: "/landing/brain_training/reaction.png",
     badgeClass: "bg-[#F77F00]",
     badgeTextClass: "text-white",
   },
   {
     key: "logic",
-    image: "/images/game-sudoku.jpg",
+    image: "/landing/brain_training/logic.png",
     badgeClass: "bg-[#3A86FF]",
     badgeTextClass: "text-white",
   },
   {
     key: "focus",
-    image: "/images/game-sudoku-battle.jpg",
+    image: "/landing/brain_training/focus.png",
     badgeClass: "bg-[#6D597A]",
     badgeTextClass: "text-white",
   },
   {
     key: "reasoning",
-    image: "/images/5.jpg",
+    image: "/landing/brain_training/memory.png",
     badgeClass: "bg-[#4C566A]",
     badgeTextClass: "text-white",
   },

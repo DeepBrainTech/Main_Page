@@ -20,7 +20,6 @@ export default function FinalCtaSection({
     <section className="px-4 pb-16 pt-10 sm:px-6 lg:px-8">
       <div className="mx-auto w-full max-w-4xl rounded-3xl bg-white/65 px-6 py-8 text-center shadow-md backdrop-blur-sm">
         <h2 className="text-2xl font-black text-[#0B4F84] sm:text-3xl">{t("title")}</h2>
-        <p className="mx-auto mt-3 max-w-2xl text-sm leading-7 text-[#345f82]">{t("subtitle")}</p>
 
         <div className="mt-6 flex flex-wrap justify-center gap-3">
           <button
