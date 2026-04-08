@@ -931,19 +931,19 @@
       "items": {
         "students": {
           "title": "K-12 and University Students",
-          "description": "Boost academic performance and sharpen analytical thinking through engaging daily training."
+          "description": "Ace academic performance and thinking ability."
         },
         "children": {
-          "title": "Children with ADHD/Autism",
-          "description": "Improve focus and social interaction with structured, game-based cognitive practice."
+          "title": "Children & Teens with ADHD/Autism",
+          "description": "Improve focus and social skills through targeted cognitive training."
         },
         "educators": {
-          "title": "Educators and Therapists",
-          "description": "Use evidence-based activities to support intervention plans and measurable progress."
+          "title": "Educators, Therapists & Health Enthusiasts",
+          "description": "Our solutions provide evidence-based support for your professional interventions."
         },
         "olderAdults": {
           "title": "Older Adults",
-          "description": "Protect cognitive vitality and maintain mental sharpness with adaptive exercises."
+          "description": "Prevent cognitive decline and stay mentally sharp as you age."
         }
       }
     },

@@ -64,7 +64,7 @@ export default function Home() {
   };
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[#d8e2ee]">
+    <div className="relative min-h-screen overflow-hidden bg-[#EDF4FC]">
       <DecorativeBackground />
 
       <div className="relative z-10">

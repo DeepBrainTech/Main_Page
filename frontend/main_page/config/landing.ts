@@ -10,22 +10,22 @@ import type {
 export const LANDING_AUDIENCES: AudienceItem[] = [
   {
     key: "students",
-    image: "/images/1.jpg",
+    image: "/landing/who_is_this_for/1.png",
     accentClass: "from-sky-100 to-indigo-100",
   },
   {
     key: "children",
-    image: "/images/2.jpg",
+    image: "/landing/who_is_this_for/2.png",
     accentClass: "from-violet-100 to-pink-100",
   },
   {
     key: "educators",
-    image: "/images/3.jpg",
+    image: "/landing/who_is_this_for/3.png",
     accentClass: "from-emerald-100 to-cyan-100",
   },
   {
     key: "olderAdults",
-    image: "/images/4.jpg",
+    image: "/landing/who_is_this_for/4.png",
     accentClass: "from-amber-100 to-orange-100",
   },
 ];

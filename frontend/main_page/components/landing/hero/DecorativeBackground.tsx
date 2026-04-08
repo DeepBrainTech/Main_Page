@@ -5,7 +5,7 @@
 export default function DecorativeBackground() {
   return (
     <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
-      <div className="absolute inset-0 bg-[#d8e2ee]" />
+      <div className="absolute inset-0 bg-[#EDF4FC]" />
 
       <div className="absolute left-1/2 top-[34%] h-96 w-[130%] -translate-x-1/2 rounded-[50%] bg-white/25" />
       <div className="absolute left-1/2 top-[60%] h-96 w-[130%] -translate-x-1/2 rounded-[50%] bg-white/20" />
