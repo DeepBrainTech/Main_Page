@@ -1,78 +1,46 @@
-"use client";
+﻿"use client";
 
+import Image from "next/image";
 import { useTranslations } from "next-intl";
 
-interface HeroSectionProps {
-  onWatchDemo?: () => void;
-}
-
 /**
- * 着陆页英雄区域组件
- * 包含主标题、副标题、描述和视频演示区域
+ * Landing 英雄区
+ * 始终完整显示背景图，不使用绝对定位
  */
-export default function HeroSection({ onWatchDemo }: HeroSectionProps) {
-  const t = useTranslations("beforelogin.hero");
+export default function HeroSection() {
+  const t = useTranslations("beforeloginV2.hero");
 
   return (
-    <section className="pt-32 pb-16 px-6">
-      <div className="max-w-4xl mx-auto text-center">
-        <h1 className="text-5xl md:text-6xl font-bold:200 mb-2">
-          <span className="text-[#0A0A0A] block mb-2">{t("title")}</span>
-          <span className="text-[#5E81AC] block">{t("subtitle")}</span>
-        </h1>
-        <br />
-        <p className="text-lg text-[#000000] mb-8 max-w-2xl mx-auto">
-          {t("description")}
-        </p>
-        <button 
-          onClick={() => {
-            if (onWatchDemo) {
-              onWatchDemo();
-            }
-            // 滚动到视频区域
-            document.getElementById("demo-video")?.scrollIntoView({ 
-              behavior: "smooth",
-              block: "center"
-            });
-          }}
-          className="px-6 py-3 bg-[#A3BE8C] hover:bg-[#8FA87A] text-white rounded-full font-medium transition-colors shadow-md inline-flex items-center gap-2 mx-auto"
-        >
-          {/* 播放图标 */}
-          <svg 
-            width="16" 
-            height="16" 
-            viewBox="0 0 16 16" 
-            fill="none" 
-            xmlns="http://www.w3.org/2000/svg"
-            className="flex-shrink-0"
-          >
-            <path 
-              d="M3 2L13 8L3 14V2Z" 
-              stroke="white" 
-              strokeWidth="1.5" 
-              strokeLinecap="round" 
-              strokeLinejoin="round"
-              fill="none"
-            />
-          </svg>
-          {t("watchDemo")}
-        </button>
-      </div>
-      
+    <section className="pb-4 pt-0">
+      <div className="w-full shadow-sm">
+        <div className="mx-auto grid w-full">
+          <Image
+            src="/landing/hero/hero.png"
+            alt="DeepBrain Tech hero background"
+            width={1920}
+            height={1080}
+            priority
+            className="col-start-1 row-start-1 h-auto w-full"
+          />
 
-      {/* Video/Demo Section */}
-      <div id="demo-video" className="max-w-4xl mx-auto mt-12">
-        <div className="relative rounded-3xl overflow-hidden shadow-2xl bg-gray-800 aspect-video">
-          <iframe
-            className="w-full h-full"
-            src="https://www.youtube.com/embed/iG8ritExvgU"
-            title="Demo Video"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            allowFullScreen
-          ></iframe>
+          <div className="col-start-1 row-start-1 flex items-start">
+            <div className="w-full max-w-[80%] pl-[7.1%] pt-[14.6%]">
+              <h2
+                className="whitespace-nowrap text-4xl sm:text-6xl lg:text-8xl font-normal font-[var(--font-titan-one)] leading-[1.2] tracking-[8px] text-sky-700"
+                style={{ fontFamily: "var(--font-titan-one), cursive" }}
+              >
+                {t("title")}
+              </h2>
+              <p
+                className="mt-6 max-w-3xl text-2xl font-normal font-[var(--font-outfit)] leading-10 tracking-widest text-sky-700"
+                style={{ fontFamily: "var(--font-outfit), sans-serif" }}
+              >
+                {t("description")}
+              </p>
+            </div>
+          </div>
         </div>
       </div>
     </section>
   );
 }
-

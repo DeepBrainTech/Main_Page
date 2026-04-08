@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Outfit, Titan_One } from "next/font/google";
 import "./globals.css";
 import { defaultLocale } from "../i18n-config";
 
@@ -10,6 +10,17 @@ const geistSans = Geist({
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
+  subsets: ["latin"],
+});
+
+const titanOne = Titan_One({
+  variable: "--font-titan-one",
+  subsets: ["latin"],
+  weight: "400",
+});
+
+const outfit = Outfit({
+  variable: "--font-outfit",
   subsets: ["latin"],
 });
 
@@ -28,7 +39,7 @@ export default function RootLayout({
   return (
     <html lang={defaultLocale}>
       <body
-          className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+          className={`${geistSans.variable} ${geistMono.variable} ${titanOne.variable} ${outfit.variable} antialiased`}
           suppressHydrationWarning
       >
         {children}

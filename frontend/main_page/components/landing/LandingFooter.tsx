@@ -1,13 +1,12 @@
-"use client";
+﻿"use client";
 
 import { useTranslations } from "next-intl";
 
 /**
- * 着陆页页脚组件
- * 包含导航链接和版权信息
+ * Landing 页脚
  */
 export default function LandingFooter() {
-  const t = useTranslations("beforelogin.footer");
+  const t = useTranslations("beforeloginV2.footer");
 
   const footerLinks = [
     { key: "about", href: "#" },
@@ -19,24 +18,21 @@ export default function LandingFooter() {
   ];
 
   return (
-    <footer className="bg-gray-800 text-white py-12 px-6">
-      <div className="max-w-6xl mx-auto">
-        <div className="flex flex-wrap justify-center gap-8 mb-8">
+    <footer className="border-t border-slate-200/70 bg-white/80 px-4 py-10 backdrop-blur-sm sm:px-6 lg:px-8">
+      <div className="mx-auto w-full max-w-7xl">
+        <div className="flex flex-wrap justify-center gap-x-6 gap-y-3">
           {footerLinks.map((link) => (
             <a
               key={link.key}
               href={link.href}
-              className="hover:text-blue-400 transition-colors"
+              className="text-sm font-semibold text-slate-600 transition hover:text-sky-700"
             >
               {t(link.key)}
             </a>
           ))}
         </div>
-        <div className="text-center text-gray-400 text-sm">
-          {t("copyright")}
-        </div>
+        <p className="mt-6 text-center text-xs text-slate-500">{t("copyright")}</p>
       </div>
     </footer>
   );
 }
-

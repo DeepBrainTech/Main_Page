@@ -894,8 +894,127 @@
       "terms": "Terms",
       "copyright": "Â© 2025 DeepBrain Tech. All rights reserved."
     }
+  },
+  "beforeloginV2": {
+    "header": {
+      "badge": "AI Cognitive Platform"
+    },
+    "hero": {
+      "eyebrow": "Build Better Brains",
+      "title": "DeepBrain Tech™",
+      "description": "Use innovative brain games and AI-empowered tools to enhance cognitive health and accelerate learning.",
+      "primaryCta": "Start Free Trial",
+      "secondaryCta": "Log In",
+      "footnote": "Designed for families, educators, and lifelong learners who want structured cognitive growth.",
+      "stats": {
+        "users": {
+          "value": "20K+",
+          "label": "Active Learners"
+        },
+        "games": {
+          "value": "30+",
+          "label": "Brain Training Games"
+        },
+        "focus": {
+          "value": "94%",
+          "label": "Focus Improvement"
+        },
+        "memory": {
+          "value": "91%",
+          "label": "Memory Retention"
+        }
+      }
+    },
+    "audience": {
+      "eyebrow": "Who Is This For",
+      "title": "Built For Different Learning Journeys",
+      "items": {
+        "students": {
+          "title": "K-12 and University Students",
+          "description": "Boost academic performance and sharpen analytical thinking through engaging daily training."
+        },
+        "children": {
+          "title": "Children with ADHD/Autism",
+          "description": "Improve focus and social interaction with structured, game-based cognitive practice."
+        },
+        "educators": {
+          "title": "Educators and Therapists",
+          "description": "Use evidence-based activities to support intervention plans and measurable progress."
+        },
+        "olderAdults": {
+          "title": "Older Adults",
+          "description": "Protect cognitive vitality and maintain mental sharpness with adaptive exercises."
+        }
+      }
+    },
+    "gameCategories": {
+      "eyebrow": "Brain Training",
+      "title": "Train Core Cognitive Skills Through Play",
+      "subtitle": "From strategy to focus, each game category targets a specific cognitive domain and turns practice into a habit.",
+      "items": {
+        "play": "Play",
+        "spatial": {
+          "title": "Spatial Games",
+          "description": "Strengthen visual reasoning and mental rotation skills."
+        },
+        "strategy": {
+          "title": "Strategy Games",
+          "description": "Build planning, foresight, and complex decision-making ability."
+        },
+        "reaction": {
+          "title": "Reaction Games",
+          "description": "Improve response speed and sustained alertness under pressure."
+        },
+        "logic": {
+          "title": "Logic Games",
+          "description": "Train deduction, pattern discovery, and structured thinking."
+        },
+        "focus": {
+          "title": "Focus Games",
+          "description": "Develop attentional control and reduce distraction cost."
+        },
+        "reasoning": {
+          "title": "Reasoning Games",
+          "description": "Practice multi-step inference and flexible problem solving."
+        }
+      }
+    },
+    "benefitStories": {
+      "eyebrow": "Why It Works",
+      "title": "Backed By Cognitive Science",
+      "items": {
+        "executiveFunction": {
+          "title": "Enhancement of Executive Function",
+          "description": "Repeated challenge improves working memory, mental flexibility, and inhibitory control, forming stronger foundations for learning and daily decisions."
+        },
+        "problemSolving": {
+          "title": "Development of Problem-Solving Abilities",
+          "description": "Adaptive game levels train children and adults to test hypotheses, recover from failure, and apply growth-mindset strategies in real tasks."
+        },
+        "imagination": {
+          "title": "Igniting Young Imaginations",
+          "description": "Playful cognitive tasks encourage divergent thinking and creative exploration, helping learners discover novel approaches with confidence."
+        },
+        "mentalLongevity": {
+          "title": "Prioritize Mental Longevity",
+          "description": "Consistent cognitive practice supports long-term attention, memory, and processing-speed resilience across the lifespan."
+        }
+      }
+    },
+    "finalCta": {
+      "title": "Ready to Train Your Brain With Purpose?",
+      "subtitle": "Join DeepBrain Tech and start your personalized cognitive journey today.",
+      "primaryCta": "Create Account",
+      "secondaryCta": "Already Have an Account"
+    },
+    "footer": {
+      "about": "About",
+      "resources": "Resources",
+      "help": "Help",
+      "contact": "Contact",
+      "privacy": "Privacy",
+      "terms": "Terms",
+      "copyright": "? 2026 DeepBrain Tech. All rights reserved."
+    }
   }
 }
-
-
-
