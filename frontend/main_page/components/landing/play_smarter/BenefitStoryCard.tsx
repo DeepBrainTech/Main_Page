@@ -17,22 +17,35 @@ export default function BenefitStoryCard({ item }: BenefitStoryCardProps) {
     imagination: "bg-[#83B9DB]",
     mentalLongevity: "bg-[#D7BDE4]",
   };
+  const imageScaleClassMap: Record<string, string> = {
+    executiveFunction: "h-[80%] w-[80%]",
+    problemSolving: "h-[150%] w-[150%]",
+    imagination: "h-[150%] w-[132%]",
+    mentalLongevity: "h-[118%] w-[118%]",
+  };
   const imageSlotBgClass = imageSlotBgClassMap[item.key] ?? "";
+  const imageScaleClass = imageScaleClassMap[item.key] ?? "h-[118%] w-[118%]";
+  const allowImageOverflow = item.allowImageOverflow ?? true;
 
   return (
-    <article className="relative mx-auto h-full w-full max-w-[25rem] pt-9">
+    <article className="relative mx-auto h-full w-full max-w-[25rem] pt-11">
       <div
-        className={`absolute left-1/2 top-0 z-10 h-20 w-20 -translate-x-1/2 overflow-hidden rounded-full border-4 border-white shadow-md ${imageSlotBgClass}`}
+        className={`absolute left-1/2 top-0 z-10 h-24 w-24 -translate-x-1/2 ${allowImageOverflow ? "" : "overflow-hidden rounded-full"}`}
       >
+        <div className={`h-full w-full rounded-full shadow-md ${imageSlotBgClass}`} />
         <Image
           src={item.image}
           alt={t(`${item.key}.title`)}
           width={160}
           height={160}
-          className="h-full w-full object-cover"
+          className={
+            allowImageOverflow
+              ? `pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 object-contain ${imageScaleClass}`
+              : "pointer-events-none absolute inset-0 h-full w-full object-cover"
+          }
         />
       </div>
-      <div className={`flex h-[28rem] flex-col rounded-3xl px-5 pb-6 pt-12 shadow-md ${item.cardClass}`}>
+      <div className={`flex h-[28rem] flex-col rounded-3xl px-5 pb-6 pt-14 shadow-md ${item.cardClass}`}>
         <h3 className="shrink-0 text-center text-base font-normal font-['Titan_One'] text-[#0B4F84] sm:text-lg">
           {t(`${item.key}.title`)}
         </h3>

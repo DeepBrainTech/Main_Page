@@ -80,20 +80,24 @@ export const LANDING_BENEFIT_STORIES: BenefitStoryItem[] = [
     key: "executiveFunction",
     image: "/landing/play_smarter/1.png",
     cardClass: "bg-[#FDE2E4]",
+    allowImageOverflow: false,
   },
   {
     key: "problemSolving",
     image: "/landing/play_smarter/2.png",
     cardClass: "bg-[#DDF4E7]",
+    allowImageOverflow: true,
   },
   {
     key: "imagination",
     image: "/landing/play_smarter/3.png",
     cardClass: "bg-[#DBEAFE]",
+    allowImageOverflow: true,
   },
   {
     key: "mentalLongevity",
     image: "/landing/play_smarter/4.png",
-    cardClass: "bg-[#E5E7EB]",
+    cardClass: "bg-[#E8DCEE]",
+    allowImageOverflow: true,
   },
 ];

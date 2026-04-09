@@ -24,4 +24,5 @@ export interface BenefitStoryItem {
   key: string;
   image: string;
   cardClass: string;
+  allowImageOverflow?: boolean;
 }
