@@ -724,6 +724,7 @@
   },
   "register": {
     "title": "DeepBrain Tech",
+    "heading": "加入我们！",
     "subtitle": "创建新账户",
     "username": "用户名",
     "email": "邮箱",
@@ -754,7 +755,9 @@
     "signInWithGoogle": "使用 Google 注册",
     "orContinueWith": "或使用邮箱注册",
     "dateOfBirth": "出生日期",
-    "dateOfBirthPlaceholder": "选择出生日期"
+    "dateOfBirthPlaceholder": "选择出生日期",
+    "agreeTermsRequired": "请先同意服务条款与隐私政策。",
+    "dateInvalid": "请填写有效日期"
   },
   "completeProfile": {
     "title": "补全资料",

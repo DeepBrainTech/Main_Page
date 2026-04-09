@@ -1,25 +1,44 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { useRouter, useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { getApiUrl } from "@/lib/api-config";
 import GoogleLoginButton from "@/components/auth/GoogleLoginButton";
 import CompleteProfileDialog from "@/components/features/profile/CompleteProfileDialog";
 
-// 注意：客户端组件默认就是动态渲染，适合登录页的需求
-// （CSRF、会话、安全验证等）
 export default function LoginPage() {
   const router = useRouter();
   const params = useParams();
   const locale = params.locale as string;
   const t = useTranslations();
+
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [showCompleteProfile, setShowCompleteProfile] = useState(false);
   const [completeProfileUsername, setCompleteProfileUsername] = useState("");
+  const resolveApiErrorMessage = (detail: unknown, fallback: string) => {
+    if (typeof detail === "string") {
+      return /^[A-Z_]+$/.test(detail) ? t(`auth.${detail}`) : detail;
+    }
+    if (Array.isArray(detail) && detail.length > 0) {
+      const first = detail[0];
+      if (typeof first === "string") return first;
+      if (first && typeof first === "object" && "msg" in first) {
+        const message = (first as { msg?: unknown }).msg;
+        if (typeof message === "string" && message.trim()) return message;
+      }
+    }
+    if (detail && typeof detail === "object" && "message" in detail) {
+      const message = (detail as { message?: unknown }).message;
+      if (typeof message === "string" && message.trim()) return message;
+    }
+    return fallback;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,21 +57,20 @@ export default function LoginPage() {
 
       if (!response.ok) {
         const errorData = await response.json();
-        // 如果返回的是错误代码（全大写+下划线），则从语言文件中翻译
-        const errorCode = errorData.detail || "login.invalidCredentials";
-        const errorMessage = errorCode.match(/^[A-Z_]+$/) 
-          ? t(`auth.${errorCode}`) 
-          : errorCode;
+        const errorMessage = resolveApiErrorMessage(errorData?.detail, t("login.loginFailed"));
         throw new Error(errorMessage);
       }
 
       const data = await response.json();
-      
-      // 保存 token 到 localStorage
       localStorage.setItem("access_token", data.access_token);
       localStorage.setItem("token_expires_in", String(data.expires_in));
 
-      // 登录成功，直接跳转到 home 页面
+      if (rememberMe) {
+        localStorage.setItem("remember_me", "true");
+      } else {
+        localStorage.removeItem("remember_me");
+      }
+
       router.push(`/${locale}/home`);
     } catch (err: any) {
       setError(err.message || t("login.loginFailed"));
@@ -62,27 +80,28 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="w-full max-w-md px-6 py-8 bg-white dark:bg-zinc-900 rounded-lg shadow-lg">
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-br from-sky-100 via-blue-50 to-white px-4 py-10">
+      <div className="pointer-events-none absolute -left-16 bottom-12 h-56 w-56 rounded-full bg-gradient-to-br from-sky-200 to-blue-300 opacity-50 blur-3xl" />
+      <div className="pointer-events-none absolute right-0 top-0 h-72 w-72 rounded-full bg-gradient-to-br from-blue-100 to-cyan-200 opacity-40 blur-3xl" />
+
+      <main className="relative w-full max-w-[430px] overflow-hidden rounded-[30px] border border-white/50 bg-white/95 p-7 shadow-[0_30px_60px_-16px_rgba(15,23,42,0.28)] backdrop-blur-sm sm:p-9">
         <div className="mb-8 text-center">
-          <h1 className="text-3xl font-bold text-black dark:text-white mb-2">
-            {t("login.title")}
-          </h1>
-          <p className="text-zinc-600 dark:text-zinc-400">{t("login.subtitle")}</p>
+          <div className="mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-full bg-blue-500 shadow-[0_10px_30px_-10px_rgba(37,99,235,0.6)]">
+            <Image src="/login/Icon.svg" alt="DBT icon" width={46} height={46} priority />
+          </div>
+          <h1 className="text-3xl font-bold tracking-wide text-slate-900">{t("login.title")}</h1>
+          <p className="mt-2 text-base text-slate-500">{t("login.subtitle")}</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-5">
           {error && (
-            <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-              <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+            <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-600">
+              {error}
             </div>
           )}
 
-          <div>
-            <label
-              htmlFor="username"
-              className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-            >
+          <div className="space-y-2">
+            <label htmlFor="username" className="block text-base font-medium text-slate-700">
               {t("login.username")}
             </label>
             <input
@@ -91,75 +110,102 @@ export default function LoginPage() {
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               required
-              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-black dark:focus:ring-white focus:border-transparent bg-white dark:bg-zinc-800 text-black dark:text-white"
               placeholder={t("login.usernamePlaceholder")}
+              className="h-14 w-full rounded-2xl border-2 border-slate-200 bg-white px-4 text-[15px] text-slate-900 outline-none transition focus:border-blue-500"
             />
           </div>
 
-          <div>
-            <div className="flex justify-between items-center mb-2">
-              <label
-                htmlFor="password"
-                className="block text-sm font-medium text-gray-700 dark:text-gray-300"
-              >
-                {t("login.password")}
-              </label>
-              <button
-                type="button"
-                onClick={() => router.push(`/${locale}/forgot-password`)}
-                className="text-sm text-black dark:text-white hover:underline"
-              >
-                {t("login.forgotPassword")}
-              </button>
-            </div>
+          <div className="space-y-2">
+            <label htmlFor="password" className="block text-base font-medium text-slate-700">
+              {t("login.password")}
+            </label>
             <input
               id="password"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-black dark:focus:ring-white focus:border-transparent bg-white dark:bg-zinc-800 text-black dark:text-white"
               placeholder={t("login.passwordPlaceholder")}
+              className="h-14 w-full rounded-2xl border-2 border-slate-200 bg-white px-4 text-[15px] text-slate-900 outline-none transition focus:border-blue-500"
             />
+          </div>
+
+          <div className="flex items-center justify-between pt-1">
+            <label className="inline-flex cursor-pointer items-center gap-2 text-sm text-slate-500">
+              <input
+                type="checkbox"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+                className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+              />
+              <span>Remember me</span>
+            </label>
+            <button
+              type="button"
+              onClick={() => router.push(`/${locale}/forgot-password`)}
+              className="text-sm font-medium text-blue-600 hover:underline"
+            >
+              {t("login.forgotPassword")}
+            </button>
           </div>
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 px-4 bg-black dark:bg-white text-white dark:text-black font-medium rounded-lg hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="h-14 w-full rounded-2xl bg-blue-500 text-base font-semibold text-white shadow-[0_12px_24px_-8px_rgba(37,99,235,0.55)] transition hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {loading ? t("login.buttonLoading") : t("login.button")}
           </button>
         </form>
 
-        <div className="flex flex-col items-center w-full my-6">
-          <div className="relative w-full">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-300 dark:border-gray-600" />
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-white dark:bg-zinc-900 text-zinc-500 dark:text-zinc-400">
-                {t("login.orContinueWith")}
-              </span>
-            </div>
-          </div>
+        <div className="my-6 flex items-center gap-4">
+          <div className="h-px flex-1 bg-slate-200" />
+          <span className="text-sm text-slate-400">{t("login.orContinueWith")}</span>
+          <div className="h-px flex-1 bg-slate-200" />
+        </div>
 
-          {/* Google 登录：仅当配置了 Client ID 时显示 */}
-          <div className="w-full flex justify-center mt-4">
-            <GoogleLoginButton
-              variant="signin"
-              onSuccess={(opts) => {
-                if (opts.needsProfileCompletion) {
-                  setCompleteProfileUsername(opts.username ?? "");
-                  setShowCompleteProfile(true);
-                } else {
-                  router.push(`/${locale}/home`);
-                }
-              }}
-              onError={(code) => setError(t(`auth.${code}`))}
-              disabled={loading}
-            />
+        <div className="flex justify-center">
+          <div className="relative w-[320px]">
+            <div className="pointer-events-none flex h-12 items-center justify-center gap-3 rounded-xl border border-slate-300 bg-white px-4 text-base font-semibold text-slate-900">
+              <Image src="/login/google.svg" alt="Google" width={22} height={22} />
+              <span>{t("login.signInWithGoogle")}</span>
+            </div>
+
+            <div className="absolute inset-0 overflow-hidden rounded-xl opacity-0">
+              <GoogleLoginButton
+                variant="signin"
+                onSuccess={(opts) => {
+                  if (opts.needsProfileCompletion) {
+                    setCompleteProfileUsername(opts.username ?? "");
+                    setShowCompleteProfile(true);
+                  } else {
+                    router.push(`/${locale}/home`);
+                  }
+                }}
+                onError={(code) => setError(t(`auth.${code}`))}
+                disabled={loading}
+              />
+            </div>
           </div>
+        </div>
+
+        <div className="mt-7 text-center text-sm text-slate-600">
+          <span>{t("login.noAccount")} </span>
+          <button
+            onClick={() => router.push(`/${locale}/register`)}
+            className="font-semibold text-blue-600 hover:underline"
+          >
+            {t("login.registerLink")}
+          </button>
+        </div>
+
+        <div className="mt-4 text-center">
+          <button
+            onClick={() => router.push(`/${locale}`)}
+            className="text-sm text-slate-500 hover:text-slate-700 hover:underline"
+          >
+            {t("common.back")}
+          </button>
         </div>
 
         <CompleteProfileDialog
@@ -171,27 +217,6 @@ export default function LoginPage() {
             router.push(`/${locale}/home`);
           }}
         />
-
-        <div className="mt-6 flex flex-col items-center text-center">
-          <p className="text-sm text-zinc-600 dark:text-zinc-400">
-            {t("login.noAccount")}{" "}
-            <button
-              onClick={() => router.push(`/${locale}/register`)}
-              className="text-black dark:text-white font-medium hover:underline"
-            >
-              {t("login.registerLink")}
-            </button>
-          </p>
-        </div>
-
-        <div className="mt-4 flex justify-center">
-          <button
-            onClick={() => router.push(`/${locale}`)}
-            className="text-sm text-zinc-500 dark:text-zinc-400 hover:underline"
-          >
-            {t("common.back")}
-          </button>
-        </div>
       </main>
     </div>
   );

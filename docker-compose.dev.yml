@@ -70,6 +70,7 @@ services:
       # FogChess 前端入口（本地或指向线上）
       - NEXT_PUBLIC_FOGCHESS_URL=http://localhost:8080
       - WATCHPACK_POLLING=true
+      - NEXT_PUBLIC_GOOGLE_CLIENT_ID=${NEXT_PUBLIC_GOOGLE_CLIENT_ID}
     volumes:
       # 开发模式：挂载代码目录以便热重载
       - ./frontend/main_page:/app

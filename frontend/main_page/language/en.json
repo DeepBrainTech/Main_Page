@@ -724,7 +724,8 @@
   },
   "register": {
     "title": "DeepBrain Tech",
-    "subtitle": "Create a new account",
+    "heading": "Join Us!",
+    "subtitle": "Create your account and start learning",
     "username": "Username",
     "email": "Email",
     "verificationCode": "Verification Code",
@@ -754,7 +755,9 @@
     "signInWithGoogle": "Sign up with Google",
     "orContinueWith": "Or register with email",
     "dateOfBirth": "Date of birth",
-    "dateOfBirthPlaceholder": "Select date of birth"
+    "dateOfBirthPlaceholder": "Select date of birth",
+    "agreeTermsRequired": "Please agree to the Terms of Service and Privacy Policy.",
+    "dateInvalid": "Please enter a valid date"
   },
   "completeProfile": {
     "title": "Complete profile",

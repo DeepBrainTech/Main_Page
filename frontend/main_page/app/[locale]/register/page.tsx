@@ -1,19 +1,28 @@
 "use client";
 
-import React, { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import { useRouter, useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { getApiUrl } from "@/lib/api-config";
 import GoogleLoginButton from "@/components/auth/GoogleLoginButton";
 import CompleteProfileDialog from "@/components/features/profile/CompleteProfileDialog";
 
-// 注意：客户端组件默认就是动态渲染，适合注册页的需求
-// （CSRF、会话、A/B测试、风控等）
+type FormField =
+  | "username"
+  | "email"
+  | "verificationCode"
+  | "password"
+  | "confirmPassword"
+  | "dateOfBirth"
+  | "agreeTerms";
+
 export default function RegisterPage() {
   const router = useRouter();
   const params = useParams();
   const locale = params.locale as string;
   const t = useTranslations();
+
   const [formData, setFormData] = useState({
     username: "",
     email: "",
@@ -22,38 +31,171 @@ export default function RegisterPage() {
     confirmPassword: "",
     dateOfBirth: "",
   });
-  const [error, setError] = useState("");
+  /** 无对应表单字段时的提示（如 Google 失败、网络错误），不使用顶部大红条 */
+  const [generalError, setGeneralError] = useState("");
   const [loading, setLoading] = useState(false);
   const [sendingCode, setSendingCode] = useState(false);
   const [countdown, setCountdown] = useState(0);
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<Partial<Record<FormField, string>>>({});
   const [successMessage, setSuccessMessage] = useState("");
   const [showCompleteProfile, setShowCompleteProfile] = useState(false);
   const [completeProfileUsername, setCompleteProfileUsername] = useState("");
 
+  const usernameRef = useRef<HTMLInputElement>(null);
+  const dateOfBirthRef = useRef<HTMLInputElement>(null);
+  const emailRef = useRef<HTMLInputElement>(null);
+  const verificationCodeRef = useRef<HTMLInputElement>(null);
+  const passwordRef = useRef<HTMLInputElement>(null);
+  const confirmPasswordRef = useRef<HTMLInputElement>(null);
+  const agreeTermsRef = useRef<HTMLInputElement>(null);
+
+  const focusField = (field: FormField) => {
+    let target: HTMLInputElement | null = null;
+    if (field === "username") target = usernameRef.current;
+    if (field === "dateOfBirth") target = dateOfBirthRef.current;
+    if (field === "email") target = emailRef.current;
+    if (field === "verificationCode") target = verificationCodeRef.current;
+    if (field === "password") target = passwordRef.current;
+    if (field === "confirmPassword") target = confirmPasswordRef.current;
+    if (field === "agreeTerms") target = agreeTermsRef.current;
+
+    if (!target) return;
+    target.focus();
+    target.scrollIntoView({ behavior: "smooth", block: "center" });
+  };
+
+  const raiseFieldError = (field: FormField, message: string) => {
+    setFieldErrors((prev) => ({ ...prev, [field]: message }));
+    setGeneralError("");
+    focusField(field);
+  };
+
+  const clearFieldError = (field: FormField) => {
+    setFieldErrors((prev) => {
+      if (!prev[field]) return prev;
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
+  };
+
+  const mapApiField = (value: string): FormField | undefined => {
+    if (value === "username") return "username";
+    if (value === "email") return "email";
+    if (value === "verification_code") return "verificationCode";
+    if (value === "password") return "password";
+    if (value === "date_of_birth") return "dateOfBirth";
+    return undefined;
+  };
+
+  const friendlyValidationMessage = (
+    locField: FormField | undefined,
+    rawMsg: string,
+    fallback: string
+  ): { message: string; field?: FormField } => {
+    const low = rawMsg.toLowerCase();
+    const looksLikeEmail =
+      locField === "email" ||
+      (low.includes("email") && (low.includes("valid") || low.includes("@")));
+    if (looksLikeEmail) {
+      return { message: t("register.emailInvalid"), field: locField ?? "email" };
+    }
+    if (locField === "username" || low.includes("username")) {
+      return { message: t("auth.AUTH_USERNAME_INVALID"), field: locField ?? "username" };
+    }
+    if (locField === "password" || (low.includes("password") && low.includes("least"))) {
+      return { message: t("register.passwordTooShort"), field: locField ?? "password" };
+    }
+    if (locField === "verificationCode") {
+      return { message: t("register.verificationCodeInvalid"), field: "verificationCode" };
+    }
+    if (locField === "dateOfBirth" || low.includes("date")) {
+      return { message: t("register.dateInvalid"), field: locField ?? "dateOfBirth" };
+    }
+    return { message: fallback, field: locField };
+  };
+
+  const parseApiError = (detail: unknown, fallback: string): { message: string; field?: FormField } => {
+    if (typeof detail === "string") {
+      const codeFieldMap: Partial<Record<string, FormField>> = {
+        AUTH_USERNAME_EXISTS: "username",
+        AUTH_USERNAME_INVALID: "username",
+        AUTH_EMAIL_EXISTS: "email",
+        EMAIL_NOT_FOUND: "email",
+        VERIFICATION_CODE_INVALID: "verificationCode",
+      };
+      if (/^[A-Z_]+$/.test(detail)) {
+        return { message: t(`auth.${detail}`), field: codeFieldMap[detail] };
+      }
+      return friendlyValidationMessage(undefined, detail, fallback);
+    }
+
+    if (Array.isArray(detail) && detail.length > 0) {
+      const first = detail[0];
+      if (typeof first === "string") {
+        return friendlyValidationMessage(undefined, first, fallback);
+      }
+      if (first && typeof first === "object") {
+        const item = first as { msg?: unknown; loc?: unknown };
+        const rawMsg = typeof item.msg === "string" && item.msg.trim() ? item.msg : "";
+        const locField =
+          Array.isArray(item.loc) && typeof item.loc[item.loc.length - 1] === "string"
+            ? mapApiField(item.loc[item.loc.length - 1] as string)
+            : undefined;
+        if (!rawMsg) {
+          return { message: fallback, field: locField };
+        }
+        return friendlyValidationMessage(locField, rawMsg, fallback);
+      }
+    }
+
+    if (detail && typeof detail === "object" && "message" in detail) {
+      const message = (detail as { message?: unknown }).message;
+      if (typeof message === "string" && message.trim()) {
+        return friendlyValidationMessage(undefined, message, fallback);
+      }
+    }
+
+    return { message: fallback };
+  };
+
+  const inputClassName = (field: FormField) =>
+    `h-12 w-full rounded-2xl border-2 bg-white px-4 text-sm text-slate-900 outline-none transition ${
+      fieldErrors[field]
+        ? "border-rose-400 ring-2 ring-rose-100"
+        : "border-slate-200 focus:border-blue-500"
+    }`;
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const field = e.target.name as FormField;
     setFormData({
       ...formData,
       [e.target.name]: e.target.value,
     });
+    clearFieldError(field);
+    setGeneralError("");
   };
 
   const handleSendCode = async () => {
-    setError("");
+    setGeneralError("");
     setSuccessMessage("");
 
-    // 验证邮箱
-    if (!formData.email) {
-      setError(t("register.emailRequired"));
+    const email = formData.email.trim();
+    setFormData((prev) => ({ ...prev, email }));
+
+    if (!email) {
+      raiseFieldError("email", t("register.emailRequired"));
       return;
     }
 
-    // 简单的邮箱格式验证
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(formData.email)) {
-      setError(t("register.emailInvalid"));
+    if (!emailRegex.test(email)) {
+      raiseFieldError("email", t("register.emailInvalid"));
       return;
     }
 
+    clearFieldError("email");
     setSendingCode(true);
 
     try {
@@ -63,38 +205,33 @@ export default function RegisterPage() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          email: formData.email,
-          language: locale === "zh" ? "zh" : "en",  // 根据页面语言发送对应语言的邮件
+          email,
+          language: locale === "zh" ? "zh" : "en",
         }),
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        const errorCode = errorData.detail || "register.registerFailed";
-        
-        const errorMessage = errorCode.match(/^[A-Z_]+$/) 
-          ? t(`auth.${errorCode}`) 
-          : errorCode;
-        
-        setError(errorMessage);
-        throw new Error(errorMessage);
+        const parsed = parseApiError(errorData?.detail, t("register.registerFailed"));
+        if (parsed.field) {
+          raiseFieldError(parsed.field, parsed.message);
+        } else {
+          setGeneralError(parsed.message);
+        }
+        return;
       }
 
-      // 发送成功
       setSuccessMessage(t("register.verificationCodeSent"));
-      setCountdown(60); // 60秒倒计时
+      setCountdown(60);
     } catch (err) {
-      if (!error) {
-        const errorMessage = err instanceof Error ? err.message : t("register.registerFailed");
-        setError(errorMessage);
-      }
+      const errorMessage = err instanceof Error ? err.message : t("register.registerFailed");
+      setGeneralError(errorMessage);
     } finally {
       setSendingCode(false);
     }
   };
 
-  // 倒计时效果
-  React.useEffect(() => {
+  useEffect(() => {
     if (countdown > 0) {
       const timer = setTimeout(() => {
         setCountdown(countdown - 1);
@@ -105,16 +242,26 @@ export default function RegisterPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
+    setGeneralError("");
+    setFieldErrors({});
 
-    // 验证密码
+    const username = formData.username.trim();
+    const email = formData.email.trim();
+    const verificationCode = formData.verificationCode.trim();
+    setFormData((prev) => ({ ...prev, username, email, verificationCode }));
+
     if (formData.password !== formData.confirmPassword) {
-      setError(t("register.passwordMismatch"));
+      raiseFieldError("confirmPassword", t("register.passwordMismatch"));
       return;
     }
 
     if (formData.password.length < 6) {
-      setError(t("register.passwordTooShort"));
+      raiseFieldError("password", t("register.passwordTooShort"));
+      return;
+    }
+
+    if (!agreedToTerms) {
+      raiseFieldError("agreeTerms", t("register.agreeTermsRequired"));
       return;
     }
 
@@ -127,107 +274,66 @@ export default function RegisterPage() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          username: formData.username,
-          email: formData.email,
+          username,
+          email,
           password: formData.password,
-          verification_code: formData.verificationCode,
+          verification_code: verificationCode,
           date_of_birth: formData.dateOfBirth || null,
         }),
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        const errorCode = errorData.detail || "register.registerFailed";
-        
-        // 如果返回的是错误代码（全大写+下划线），则从语言文件中翻译
-        const errorMessage = errorCode.match(/^[A-Z_]+$/) 
-          ? t(`auth.${errorCode}`) 
-          : errorCode;
-        
-        setError(errorMessage);
-        throw new Error(errorMessage);
+        const parsed = parseApiError(errorData?.detail, t("register.registerFailed"));
+        if (parsed.field) {
+          raiseFieldError(parsed.field, parsed.message);
+        } else {
+          setGeneralError(parsed.message);
+        }
+        return;
       }
 
-      // 注册成功，自动登录
       const result = await response.json();
-      
-      // 后端返回的数据在 result.data 中
+
       if (result.data && result.data.access_token) {
         localStorage.setItem("access_token", result.data.access_token);
         localStorage.setItem("token_expires_in", String(result.data.expires_in || 3600));
         router.push(`/${locale}/home`);
       } else {
-        // 如果没有 token，跳转到登录页
         router.push(`/${locale}/login?registered=true`);
       }
     } catch (err) {
-      // 错误已在上面的 if 中设置
-      if (!error) {
-        const errorMessage = err instanceof Error ? err.message : t("register.registerFailed");
-        setError(errorMessage);
-      }
+      const errorMessage = err instanceof Error ? err.message : t("register.registerFailed");
+      setGeneralError(errorMessage);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="w-full max-w-md px-6 py-8 bg-white dark:bg-zinc-900 rounded-lg shadow-lg">
-        <div className="mb-8 text-center">
-          <h1 className="text-3xl font-bold text-black dark:text-white mb-2">
-            {t("register.title")}
-          </h1>
-          <p className="text-zinc-600 dark:text-zinc-400">{t("register.subtitle")}</p>
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-br from-sky-100 via-blue-50 to-white px-4 py-10">
+      <div className="pointer-events-none absolute -left-16 bottom-4 h-56 w-56 rounded-full bg-gradient-to-br from-sky-200 to-blue-300 opacity-45 blur-3xl" />
+      <div className="pointer-events-none absolute -right-10 top-0 h-52 w-52 rounded-full bg-gradient-to-br from-blue-200 to-cyan-200 opacity-50 blur-3xl" />
+
+      <main className="relative w-full max-w-[440px] overflow-hidden rounded-[30px] border border-white/50 bg-white/95 p-7 shadow-[0_30px_60px_-16px_rgba(15,23,42,0.28)] backdrop-blur-sm sm:p-9">
+        <div className="mb-7 text-center">
+          <h1 className="text-4xl font-bold tracking-wide text-[#2B7FFF]">{t("register.heading")}</h1>
+          <p className="mt-2 text-sm text-slate-500">{t("register.subtitle")}</p>
         </div>
 
-        {/* Google 注册：仅当配置了 Client ID 时显示 */}
-        <GoogleLoginButton
-          variant="signup"
-          onSuccess={(opts) => {
-            if (opts.needsProfileCompletion) {
-              setCompleteProfileUsername(opts.username ?? "");
-              setShowCompleteProfile(true);
-            } else {
-              router.push(`/${locale}/home`);
-            }
-          }}
-          onError={(code) => setError(t(`auth.${code}`))}
-          disabled={loading}
-        />
-
-        <div className="relative my-6">
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-gray-300 dark:border-gray-600" />
-          </div>
-          <div className="relative flex justify-center text-sm">
-            <span className="px-2 bg-white dark:bg-zinc-900 text-zinc-500 dark:text-zinc-400">
-              {t("register.orContinueWith")}
-            </span>
-          </div>
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {error && (
-            <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-              <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
-            </div>
-          )}
-          
+        <form onSubmit={handleSubmit} className="space-y-4">
           {successMessage && (
-            <div className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
-              <p className="text-sm text-green-600 dark:text-green-400">{successMessage}</p>
+            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+              {successMessage}
             </div>
           )}
 
-          <div>
-            <label
-              htmlFor="username"
-              className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-            >
+          <div className="space-y-2">
+            <label htmlFor="username" className="block text-sm font-medium text-slate-700">
               {t("register.username")}
             </label>
             <input
+              ref={usernameRef}
               id="username"
               name="username"
               type="text"
@@ -237,37 +343,34 @@ export default function RegisterPage() {
               minLength={3}
               maxLength={50}
               autoComplete="username"
-              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-black dark:focus:ring-white focus:border-transparent bg-white dark:bg-zinc-800 text-black dark:text-white"
               placeholder={t("register.usernamePlaceholder")}
+              className={inputClassName("username")}
             />
+            {fieldErrors.username && <p className="text-xs text-rose-600">{fieldErrors.username}</p>}
           </div>
 
-          <div>
-            <label
-              htmlFor="dateOfBirth"
-              className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-            >
+          <div className="space-y-2">
+            <label htmlFor="dateOfBirth" className="block text-sm font-medium text-slate-700">
               {t("register.dateOfBirth")}
             </label>
             <input
+              ref={dateOfBirthRef}
               id="dateOfBirth"
               name="dateOfBirth"
               type="date"
               value={formData.dateOfBirth}
               onChange={handleChange}
-              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-black dark:focus:ring-white focus:border-transparent bg-white dark:bg-zinc-800 text-black dark:text-white"
-              placeholder={t("register.dateOfBirthPlaceholder")}
+              className={inputClassName("dateOfBirth")}
             />
+            {fieldErrors.dateOfBirth && <p className="text-xs text-rose-600">{fieldErrors.dateOfBirth}</p>}
           </div>
 
-          <div>
-            <label
-              htmlFor="email"
-              className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-            >
+          <div className="space-y-2">
+            <label htmlFor="email" className="block text-sm font-medium text-slate-700">
               {t("register.email")}
             </label>
             <input
+              ref={emailRef}
               id="email"
               name="email"
               type="email"
@@ -275,20 +378,19 @@ export default function RegisterPage() {
               onChange={handleChange}
               required
               autoComplete="email"
-              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-black dark:focus:ring-white focus:border-transparent bg-white dark:bg-zinc-800 text-black dark:text-white"
               placeholder={t("register.emailPlaceholder")}
+              className={inputClassName("email")}
             />
+            {fieldErrors.email && <p className="text-xs text-rose-600">{fieldErrors.email}</p>}
           </div>
 
-          <div>
-            <label
-              htmlFor="verificationCode"
-              className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-            >
+          <div className="space-y-2">
+            <label htmlFor="verificationCode" className="block text-sm font-medium text-slate-700">
               {t("register.verificationCode")}
             </label>
             <div className="flex gap-2">
               <input
+                ref={verificationCodeRef}
                 id="verificationCode"
                 name="verificationCode"
                 type="text"
@@ -297,14 +399,18 @@ export default function RegisterPage() {
                 required
                 maxLength={6}
                 autoComplete="off"
-                className="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-black dark:focus:ring-white focus:border-transparent bg-white dark:bg-zinc-800 text-black dark:text-white"
                 placeholder={t("register.verificationCodePlaceholder")}
+                className={`h-12 flex-1 rounded-2xl border-2 bg-white px-4 text-sm text-slate-900 outline-none transition ${
+                  fieldErrors.verificationCode
+                    ? "border-rose-400 ring-2 ring-rose-100"
+                    : "border-slate-200 focus:border-blue-500"
+                }`}
               />
               <button
                 type="button"
                 onClick={handleSendCode}
                 disabled={sendingCode || countdown > 0}
-                className="px-6 py-3 bg-black dark:bg-white text-white dark:text-black font-medium rounded-lg hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                className="h-12 shrink-0 rounded-2xl border border-blue-200 bg-blue-50 px-4 text-sm font-medium text-blue-600 transition hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {sendingCode
                   ? t("register.sendingCode")
@@ -313,16 +419,17 @@ export default function RegisterPage() {
                   : t("register.sendCode")}
               </button>
             </div>
+            {fieldErrors.verificationCode && (
+              <p className="text-xs text-rose-600">{fieldErrors.verificationCode}</p>
+            )}
           </div>
 
-          <div>
-            <label
-              htmlFor="password"
-              className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-            >
+          <div className="space-y-2">
+            <label htmlFor="password" className="block text-sm font-medium text-slate-700">
               {t("register.password")}
             </label>
             <input
+              ref={passwordRef}
               id="password"
               name="password"
               type="password"
@@ -331,19 +438,18 @@ export default function RegisterPage() {
               required
               minLength={6}
               autoComplete="new-password"
-              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-black dark:focus:ring-white focus:border-transparent bg-white dark:bg-zinc-800 text-black dark:text-white"
               placeholder={t("register.passwordPlaceholder")}
+              className={inputClassName("password")}
             />
+            {fieldErrors.password && <p className="text-xs text-rose-600">{fieldErrors.password}</p>}
           </div>
 
-          <div>
-            <label
-              htmlFor="confirmPassword"
-              className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-            >
+          <div className="space-y-2">
+            <label htmlFor="confirmPassword" className="block text-sm font-medium text-slate-700">
               {t("register.confirmPassword")}
             </label>
             <input
+              ref={confirmPasswordRef}
               id="confirmPassword"
               name="confirmPassword"
               type="password"
@@ -352,36 +458,103 @@ export default function RegisterPage() {
               required
               minLength={6}
               autoComplete="new-password"
-              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-black dark:focus:ring-white focus:border-transparent bg-white dark:bg-zinc-800 text-black dark:text-white"
               placeholder={t("register.confirmPasswordPlaceholder")}
+              className={inputClassName("confirmPassword")}
             />
+            {fieldErrors.confirmPassword && (
+              <p className="text-xs text-rose-600">{fieldErrors.confirmPassword}</p>
+            )}
           </div>
+
+          <div
+            className={`flex items-start gap-2 rounded-lg pt-1 text-xs leading-5 ${
+              fieldErrors.agreeTerms ? "text-rose-600" : "text-slate-500"
+            }`}
+          >
+            <input
+              ref={agreeTermsRef}
+              id="agreeTerms"
+              type="checkbox"
+              checked={agreedToTerms}
+              onChange={(e) => {
+                setAgreedToTerms(e.target.checked);
+                clearFieldError("agreeTerms");
+                setGeneralError("");
+              }}
+              className="mt-0.5 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+            />
+            <label htmlFor="agreeTerms">
+              <span>I agree to the </span>
+              <span className="font-medium text-blue-600">Terms of Service</span>
+              <span> and </span>
+              <span className="font-medium text-blue-600">Privacy Policy</span>
+            </label>
+          </div>
+          {fieldErrors.agreeTerms && <p className="text-xs text-rose-600">{fieldErrors.agreeTerms}</p>}
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 px-4 bg-black dark:bg-white text-white dark:text-black font-medium rounded-lg hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="h-12 w-full rounded-2xl bg-blue-500 text-sm font-semibold text-white shadow-[0_12px_24px_-8px_rgba(37,99,235,0.55)] transition hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {loading ? t("register.buttonLoading") : t("register.button")}
           </button>
+
+          {generalError && (
+            <p className="text-center text-sm text-rose-600" role="alert">
+              {generalError}
+            </p>
+          )}
         </form>
 
-        <div className="mt-6 text-center">
-          <p className="text-sm text-zinc-600 dark:text-zinc-400">
-            {t("register.hasAccount")}{" "}
-            <button
-              onClick={() => router.push(`/${locale}/login`)}
-              className="text-black dark:text-white font-medium hover:underline"
-            >
-              {t("register.loginLink")}
-            </button>
-          </p>
+        <div className="my-5 flex items-center gap-4">
+          <div className="h-px flex-1 bg-slate-200" />
+          <span className="text-sm text-slate-400">{t("register.orContinueWith")}</span>
+          <div className="h-px flex-1 bg-slate-200" />
+        </div>
+
+        <div className="flex justify-center">
+          <div className="relative w-[320px]">
+            <div className="pointer-events-none flex h-12 items-center justify-center gap-3 rounded-xl border border-slate-300 bg-white px-4 text-base font-semibold text-slate-900">
+              <Image src="/login/google.svg" alt="Google" width={22} height={22} />
+              <span>{t("register.signInWithGoogle")}</span>
+            </div>
+
+            <div className="absolute inset-0 overflow-hidden rounded-xl opacity-0">
+              <GoogleLoginButton
+                variant="signup"
+                onSuccess={(opts) => {
+                  if (opts.needsProfileCompletion) {
+                    setCompleteProfileUsername(opts.username ?? "");
+                    setShowCompleteProfile(true);
+                  } else {
+                    router.push(`/${locale}/home`);
+                  }
+                }}
+                onError={(code) => {
+                  setGeneralError(t(`auth.${code}`));
+                  setFieldErrors({});
+                }}
+                disabled={loading}
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-6 text-center text-sm text-slate-600">
+          <span>{t("register.hasAccount")} </span>
+          <button
+            onClick={() => router.push(`/${locale}/login`)}
+            className="font-semibold text-blue-600 hover:underline"
+          >
+            {t("register.loginLink")}
+          </button>
         </div>
 
         <div className="mt-4 text-center">
           <button
             onClick={() => router.push(`/${locale}`)}
-            className="text-sm text-zinc-500 dark:text-zinc-400 hover:underline"
+            className="text-sm text-slate-500 hover:text-slate-700 hover:underline"
           >
             {t("common.back")}
           </button>
