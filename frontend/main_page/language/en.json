@@ -101,7 +101,7 @@
     "dailyLabel": "Daily"
   },
   "tasks": {
-    "dailyPlayChessMaster": "Complete 1 game of Chess Master",
+    "dailyPlayChessMater": "Complete 1 game of ChessMater",
     "dailyPlayChessTourmaster": "Complete 1 game of Chess Tourmaster",
     "monthlyChessTourmaster20": "Complete first 20 games of Chess Tourmaster",
     "rewardCoins": "+{count} coins",
@@ -155,7 +155,7 @@
       "cdPracticeDoneTitle": "Practice Complete",
       "cdPracticeDoneDesc": "You have finished practice. Start the formal test when ready.",
       "cdFormalBadge": "Formal Test",
-      "cdProgress": "Progress {current}/{total} Â· Load {setSize}",
+      "cdProgress": "Progress {current}/{total} · Load {setSize}",
       "cdProgressSimple": "Progress {current}/{total}",
       "cdAnswerChanged": "Changed",
       "cdAnswerNoChange": "No Change",
@@ -169,8 +169,8 @@
       "resetPractice": "Reset",
       "practiceModeGrid": "Grid",
       "practiceModeLetter": "Letter",
-      "practiceStreamHint": "Stimuli play in sequence. Click Â«MatchÂ» when the current one matches N steps back.",
-      "answerSameWhenMatch": "Click Â«MatchÂ» when you think it matchesâ€”practice only, no scoring.",
+      "practiceStreamHint": "Stimuli play in sequence. Click \"Match\" when the current one matches N steps back.",
+      "answerSameWhenMatch": "Click \"Match\" when you think it matches—practice only, no scoring.",
       "practiceFeedbackCorrect": "Correct for this stimulus.",
       "practiceFeedbackWrong": "Incorrect for this stimulus.",
       "practiceFeedbackWait": "Wait until at least N stimuli are shown before judging.",
@@ -179,8 +179,8 @@
       "nBackPracticeDesc": "Use the history and current stimulus to judge whether they match under the given N-back level. Once you are familiar, start the formal test.",
       "nBackFixedLevelHint": "This test uses 2-back for all trials.",
       "nBackFormalDesc": "For each trial, follow the shown N-back level and decide whether the current stimulus matches the one N steps earlier. Try to be both fast and accurate.",
-      "nBackHintGrid": "Grid mode: numbers in the 3Ã—3 grid represent different positions. Compare the current highlighted cell with the position {level} steps before.",
-      "nBackHintLetter": "Letter mode: letters are chosen from Aâ€“K. Compare the current letter with the one {level} steps before.",
+      "nBackHintGrid": "Grid mode: numbers in the 3×3 grid represent different positions. Compare the current highlighted cell with the position {level} steps before.",
+      "nBackHintLetter": "Letter mode: letters are chosen from A–K. Compare the current letter with the one {level} steps before.",
       "nBackQuestion": "Is the current stimulus the same as the {level}-back (the one {level} steps before)?",
       "answerSame": "Match",
       "answerDifferent": "Different",
@@ -192,9 +192,9 @@
       "formalLevelSwitchNotice": "Difficulty adjusted: next trial is {level}-back",
       "nBackResultTitle": "N-back Test Result",
       "nBackResultDesc": "Below are the multi-metric results of this N-back test, used for later brain analysis and radar display.",
-      "abilityScoreLabel": "Your Ability Score (dâ€² + RT)",
+      "abilityScoreLabel": "Your Ability Score (d′ + RT)",
       "sameAgePercentileLabel": "Age Percentile",
-      "dPrimeLabel": "dâ€² (Sensitivity)",
+      "dPrimeLabel": "d′ (Sensitivity)",
       "medianRtLabel": "Median RT (Correct Hits)",
       "ageGroupLabel": "Age Group",
       "ageBandChildren": "Children (7-12)",
@@ -206,9 +206,9 @@
       "noRtData": "No valid RT data",
       "rawScoreLabel": "Raw score (correct count)",
       "ageNormScoreLabel": "Age-normed score (currently same as raw)",
-      "percentileLikeScoreLabel": "Percentile-like score (0â€“100)",
+      "percentileLikeScoreLabel": "Percentile-like score (0–100)",
       "displayScoreLabel": "Display score (for radar chart)",
-      "displayScoreHint": "Ability score combines dâ€² (hit rate and false-alarm rate) with correct-hit reaction time; Age percentile is an age-band norm estimate for training feedback only."
+      "displayScoreHint": "Ability score combines d′ (hit rate and false-alarm rate) with correct-hit reaction time; Age percentile is an age-band norm estimate for training feedback only."
     },
     "logic": {
       "patternTitle": "Transitive Inference",
@@ -256,7 +256,7 @@
       "flankerTitle": "Flanker (Interference Control)",
       "flankerDesc": "Judge the center arrow direction while ignoring surrounding distractors",
       "flankerPracticeTitle": "Flanker Practice",
-      "flankerShortcutHint": "Quick controls: press â† for left and â†’ for right.",
+      "flankerShortcutHint": "Quick controls: press ← for left and → for right.",
       "flankerInstruction": "Respond only to the center arrow direction",
       "flankerLeft": "Left",
       "flankerRight": "Right",
@@ -823,8 +823,8 @@
         "tagline": "Solve Smarter. Compete Harder.",
         "description": "Strike SudokuBattle puzzles with real-time multiplayer battles that test your logic and speed."
       },
-      "chessMaster": {
-        "name": "ChessMaster",
+      "chessMater": {
+        "name": "ChessMater",
         "tagline": "Pattern recognition, memory, and analysis.",
         "description": "Enhances working memory and logical reasoning through dynamic chess-based puzzles, thereby building individualized cognitive patterns."
       },
@@ -860,7 +860,7 @@
       },
       "patternRecognition": {
         "title": "Pattern Recognition",
-        "game": "ChessMaster"
+        "game": "ChessMater"
       }
     },
     "testimonials": {
@@ -895,7 +895,7 @@
       "contact": "Contact",
       "privacy": "Privacy",
       "terms": "Terms",
-      "copyright": "Â© 2025 DeepBrain Tech. All rights reserved."
+      "copyright": "© 2026 DeepBrain Tech. All rights reserved."
     }
   },
   "beforeloginV2": {
@@ -1000,7 +1000,7 @@
         },
         "mentalLongevity": {
           "title": "Prioritize Mental Longevity",
-          "description": "Scientific research shows the brain remains adaptable lifelong. Neuroplasticity allows consistent cognitive challenges to strengthen neural systems for attention, memory, processing speed and executive control. Structured mental exercises in children boost academic performance and build long-term cognitive resilience. Challenging tasks form stable neural pathways to maintain mental sharpness. Intelligence is not fixed-cognitive ability improves with deliberate practice. Early habits of focused thinking and problem-solving build a foundation for lifelong mental vitality and independence."
+          "description": "Scientific research shows the brain remains adaptable lifelong. Neuroplasticity allows consistent cognitive challenges to strengthen neural systems for attention, memory, processing speed and executive control. Structured mental exercises in children boost academic performance and build long-term cognitive resilience. Challenging tasks form stable neural pathways to maintain mental sharpness. Intelligence is not fixed—cognitive ability improves with deliberate practice. Early habits of focused thinking and problem-solving build a foundation for lifelong mental vitality and independence."
         }
       }
     },

@@ -1,6 +1,6 @@
 /**
  * 每日/每月任务配置
- * 每日三任务：完成一局 chessmaster、一局 chesstourmaster、一个空位
+ * 每日三任务：完成一局 chessmater、一局 chesstourmaster、一个空位
  * 每月任务：通关前 20 局 chess tourmaster → 10 钻石
  */
 
@@ -25,7 +25,7 @@ export const DAILY_TASKS: TaskConfig[] = [
   {
     id: "daily-1",
     type: "daily",
-    labelKey: "dailyPlayChessMaster",
+    labelKey: "dailyPlayChessMater",
     gameMode: "chessmater",
     targetCount: 1,
     rewardCoins: 10,

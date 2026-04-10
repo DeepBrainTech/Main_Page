@@ -101,7 +101,7 @@
     "dailyLabel": "每日"
   },
   "tasks": {
-    "dailyPlayChessMaster": "完成一局棋艺大师",
+    "dailyPlayChessMater": "完成一局棋艺大师",
     "dailyPlayChessTourmaster": "完成一局棋境之旅",
     "monthlyChessTourmaster20": "通关前 20 局棋境之旅",
     "rewardCoins": "+{count} 金币",
@@ -110,9 +110,9 @@
     "statusCompleted": "已完成"
   },
   "test": {
-    "title": "脑力测试",
+    "title": "测试",
     "testProgress": "测试 {current}/{total}",
-    "subtitle": "按维度完成测试,获得总脑力指数",
+    "subtitle": "按维度完成测试，获得你的脑力指数",
     "selectDimension": "选择测试维度",
     "freeUserLimit": "免费用户仅可免费体验一个维度(1~3 种测试,约 15 分钟)",
     "startTest": "开始测试",
@@ -128,7 +128,7 @@
     "statsTopPercentBest": "前1%以内",
     "statsAverageRow": "综合均分",
     "skipTest": "跳过本项",
-    "brainIndex": "总脑力指数",
+    "brainIndex": "脑力指数",
     "memory": {
       "nBackTitle": "N-back 记忆测试",
       "nBackIntro1": "本测试会依次呈现图形或字母,你需要判断当前刺激是否与 N 步之前的相同。",
@@ -350,7 +350,7 @@
       "pvtRulePractice": "先进行练习,熟悉随机等待节奏。",
       "pvtRuleFormal": "正式测试共 5 次,并计入成绩。",
       "pvtRuleNoEarly": "刺激出现前按空格会判定为提前反应,并重开本轮。",
-      "pvtRuleLapse": "反应时大于 500ms 记为一次警觉失误(lapse),会影响分数。",
+      "pvtRuleLapse": "反应时高于年龄组参考区间上界时计为一次警觉失误（lapse），并会降低得分。",
       "pvtRuleReference": "评分结合年龄分组参考区间、稳定性与失误惩罚。",
       "pvtWaiting": "请保持警觉,等待刺激...",
       "pvtPressNow": "立即按空格键!",
@@ -504,8 +504,8 @@
     "noData": "暂无游戏"
   },
   "learning": {
-    "title": "Learning",
-    "subtitle": "Choose by cognitive dimension",
+    "title": "学习",
+    "subtitle": "按认知维度选择",
     "math": "数学",
     "mentalMath": "心算",
     "menuButtonLabel": "打开导航菜单",
@@ -573,7 +573,7 @@
     },
     "assessment": {
       "title": "评估",
-      "subject": "Test Subject: mental-math",
+      "subject": "测试科目：mental-math",
       "rules": "每题限时 {seconds} 秒，总 topic 数：{count}。",
       "start": "开始评估",
       "metricAccuracy": "正确率",
@@ -725,7 +725,7 @@
   "register": {
     "title": "DeepBrain Tech",
     "heading": "加入我们！",
-    "subtitle": "创建新账户",
+    "subtitle": "创建你的账户并开始学习",
     "username": "用户名",
     "email": "邮箱",
     "verificationCode": "验证码",
@@ -761,7 +761,7 @@
   },
   "completeProfile": {
     "title": "补全资料",
-    "subtitle": "请设置用户名和出生日期(用于年龄分析)",
+    "subtitle": "请设置用户名和出生日期（用于认知分析）",
     "username": "用户名",
     "usernamePlaceholder": "请输入用户名(3-50个字符)",
     "dateOfBirth": "出生日期",
@@ -823,10 +823,10 @@
         "tagline": "更聪明地解题。更努力地竞争。",
         "description": "在实时多人对战中挑战数独谜题,测试你的逻辑和速度。"
       },
-      "chessMaster": {
-        "name": "思维棋阵",
-        "tagline": "模式识别、记忆和分析。",
-        "description": "基于动态国际象棋谜题强化工作记忆和逻辑推理能力,从而构建个体的认知模式。"
+      "chessMater": {
+        "name": "棋艺大师",
+        "tagline": "模式识别、记忆与分析。",
+        "description": "通过动态象棋类谜题增强工作记忆与逻辑推理，从而构建个性化的认知模式。"
       },
       "chessTourmaster": {
         "name": "棋旅大师",
@@ -860,7 +860,7 @@
       },
       "patternRecognition": {
         "title": "模式识别",
-        "game": "国际象棋大师"
+        "game": "棋艺大师"
       }
     },
     "testimonials": {
@@ -895,7 +895,7 @@
       "contact": "联系我们",
       "privacy": "隐私",
       "terms": "条款",
-      "copyright": "© 2025 DeepBrain Tech。保留所有权利。"
+      "copyright": "© 2026 DeepBrain Tech。保留所有权利。"
     }
   },
   "beforeloginV2": {
@@ -941,8 +941,8 @@
           "description": "借助结构化、游戏化认知练习，提升专注力与社交互动能力。"
         },
         "educators": {
-          "title": "教育者与治疗师",
-          "description": "使用循证活动支持干预方案，并跟踪可量化进步。"
+          "title": "教育工作者、治疗师与健康爱好者",
+          "description": "我们的解决方案为您的专业干预提供循证支持。"
         },
         "olderAdults": {
           "title": "老年人群",
@@ -977,36 +977,35 @@
           "description": "提升注意控制能力，降低分心带来的影响。"
         },
         "reasoning": {
-          "title": "推理类游戏",
-          "description": "练习多步骤推断与灵活的问题解决能力。"
+          "title": "记忆类游戏",
+          "description": "练习多步骤推理与灵活的问题解决。"
         }
       }
     },
     "benefitStories": {
       "eyebrow": "为何有效",
-      "title": "以认知科学为基础",
+      "title": "认知科学背书",
       "items": {
         "executiveFunction": {
-          "title": "提升执行功能",
-          "description": "持续挑战可增强工作记忆、认知灵活性和抑制控制，为学习与日常决策打下更坚实基础。"
+          "title": "执行功能的强化",
+          "description": "脑力游戏促使人们调动「执行功能」，例如工作记忆、心理灵活性与自我控制。借助神经可塑性——即大脑通过形成新的神经连接来重组自身的能力——这些游戏会在儿童学习规划并同时保持多条信息的过程中，切实重塑前额叶皮层。持续刺激这些通路，能够夯实专注力与决策力的结构基础，帮助人们在学校与日常生活中更高效地处理复杂任务。"
         },
         "problemSolving": {
-          "title": "发展问题解决能力",
-          "description": "自适应关卡帮助儿童与成人学会验证假设、从失败中恢复，并将成长型思维应用到真实任务中。"
+          "title": "问题解决能力的发展",
+          "description": "互动游戏为儿童提供了安全的环境去面对挑战并经历「建设性失败」。在难度逐步提升的关卡中，儿童会发展批判性思维能力，并学会从多个角度看待问题。藉由培养成长型思维，学生会理解智力与技能可以通过努力而发展；这种认识最终会积累起掌握数学、科学等挑战性学科所需的情绪韧性。"
         },
         "imagination": {
-          "title": "激发想象力",
-          "description": "富有趣味的认知任务鼓励发散思维与创造性探索，帮助学习者更自信地找到新解法。"
+          "title": "点燃年少想象",
+          "description": "脑力游戏把复杂的认知挑战转化为引人入胜的游戏体验，从而有力推动儿童的创造力发展。除了寻找「正确」答案之外，这些活动还鼓励发散思维：必须探索多种路径与非传统解法才能达成目标。这一过程培养了关键的认知灵活性，让年轻大脑能适应新规则，在别人眼中是混乱的地方看出规律。通过在安全的游戏化环境中进行智力冒险，脑力游戏帮助儿童相信自己的直觉，并建立以好奇与原创视角探索世界的自信。"
         },
         "mentalLongevity": {
-          "title": "守护长期脑健康",
-          "description": "持续认知训练有助于在全生命周期中维持注意力、记忆力与信息处理速度。"
+          "title": "重视心智持久健康",
+          "description": "科学研究表明，大脑在一生中都具有可塑性。神经可塑性使持续的认知挑战能够强化与注意、记忆、处理速度和执行控制相关的神经系统。对儿童而言，结构化的心智练习可提升学业表现并建立长期的认知韧性。富有挑战的任务会形成稳定的神经通路，以维持思维敏锐。智力并非固定不变——认知能力可通过刻意练习提升。早期养成专注思考与解决问题的习惯，为终身的心智活力与独立性打下基础。"
         }
       }
     },
     "finalCta": {
       "title": "准备好开启有目标的大脑训练了吗？",
-      "subtitle": "加入 DeepBrain Tech，今天就开始你的个性化认知成长之旅。",
       "primaryCta": "创建账号",
       "secondaryCta": "我已有账号"
     },
