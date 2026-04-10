@@ -45,11 +45,11 @@ export default function BenefitStoryCard({ item }: BenefitStoryCardProps) {
           }
         />
       </div>
-      <div className={`flex h-[28rem] flex-col rounded-3xl px-5 pb-6 pt-14 shadow-md ${item.cardClass}`}>
+      <div className={`flex h-auto min-h-[24rem] flex-col rounded-3xl px-5 pb-6 pt-14 shadow-md min-[480px]:min-h-[26rem] md:h-[28rem] ${item.cardClass}`}>
         <h3 className="shrink-0 text-center text-base font-normal font-['Titan_One'] text-[#0B4F84] sm:text-lg">
           {t(`${item.key}.title`)}
         </h3>
-        <p className="mt-3 flex-1 overflow-y-auto pr-1 text-center text-xs font-normal font-['Outfit'] leading-6 text-[#1571AA] sm:text-sm">
+        <p className="mt-3 flex-1 pr-1 text-center text-xs font-normal font-['Outfit'] leading-6 text-[#1571AA] sm:text-sm">
           {t(`${item.key}.description`)}
         </p>
       </div>

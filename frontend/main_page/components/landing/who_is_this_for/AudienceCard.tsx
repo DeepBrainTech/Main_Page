@@ -46,8 +46,8 @@ export default function AudienceCard({ item }: AudienceCardProps) {
 
   return (
     <article className="relative h-full w-full">
-      <div className="relative flex h-45 w-full overflow-hidden rounded-[18px] bg-blue-100 px-3 pb-3 pt-3 sm:h-56 sm:rounded-[24px] sm:px-4 sm:pb-4 sm:pt-4 md:h-[16rem] min-[1100px]:hidden">
-        <div className="pointer-events-none absolute bottom-2 left-1 z-30 h-32 w-32 overflow-visible sm:bottom-3 sm:h-40 sm:w-40 md:bottom-3 md:h-52 md:w-52">
+      <div className="relative flex h-[10.5rem] w-full overflow-hidden rounded-[18px] bg-blue-100 px-3 pb-3 pt-3 min-[360px]:h-[11.25rem] sm:h-56 sm:rounded-[24px] sm:px-4 sm:pb-4 sm:pt-4 md:h-[17rem] min-[1100px]:hidden">
+        <div className="pointer-events-none absolute bottom-2 left-1 z-30 h-28 w-28 overflow-visible min-[360px]:h-30 min-[360px]:w-30 sm:bottom-3 sm:h-40 sm:w-40 md:bottom-2 md:h-44 md:w-44 lg:h-48 lg:w-48">
           <Image
             src={item.image}
             alt={t(`${item.key}.title`)}
@@ -57,18 +57,18 @@ export default function AudienceCard({ item }: AudienceCardProps) {
           />
         </div>
 
-        <div className="absolute right-3 top-4 bottom-14 w-[56%] overflow-hidden sm:right-4 sm:top-5 sm:bottom-16 sm:w-[55%] md:top-6 md:bottom-20 md:w-[50%]">
+        <div className="absolute right-3 top-4 bottom-[3.75rem] w-[58%] overflow-hidden min-[360px]:bottom-[4.1rem] min-[360px]:w-[56%] sm:right-4 sm:top-5 sm:bottom-[4.75rem] sm:w-[55%] md:top-6 md:bottom-[5.75rem] md:w-[50%]">
           <p
-            className="break-words text-right text-[0.92rem] font-medium leading-5 text-[#538DB1] sm:text-[1rem] sm:leading-6 md:text-[1.12rem] md:leading-8"
+            className="break-words text-right text-[clamp(0.78rem,2.4vw,1.05rem)] font-medium leading-5 text-[#538DB1] sm:leading-6 md:leading-6"
             style={{ fontFamily: "var(--font-outfit), sans-serif" }}
           >
             {t(`${item.key}.description`)}
           </p>
         </div>
 
-        <div className="absolute bottom-3 left-3 right-3 z-20 flex h-11 items-center justify-end rounded-xl bg-indigo-50 px-3 sm:left-4 sm:right-4 sm:h-12 md:h-[3.75rem]">
+        <div className="absolute bottom-3 left-3 right-3 z-20 flex min-h-11 items-center justify-end rounded-xl bg-indigo-50 px-3 py-1.5 sm:left-4 sm:right-4 sm:min-h-12 sm:py-2 md:min-h-[4.25rem]">
           <p
-            className="ml-auto w-[68%] break-words text-right text-[0.98rem] font-medium leading-5 text-[#045E96] sm:w-[64%] sm:text-[1.08rem] sm:leading-6 md:w-[62%] md:text-[1.28rem] md:leading-8"
+            className="ml-auto max-h-[3.8rem] w-[70%] overflow-hidden break-words text-right text-[clamp(0.88rem,2.5vw,1.15rem)] font-medium leading-5 text-[#045E96] min-[360px]:w-[68%] sm:max-h-[4rem] sm:w-[64%] sm:leading-6 md:w-[62%] md:leading-7"
             style={{ fontFamily: "var(--font-outfit), sans-serif" }}
           >
             {t(`${item.key}.title`)}

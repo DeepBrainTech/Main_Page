@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Outfit, Titan_One } from "next/font/google";
 import "./globals.css";
 import { defaultLocale } from "../i18n-config";
@@ -27,6 +27,11 @@ const outfit = Outfit({
 export const metadata: Metadata = {
   title: "DeepBrain Tech",
   description: "DeepBrain Tech Platform",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
 };
 
 export default function RootLayout({
