@@ -3,9 +3,58 @@ import { getMessages } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 import { locales, type Locale } from '../../i18n-config';
 import GoogleAuthProvider from '@/components/providers/GoogleOAuthProvider';
+import type { Metadata } from "next";
 
 // Cloudflare Pages 需要 Edge Runtime
 export const runtime = 'edge';
+
+const localeMetadata: Record<Locale, { title: string; description: string; ogLocale: string }> = {
+  en: {
+    title: "DeepBrain Tech | AI Cognitive Training Platform",
+    description:
+      "Train focus, memory, logic, and strategy with AI-powered brain games and personalized cognitive practice.",
+    ogLocale: "en_US",
+  },
+  zh: {
+    title: "DeepBrain Tech | AI 认知训练平台",
+    description: "通过 AI 脑力训练游戏提升专注力、记忆力、逻辑能力与策略思维。",
+    ogLocale: "zh_CN",
+  },
+};
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale: localeParam } = await params;
+  const locale = locales.includes(localeParam as Locale) ? (localeParam as Locale) : "en";
+  const content = localeMetadata[locale];
+
+  return {
+    title: content.title,
+    description: content.description,
+    openGraph: {
+      title: content.title,
+      description: content.description,
+      locale: content.ogLocale,
+      alternateLocale: locale === "en" ? ["zh_CN"] : ["en_US"],
+      url: `/${locale}`,
+    },
+    twitter: {
+      title: content.title,
+      description: content.description,
+    },
+    alternates: {
+      canonical: `/${locale}`,
+      languages: {
+        en: "/en",
+        zh: "/zh",
+        "x-default": "/en",
+      },
+    },
+  };
+}
 
 // 注意：不在 layout 中使用 generateStaticParams
 // 注册和登录页面需要动态渲染（CSRF、会话、风控等）

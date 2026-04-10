@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Outfit, Titan_One } from "next/font/google";
 import "./globals.css";
 import { defaultLocale } from "../i18n-config";
+import { getSiteUrl } from "@/lib/seo";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -25,8 +26,49 @@ const outfit = Outfit({
 });
 
 export const metadata: Metadata = {
-  title: "DeepBrain Tech",
-  description: "DeepBrain Tech Platform",
+  metadataBase: getSiteUrl(),
+  title: {
+    default: "DeepBrain Tech | AI Cognitive Training Platform",
+    template: "%s | DeepBrain Tech",
+  },
+  description:
+    "DeepBrain Tech provides AI-powered brain games and cognitive training for focus, memory, strategy, and lifelong learning.",
+  applicationName: "DeepBrain Tech",
+  alternates: {
+    canonical: "/en",
+    languages: {
+      en: "/en",
+      zh: "/zh",
+      "x-default": "/en",
+    },
+  },
+  openGraph: {
+    type: "website",
+    siteName: "DeepBrain Tech",
+    title: "DeepBrain Tech | AI Cognitive Training Platform",
+    description:
+      "Train memory, focus, logic, and strategy with AI-powered brain games and structured cognitive practice.",
+    url: "/en",
+    locale: "en_US",
+    alternateLocale: ["zh_CN"],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "DeepBrain Tech | AI Cognitive Training Platform",
+    description:
+      "AI-powered brain training games for focus, memory, logic, and strategy.",
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+      "max-video-preview": -1,
+    },
+  },
 };
 
 export const viewport: Viewport = {
