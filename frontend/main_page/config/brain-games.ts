@@ -28,6 +28,12 @@ export const GAMES_BY_DIMENSION: Record<CognitiveDimensionKey, GameEntry[]> = {
       launchKey: "external",
       externalUrl: "https://intercontinental-chess.deepbraintechnology.com/",
     },
+    {
+      key: "mathchess",
+      nameKey: "mathChess",
+      launchKey: "external",
+      externalUrl: "https://mathchess.deepbraintechnology.com/",
+    },
   ],
   focus: [
     { key: "sudoku", nameKey: "sudoku", launchKey: "sudoku" },
