@@ -16,10 +16,18 @@ export interface CheckInState {
 export function useRewards() {
   const [data, setData] = useState<RewardsData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  const load = useCallback(async (options?: { background?: boolean }) => {
+    const shouldBackgroundRefresh = options?.background === true || data !== null;
+    if (shouldBackgroundRefresh) {
+      // 已有数据时走后台刷新，避免整块 UI 切到 Loading 造成闪屏。
+      setRefreshing(true);
+    } else {
+      // 首次加载仍保留整体 Loading 态。
+      setLoading(true);
+    }
     setError(null);
     try {
       const next = await fetchRewards();
@@ -28,8 +36,9 @@ export function useRewards() {
       setError(e instanceof Error ? e.message : "unknown");
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
-  }, []);
+  }, [data]);
 
   useEffect(() => {
     load();
@@ -57,7 +66,7 @@ export function useRewards() {
     if (hasCheckedInToday) return;
     try {
       await postCheckIn();
-      await load();
+      await load({ background: true });
     } catch (e) {
       setError(e instanceof Error ? e.message : "check_in_failed");
     }
@@ -67,7 +76,7 @@ export function useRewards() {
     async (taskId: string) => {
       try {
         await claimTask(taskId);
-        await load();
+        await load({ background: true });
       } catch (e) {
         throw e;
       }
@@ -77,6 +86,7 @@ export function useRewards() {
 
   return {
     loading,
+    refreshing,
     error,
     coins,
     diamonds,
