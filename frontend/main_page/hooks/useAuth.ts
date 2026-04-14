@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { getApiUrl } from "@/lib/api-config";
+import { defaultLocale } from "@/i18n-config";
 
 /** 当前用户信息（来自 GET /api/auth/me） */
 export interface AuthUserInfo {
@@ -18,7 +19,9 @@ export interface AuthUserInfo {
 export function useAuth() {
   const router = useRouter();
   const params = useParams();
-  const locale = params.locale as string;
+  const locale = (params.locale as string) || defaultLocale;
+  /** 与当前路由语言一致，避免跳转到 `/` 后被中间件/Cookie 带到另一种语言的落地页 */
+  const landingPath = `/${locale}`;
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState<string | undefined>(undefined);
   const [dateOfBirth, setDateOfBirth] = useState<string | null>(null);
@@ -30,7 +33,7 @@ export function useAuth() {
   const fetchUser = () => {
     const token = localStorage.getItem("access_token");
     if (!token) {
-      router.push(`/`);
+      router.push(landingPath);
       return;
     }
     return fetch(getApiUrl("/api/auth/me"), {
@@ -52,7 +55,7 @@ export function useAuth() {
       .catch(() => {
         localStorage.removeItem("access_token");
         localStorage.removeItem("token_expires_in");
-        router.push(`/`);
+        router.push(landingPath);
       });
   };
 
@@ -63,7 +66,7 @@ export function useAuth() {
   const logout = () => {
     localStorage.removeItem("access_token");
     localStorage.removeItem("token_expires_in");
-    router.push(`/`);
+    router.push(landingPath);
   };
 
   return {
