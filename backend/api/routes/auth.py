@@ -1,5 +1,5 @@
 """
-认证�>��.�路�"�
+认证相关路由
 """
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
@@ -35,19 +35,19 @@ router = APIRouter(prefix="/api/auth", tags=["认证"])
 
 @router.post("/send-verification-code", response_model=APIResponse)
 async def send_verification_code(request: SendVerificationCode):
-    """�'�?��,�箱�O证码"""
+    """发送邮箱验证码"""
     try:
-        # �"Y�^�6位�.��-�O证码
+        # 生成6位数字验证码
         code = verification_service.generate_code()
         
-        # 保�~�O证码�^5�^?�'Y�o?�.^�oY�?
+        # 保存验证码，5分钟后过期
         if not verification_service.save_code(request.email, code, expire_minutes=5):
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="VERIFICATION_CODE_SAVE_FAILED"
             )
         
-        # �'�?��O证码�,�件�O使�"�请�,中�s"语�?�,�.�
+        # 发送验证码邮件，支持中英文模板
         language = request.language if request.language in ["zh", "en"] else "zh"
         success = await email_service.send_verification_code(request.email, code, language=language)
         
@@ -65,7 +65,7 @@ async def send_verification_code(request: SendVerificationCode):
     except HTTPException:
         raise
     except Exception as e:
-        print(f"�'�?��O证码�,常: {str(e)}")
+        print(f"发送验证码异常: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="VERIFICATION_CODE_SEND_FAILED"
@@ -74,15 +74,15 @@ async def send_verification_code(request: SendVerificationCode):
 
 @router.post("/register", response_model=APIResponse, status_code=status.HTTP_201_CREATED)
 async def register(user_data: UserCreate, db: Session = Depends(get_db)):
-    """�"��^�注�?O"""
-    # �O证�O证码
+    """用户注册"""
+    # 验证验证码
     if not verification_service.verify_code(user_data.email, user_data.verification_code):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="VERIFICATION_CODE_INVALID"
         )
     
-    # �?�Y��"��^�名�~�否已�~�o�
+    # 检查用户名是否已存在
     existing_user = db.query(User).filter(User.username == user_data.username).first()
     if existing_user:
         raise HTTPException(
@@ -90,7 +90,7 @@ async def register(user_data: UserCreate, db: Session = Depends(get_db)):
             detail="AUTH_USERNAME_EXISTS"
         )
     
-    # �?�Y��,�箱�~�否已�~�o�
+    # 检查邮箱是否已存在
     existing_email = db.query(User).filter(User.email == user_data.email).first()
     if existing_email:
         raise HTTPException(
@@ -98,7 +98,7 @@ async def register(user_data: UserCreate, db: Session = Depends(get_db)):
             detail="AUTH_EMAIL_EXISTS"
         )
     
-    # �^>建�-��"��^�
+    # 创建新用户
     hashed_password = get_password_hash(user_data.password)
     new_user = User(
         username=user_data.username,
@@ -112,7 +112,7 @@ async def register(user_data: UserCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(new_user)
     
-    # �?��S��"Y�^� token�O�z�Z�注�?O�Z�?��S��T��.
+    # 注册成功后签发 token，免去再次登录
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
         data={"sub": new_user.username},
@@ -137,7 +137,7 @@ async def login(
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: Session = Depends(get_db)
 ):
-    """�"��^��T��."""
+    """用户登录。"""
     user = authenticate_user(db, form_data.username, form_data.password)
     if not user:
         raise HTTPException(
@@ -162,9 +162,9 @@ async def login(
 @router.post("/google", response_model=Token)
 async def google_login(request: GoogleTokenRequest, db: Session = Depends(get_db)):
     """
-    ?? Google ID Token ??????
-    ?? Google ????????,????????(??? Google ??)?
-    ??????(??????),????? google_id ??????
+    使用 Google ID Token 登录。
+    如果 Google 账号邮箱已存在，则绑定该账号（仅首次 Google 登录）。
+    若用户不存在（邮箱也不存在），则自动创建带 google_id 的新用户。
     """
     payload = verify_google_token(request.id_token)
     if not payload:
@@ -184,7 +184,7 @@ async def google_login(request: GoogleTokenRequest, db: Session = Depends(get_db
             detail="AUTH_GOOGLE_TOKEN_INVALID",
         )
 
-    # ??? google_id ?
+    # 优先按 google_id 查找
     user = db.query(User).filter(User.google_id == google_id).first()
     if user:
         if not user.is_active:
@@ -193,7 +193,7 @@ async def google_login(request: GoogleTokenRequest, db: Session = Depends(get_db
                 detail="AUTH_USER_DISABLED",
             )
     else:
-        # ??????:?????,???? google_id ???
+        # 回退策略：按邮箱查找并补绑 google_id
         user = db.query(User).filter(User.email == email).first()
         if user:
             if not user.is_active:
@@ -201,7 +201,7 @@ async def google_login(request: GoogleTokenRequest, db: Session = Depends(get_db
                     status_code=status.HTTP_403_FORBIDDEN,
                     detail="AUTH_USER_DISABLED",
                 )
-            # ???????? Google ??,????
+            # 已绑定其他 Google 账号，拒绝绑定
             if user.google_id and user.google_id != google_id:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
@@ -212,7 +212,7 @@ async def google_login(request: GoogleTokenRequest, db: Session = Depends(get_db
                 db.commit()
                 db.refresh(user)
         else:
-            # ???:? Google ??
+            # 新用户：创建 Google 用户
             base_username = (name or email.split("@")[0] or "user")[:50]
             base_username = "".join(c for c in base_username if c.isalnum() or c in "._-") or "user"
             username = base_username
@@ -270,7 +270,7 @@ def _user_to_response(
 async def get_current_user_info(
     current_user: User = Depends(get_current_active_user),
 ):
-    """�Z��-�"�?��"��^�信息"""
+    """获取当前用户信息"""
     return _user_to_response(current_user)
 
 
@@ -320,7 +320,7 @@ async def update_current_user_profile(
 
 @router.get("/verify", response_model=APIResponse)
 async def verify_token(current_user: User = Depends(get_current_active_user)):
-    """�O证 Token �~�否�o?�.^"""
+    """验证 Token 是否有效"""
     return APIResponse(
         success=True,
         message="AUTH_TOKEN_VALID",
@@ -330,9 +330,9 @@ async def verify_token(current_user: User = Depends(get_current_active_user)):
 
 @router.post("/send-reset-password-code", response_model=APIResponse)
 async def send_reset_password_code(request: SendVerificationCode, db: Session = Depends(get_db)):
-    """�'�?��?�置�?码�O证码"""
+    """发送重置密码验证码"""
     try:
-        # �?�Y��,�箱�~�否�~�o�
+        # 检查邮箱是否存在
         user = db.query(User).filter(User.email == request.email).first()
         if not user:
             raise HTTPException(
@@ -340,17 +340,17 @@ async def send_reset_password_code(request: SendVerificationCode, db: Session = 
                 detail="EMAIL_NOT_FOUND"
             )
         
-        # �"Y�^�6位�.��-�O证码
+        # 生成6位数字验证码
         code = verification_service.generate_code()
         
-        # 保�~�O证码�^5�^?�'Y�o?�.^�oY�?
+        # 保存验证码，5分钟后过期
         if not verification_service.save_code(request.email, code, expire_minutes=5):
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="VERIFICATION_CODE_SAVE_FAILED"
             )
         
-        # �'�?��O证码�,�件�O使�"�请�,中�s"语�?�,�.�
+        # 发送验证码邮件，支持中英文模板
         language = request.language if request.language in ["zh", "en"] else "zh"
         success = await email_service.send_verification_code(request.email, code, language=language)
         
@@ -368,7 +368,7 @@ async def send_reset_password_code(request: SendVerificationCode, db: Session = 
     except HTTPException:
         raise
     except Exception as e:
-        print(f"�'�?��?�置�?码�O证码�,常: {str(e)}")
+        print(f"发送重置密码验证码异常: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="VERIFICATION_CODE_SEND_FAILED"
@@ -377,16 +377,16 @@ async def send_reset_password_code(request: SendVerificationCode, db: Session = 
 
 @router.post("/reset-password", response_model=APIResponse)
 async def reset_password(request: ResetPassword, db: Session = Depends(get_db)):
-    """�?�置�?码"""
+    """重置密码"""
     try:
-        # �O证�O证码
+        # 验证验证码
         if not verification_service.verify_code(request.email, request.verification_code):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="VERIFICATION_CODE_INVALID"
             )
         
-        # �Y��?��"��^�
+        # 查找用户
         user = db.query(User).filter(User.email == request.email).first()
         if not user:
             raise HTTPException(
@@ -394,7 +394,7 @@ async def reset_password(request: ResetPassword, db: Session = Depends(get_db)):
                 detail="EMAIL_NOT_FOUND"
             )
         
-        # �>��-��?码
+        # 更新密码
         user.hashed_password = get_password_hash(request.new_password)
         db.commit()
         
@@ -406,7 +406,7 @@ async def reset_password(request: ResetPassword, db: Session = Depends(get_db)):
     except HTTPException:
         raise
     except Exception as e:
-        print(f"�?�置�?码�,常: {str(e)}")
+        print(f"重置密码异常: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="PASSWORD_RESET_FAILED"

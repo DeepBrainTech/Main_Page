@@ -1,9 +1,10 @@
-import LanguageLanding from "@/components/LanguageLanding";
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
+import { defaultLocale } from "@/i18n-config";
 
 export const metadata: Metadata = {
-  title: "Choose Language",
-  description: "Select your preferred language for DeepBrain Tech.",
+  title: "DeepBrain Tech",
+  description: "DeepBrain Tech",
   robots: {
     index: false,
     follow: false,
@@ -11,5 +12,5 @@ export const metadata: Metadata = {
 };
 
 export default function RootPage() {
-  return <LanguageLanding />;
+  redirect(`/${defaultLocale}`);
 }
