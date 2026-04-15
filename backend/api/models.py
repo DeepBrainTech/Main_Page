@@ -29,6 +29,7 @@ class User(Base):
     # 关联游戏访问记录
     game_accesses = relationship("GameAccess", back_populates="user")
     game_rewards = relationship("UserGameReward", back_populates="user")
+    game_likes = relationship("GameLike", back_populates="user")
 
 
 class GameConfig(Base):
@@ -119,6 +120,17 @@ class UserGamePlayByDay(Base):
     count = Column(Integer, default=0, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class GameLike(Base):
+    __tablename__ = "game_likes"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    game_key = Column(String(100), nullable=False, index=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    user = relationship("User", back_populates="game_likes")
 
 
 class UserRewards(Base):

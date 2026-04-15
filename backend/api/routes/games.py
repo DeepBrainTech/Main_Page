@@ -3,10 +3,11 @@ from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, Header
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from database import get_db
-from models import User, UserGameReward, UserGamePlayByDay, UserRewards
+from models import User, UserGameReward, UserGamePlayByDay, UserRewards, GameLike
 from schemas import APIResponse
 from auth import (
     get_current_active_user,
@@ -32,6 +33,16 @@ router = APIRouter(prefix="/api/games", tags=["游戏"])
 DAILY_REWARD_FLOWERS = 10
 REWARD_COOLDOWN = timedelta(hours=24)
 DEFAULT_TZ = "UTC"
+SUPPORTED_GAME_KEYS = {
+    "sudoku",
+    "intercontinental-chess",
+    "mathchess",
+    "chessmater",
+    "quantumgo",
+    "fogchess",
+    "chess-tourmaster",
+    "dash-dot-simulator",
+}
 
 
 def _today_in_tz(tz: str) -> str:
@@ -137,6 +148,26 @@ def _record_play_and_claim_if_ready(db: Session, user: User, game_mode: str) -> 
     return record, reward_status, awarded_flowers
 
 
+def _serialize_like_payload(db: Session, user_id: int) -> list[dict]:
+    like_count_rows = db.query(
+        GameLike.game_key,
+        func.count(GameLike.id),
+    ).group_by(GameLike.game_key).all()
+    liked_rows = db.query(GameLike.game_key).filter(GameLike.user_id == user_id).all()
+
+    like_count_map = {row[0]: int(row[1]) for row in like_count_rows}
+    liked_set = {row[0] for row in liked_rows}
+
+    return [
+        {
+            "game_key": game_key,
+            "like_count": like_count_map.get(game_key, 0),
+            "liked_by_me": game_key in liked_set,
+        }
+        for game_key in sorted(SUPPORTED_GAME_KEYS)
+    ]
+
+
 def _total_flowers_for_user(db: Session, user_id: int) -> int:
     return _get_asset_balances(db, user_id)["flowers"]
 
@@ -164,6 +195,72 @@ def _build_token_response(
                 "id": current_user.id,
                 "username": current_user.username,
             },
+        },
+    )
+
+
+@router.get("/likes", response_model=APIResponse)
+async def get_game_likes(
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+):
+    return APIResponse(
+        success=True,
+        message="ok",
+        data={
+            "likes": _serialize_like_payload(db, current_user.id),
+        },
+    )
+
+
+@router.post("/likes/{game_key}", response_model=APIResponse)
+async def like_game(
+    game_key: str,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+):
+    if game_key not in SUPPORTED_GAME_KEYS:
+        return APIResponse(success=False, message="invalid_game_key", data={"game_key": game_key})
+
+    existing = db.query(GameLike).filter(
+        GameLike.user_id == current_user.id,
+        GameLike.game_key == game_key,
+    ).first()
+    if not existing:
+        db.add(GameLike(user_id=current_user.id, game_key=game_key))
+        db.commit()
+
+    return APIResponse(
+        success=True,
+        message="ok",
+        data={
+            "likes": _serialize_like_payload(db, current_user.id),
+        },
+    )
+
+
+@router.delete("/likes/{game_key}", response_model=APIResponse)
+async def unlike_game(
+    game_key: str,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+):
+    if game_key not in SUPPORTED_GAME_KEYS:
+        return APIResponse(success=False, message="invalid_game_key", data={"game_key": game_key})
+
+    existing = db.query(GameLike).filter(
+        GameLike.user_id == current_user.id,
+        GameLike.game_key == game_key,
+    ).first()
+    if existing:
+        db.delete(existing)
+        db.commit()
+
+    return APIResponse(
+        success=True,
+        message="ok",
+        data={
+            "likes": _serialize_like_payload(db, current_user.id),
         },
     )
 

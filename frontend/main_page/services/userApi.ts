@@ -52,6 +52,12 @@ export interface LeaderboardEntry {
   score: number;
 }
 
+export interface GameLikeState {
+  game_key: string;
+  like_count: number;
+  liked_by_me: boolean;
+}
+
 export interface MakingWholeSecretMediaResponse {
   secret_key: string;
   urls: string[];
@@ -257,6 +263,33 @@ export async function fetchLeaderboard(type: string, limit = 50): Promise<Leader
   if (!res.ok) throw new Error("fetch_leaderboard_failed");
   const json = await res.json();
   return (json?.data?.list ?? []) as LeaderboardEntry[];
+}
+
+export async function fetchGameLikes(): Promise<GameLikeState[]> {
+  const res = await fetch(getApiUrl("/api/games/likes"), { headers: getAuthHeaders() });
+  if (!res.ok) throw new Error("fetch_game_likes_failed");
+  const json = await res.json();
+  return (json?.data?.likes ?? []) as GameLikeState[];
+}
+
+export async function likeGame(gameKey: string): Promise<GameLikeState[]> {
+  const res = await fetch(getApiUrl(`/api/games/likes/${encodeURIComponent(gameKey)}`), {
+    method: "POST",
+    headers: getAuthHeaders(),
+  });
+  if (!res.ok) throw new Error("like_game_failed");
+  const json = await res.json();
+  return (json?.data?.likes ?? []) as GameLikeState[];
+}
+
+export async function unlikeGame(gameKey: string): Promise<GameLikeState[]> {
+  const res = await fetch(getApiUrl(`/api/games/likes/${encodeURIComponent(gameKey)}`), {
+    method: "DELETE",
+    headers: getAuthHeaders(),
+  });
+  if (!res.ok) throw new Error("unlike_game_failed");
+  const json = await res.json();
+  return (json?.data?.likes ?? []) as GameLikeState[];
 }
 
 /** 获取 Making Whole 指定 secret 的私有图片签名地址 */

@@ -70,3 +70,15 @@ def ensure_users_table_compatibility():
         conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS date_of_birth DATE"))
         # 兼容旧库：统一资产账户新增鲜花字段
         conn.execute(text("ALTER TABLE user_rewards ADD COLUMN IF NOT EXISTS flowers INTEGER DEFAULT 0"))
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS game_likes (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER NOT NULL REFERENCES users(id),
+                game_key VARCHAR(100) NOT NULL,
+                created_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT NOW()
+            )
+        """))
+        conn.execute(text(
+            "CREATE UNIQUE INDEX IF NOT EXISTS ix_game_likes_user_game_key ON game_likes (user_id, game_key)"
+        ))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_game_likes_game_key ON game_likes (game_key)"))

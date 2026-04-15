@@ -1,10 +1,17 @@
 "use client";
 
 import Image, { type StaticImageData } from "next/image";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { GAMES_BY_DIMENSION } from "@/config/brain-games";
 import { COGNITIVE_DIMENSION_KEYS } from "@/types/cognitive";
 import type { GameEntry } from "@/config/brain-games";
+import {
+  fetchGameLikes,
+  likeGame,
+  unlikeGame,
+  type GameLikeState,
+} from "@/services/userApi";
 import chessmaterGif from "../../../public/brain-games/chessmater.gif";
 import sudokuGif from "../../../public/brain-games/sudoku.gif";
 import chessTourmasterGif from "../../../public/brain-games/chessTourmaster.gif";
@@ -52,6 +59,52 @@ export default function BrainGamesTab({ onLaunch }: BrainGamesTabProps) {
   const t = useTranslations("brainGames");
   const tDim = useTranslations("dimensions");
   const tHome = useTranslations("home");
+  const [likes, setLikes] = useState<GameLikeState[]>([]);
+  const [pendingLikeKey, setPendingLikeKey] = useState<string | null>(null);
+  const [hoveredLikeKey, setHoveredLikeKey] = useState<string | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+    fetchGameLikes()
+      .then((items) => {
+        if (mounted) setLikes(items);
+      })
+      .catch(() => {
+        if (mounted) setLikes([]);
+      });
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const likeMap = useMemo(
+    () =>
+      likes.reduce<Record<string, GameLikeState>>((acc, item) => {
+        acc[item.game_key] = item;
+        return acc;
+      }, {}),
+    [likes]
+  );
+
+  const handleToggleLike = async (gameKey: string, likedByMe: boolean) => {
+    if (pendingLikeKey) return;
+    setPendingLikeKey(gameKey);
+    try {
+      const updated = likedByMe ? await unlikeGame(gameKey) : await likeGame(gameKey);
+      setLikes(updated);
+    } catch {
+      // ignore and keep previous UI state
+    } finally {
+      setPendingLikeKey(null);
+    }
+  };
+
+  const formatLikeCount = (count: number) =>
+    new Intl.NumberFormat("en", {
+      notation: "compact",
+      compactDisplay: "short",
+      maximumFractionDigits: 1,
+    }).format(count);
 
   return (
     <div className="space-y-6">
@@ -94,6 +147,35 @@ export default function BrainGamesTab({ onLaunch }: BrainGamesTabProps) {
                         <span className="text-sm font-medium text-gray-800 text-center">
                           {tHome(entry.nameKey)}
                         </span>
+                        <button
+                          type="button"
+                          onMouseEnter={() => setHoveredLikeKey(entry.key)}
+                          onMouseLeave={() => setHoveredLikeKey((prev) => (prev === entry.key ? null : prev))}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            const likedByMe = likeMap[entry.key]?.liked_by_me ?? false;
+                            handleToggleLike(entry.key, likedByMe);
+                          }}
+                          disabled={pendingLikeKey === entry.key}
+                          className={`mt-1 inline-flex cursor-pointer items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-semibold tracking-wide transition-colors transition-shadow ${
+                            likeMap[entry.key]?.liked_by_me
+                              ? "border-rose-300 bg-white text-rose-600 hover:bg-rose-50 hover:shadow-sm"
+                              : "border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:text-slate-700 hover:shadow-sm"
+                          }`}
+                        >
+                          <span
+                            className={`rounded-full px-1.5 py-0.5 leading-none ${
+                              likeMap[entry.key]?.liked_by_me ? "bg-rose-50" : "bg-slate-100"
+                            }`}
+                          >
+                            ❤
+                          </span>
+                          <span>
+                            {hoveredLikeKey === entry.key
+                              ? "Like"
+                              : formatLikeCount(likeMap[entry.key]?.like_count ?? 0)}
+                          </span>
+                        </button>
                       </div>
                     );
                   })}

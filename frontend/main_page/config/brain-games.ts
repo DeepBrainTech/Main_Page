@@ -17,11 +17,9 @@ export interface GameEntry {
 
 export const GAMES_BY_DIMENSION: Record<CognitiveDimensionKey, GameEntry[]> = {
   memory: [
-    { key: "sudoku", nameKey: "sudoku", launchKey: "sudoku" },
   ],
   logic: [
-    { key: "chessmater", nameKey: "chessMater", launchKey: "chessMater" },
-    { key: "chess-tourmaster", nameKey: "chessTourmaster", launchKey: "chessTourmaster" },
+    { key: "sudoku", nameKey: "sudoku", launchKey: "sudoku" },
     {
       key: "intercontinental-chess",
       nameKey: "intercontinentalChess",
@@ -36,16 +34,15 @@ export const GAMES_BY_DIMENSION: Record<CognitiveDimensionKey, GameEntry[]> = {
     },
   ],
   focus: [
-    { key: "sudoku", nameKey: "sudoku", launchKey: "sudoku" },
   ],
   reaction: [],
   strategy: [
+    { key: "chessmater", nameKey: "chessMater", launchKey: "chessMater" },
     { key: "quantumgo", nameKey: "quantumGo", launchKey: "quantumGo" },
     { key: "fogchess", nameKey: "startFogChess", launchKey: "fogChess" },
     { key: "chess-tourmaster", nameKey: "chessTourmaster", launchKey: "chessTourmaster" },
   ],
   spatial: [
-    { key: "chessmater", nameKey: "chessMater", launchKey: "chessMater" },
     {
       key: "dash-dot-simulator",
       nameKey: "dashDotSimulator",
