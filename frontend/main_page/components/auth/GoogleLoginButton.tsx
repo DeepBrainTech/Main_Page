@@ -84,9 +84,9 @@ export default function GoogleLoginButton({
         size="large"
         text={variant === "signup" ? "signup_with" : "signin_with"}
         type="standard"
-        shape="rectangular"
+        shape="pill"
         logo_alignment="left"
-        width="320"
+        width="200"
         containerProps={{
           style: { display: "flex", justifyContent: "center" },
           "aria-disabled": disabled,
