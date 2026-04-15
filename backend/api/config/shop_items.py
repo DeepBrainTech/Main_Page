@@ -18,6 +18,11 @@ SHOP_ITEMS: dict[str, dict[str, Any]] = {
         "games": ["chess-tourmaster"],
         "cost": {"coins": 5, "diamonds": 0, "flowers": 0},
     },
+        "chess_tourmaster_undo": {
+        "name": "Chess Tourmaster_undo",
+        "games": ["chess-tourmaster"],
+        "cost": {"coins": 5, "diamonds": 0, "flowers": 0},
+    },
 
     "chess_mater_undo": {
         "name": "Chess Mater Undo",
