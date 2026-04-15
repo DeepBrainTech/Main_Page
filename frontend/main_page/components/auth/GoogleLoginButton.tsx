@@ -70,14 +70,17 @@ export default function GoogleLoginButton({
   };
 
   return (
-    <div className="flex justify-center items-center" aria-hidden={!!disabled}>
+    <div
+      className={`flex items-center justify-center ${disabled ? "pointer-events-none opacity-60" : ""}`}
+      aria-hidden={!!disabled}
+    >
       <GoogleLogin
         onSuccess={(res) => {
           if (res.credential) handleCredential(res.credential);
           else onError("AUTH_GOOGLE_TOKEN_INVALID");
         }}
         onError={() => onError("AUTH_GOOGLE_TOKEN_INVALID")}
-        theme="filled_black"
+        theme="outline"
         size="large"
         text={variant === "signup" ? "signup_with" : "signin_with"}
         type="standard"

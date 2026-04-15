@@ -515,39 +515,29 @@ export default function RegisterPage() {
         </div>
 
         <div className="flex justify-center">
-          <div className="relative w-[320px]">
-            <div
-              className={`pointer-events-none flex h-12 items-center justify-center gap-3 rounded-xl border px-4 text-base font-semibold ${
-                isGoogleLoginEnabled
-                  ? "border-slate-300 bg-white text-slate-900"
-                  : "border-slate-200 bg-slate-100 text-slate-400"
-              }`}
-            >
+          {isGoogleLoginEnabled ? (
+            <GoogleLoginButton
+              variant="signup"
+              onSuccess={(opts) => {
+                if (opts.needsProfileCompletion) {
+                  setCompleteProfileUsername(opts.username ?? "");
+                  setShowCompleteProfile(true);
+                } else {
+                  router.push(`/${locale}/home`);
+                }
+              }}
+              onError={(code) => {
+                setGeneralError(t(`auth.${code}`));
+                setFieldErrors({});
+              }}
+              disabled={loading}
+            />
+          ) : (
+            <div className="flex h-12 w-[320px] items-center justify-center gap-3 rounded-xl border border-slate-200 bg-slate-100 px-4 text-base font-semibold text-slate-400">
               <Image src="/login/google.svg" alt="Google" width={22} height={22} />
               <span>{t("register.signInWithGoogle")}</span>
             </div>
-
-            {isGoogleLoginEnabled ? (
-              <div className="absolute inset-0 overflow-hidden rounded-xl opacity-0">
-                <GoogleLoginButton
-                  variant="signup"
-                  onSuccess={(opts) => {
-                    if (opts.needsProfileCompletion) {
-                      setCompleteProfileUsername(opts.username ?? "");
-                      setShowCompleteProfile(true);
-                    } else {
-                      router.push(`/${locale}/home`);
-                    }
-                  }}
-                  onError={(code) => {
-                    setGeneralError(t(`auth.${code}`));
-                    setFieldErrors({});
-                  }}
-                  disabled={loading}
-                />
-              </div>
-            ) : null}
-          </div>
+          )}
         </div>
         {!isGoogleLoginEnabled && (
           <p className="mt-2 text-center text-xs text-slate-500">{t("auth.AUTH_GOOGLE_NOT_CONFIGURED")}</p>
