@@ -791,6 +791,7 @@
     "PASSWORD_RESET_SUCCESS": "密码重置成功",
     "PASSWORD_RESET_FAILED": "密码重置失败",
     "AUTH_GOOGLE_TOKEN_INVALID": "Google 登录无效,请重试",
+    "AUTH_GOOGLE_NOT_CONFIGURED": "Google 登录暂未配置，请联系管理员或先使用邮箱注册/登录。",
     "AUTH_USERNAME_INVALID": "用户名长度需 3-50 个字符"
   },
   "beforelogin": {

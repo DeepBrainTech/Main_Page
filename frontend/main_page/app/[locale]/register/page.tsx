@@ -41,6 +41,7 @@ export default function RegisterPage() {
   const [successMessage, setSuccessMessage] = useState("");
   const [showCompleteProfile, setShowCompleteProfile] = useState(false);
   const [completeProfileUsername, setCompleteProfileUsername] = useState("");
+  const isGoogleLoginEnabled = Boolean(process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID);
 
   const usernameRef = useRef<HTMLInputElement>(null);
   const dateOfBirthRef = useRef<HTMLInputElement>(null);
@@ -515,31 +516,42 @@ export default function RegisterPage() {
 
         <div className="flex justify-center">
           <div className="relative w-[320px]">
-            <div className="pointer-events-none flex h-12 items-center justify-center gap-3 rounded-xl border border-slate-300 bg-white px-4 text-base font-semibold text-slate-900">
+            <div
+              className={`pointer-events-none flex h-12 items-center justify-center gap-3 rounded-xl border px-4 text-base font-semibold ${
+                isGoogleLoginEnabled
+                  ? "border-slate-300 bg-white text-slate-900"
+                  : "border-slate-200 bg-slate-100 text-slate-400"
+              }`}
+            >
               <Image src="/login/google.svg" alt="Google" width={22} height={22} />
               <span>{t("register.signInWithGoogle")}</span>
             </div>
 
-            <div className="absolute inset-0 overflow-hidden rounded-xl opacity-0">
-              <GoogleLoginButton
-                variant="signup"
-                onSuccess={(opts) => {
-                  if (opts.needsProfileCompletion) {
-                    setCompleteProfileUsername(opts.username ?? "");
-                    setShowCompleteProfile(true);
-                  } else {
-                    router.push(`/${locale}/home`);
-                  }
-                }}
-                onError={(code) => {
-                  setGeneralError(t(`auth.${code}`));
-                  setFieldErrors({});
-                }}
-                disabled={loading}
-              />
-            </div>
+            {isGoogleLoginEnabled ? (
+              <div className="absolute inset-0 overflow-hidden rounded-xl opacity-0">
+                <GoogleLoginButton
+                  variant="signup"
+                  onSuccess={(opts) => {
+                    if (opts.needsProfileCompletion) {
+                      setCompleteProfileUsername(opts.username ?? "");
+                      setShowCompleteProfile(true);
+                    } else {
+                      router.push(`/${locale}/home`);
+                    }
+                  }}
+                  onError={(code) => {
+                    setGeneralError(t(`auth.${code}`));
+                    setFieldErrors({});
+                  }}
+                  disabled={loading}
+                />
+              </div>
+            ) : null}
           </div>
         </div>
+        {!isGoogleLoginEnabled && (
+          <p className="mt-2 text-center text-xs text-slate-500">{t("auth.AUTH_GOOGLE_NOT_CONFIGURED")}</p>
+        )}
 
         <div className="mt-6 text-center text-sm text-slate-600">
           <span>{t("register.hasAccount")} </span>

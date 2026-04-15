@@ -791,6 +791,7 @@
     "PASSWORD_RESET_SUCCESS": "Password reset successful",
     "PASSWORD_RESET_FAILED": "Password reset failed",
     "AUTH_GOOGLE_TOKEN_INVALID": "Google sign-in failed, please try again",
+    "AUTH_GOOGLE_NOT_CONFIGURED": "Google sign-in is not configured yet. Please contact admin or use email sign up/sign in.",
     "AUTH_USERNAME_INVALID": "Username must be 3-50 characters"
   },
   "beforelogin": {
