@@ -29,6 +29,22 @@ SHOP_ITEMS: dict[str, dict[str, Any]] = {
         "games": ["chessmater"],
         "cost": {"coins": 5, "diamonds": 0, "flowers": 0},
     },
+    "chess_mater_antigravity": {
+        "name": "Chess Mater Antigravity",
+        "games": ["chessmater"],
+        "cost": {"coins": 5, "diamonds": 0, "flowers": 0},
+    },
+    "chess_mater_reply": {
+        "name": "Chess Mater Reply",
+        "games": ["chessmater"],
+        "cost": {"coins": 0, "diamonds": 2, "flowers": 0},
+    },
+
+
+
+
+
+
 
     "homestead_scene_forest": {
         "name": "homestead_scene_forest",
