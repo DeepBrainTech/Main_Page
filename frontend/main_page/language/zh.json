@@ -49,6 +49,7 @@
     "chessTourmaster": "棋境之旅",
     "intercontinentalChess": "洲际象棋",
     "mathChess": "数学象棋",
+    "stackMathChsee": "堆叠数学象棋",
     "dashDotSimulator": "Dash & Dot 模拟器",
     "flowersCount": "花朵: {count}",
     "failedToStartGame": "启动游戏失败",

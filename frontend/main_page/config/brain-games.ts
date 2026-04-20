@@ -41,6 +41,12 @@ export const GAMES_BY_DIMENSION: Record<CognitiveDimensionKey, GameEntry[]> = {
     { key: "quantumgo", nameKey: "quantumGo", launchKey: "quantumGo" },
     { key: "fogchess", nameKey: "startFogChess", launchKey: "fogChess" },
     { key: "chess-tourmaster", nameKey: "chessTourmaster", launchKey: "chessTourmaster" },
+    {
+      key: "stack_math_chess",
+      nameKey: "stackMathChsee",
+      launchKey: "external",
+      externalUrl: "https://stack-math-chess.deepbraintechnology.com/",
+    },
   ],
   spatial: [
     {
