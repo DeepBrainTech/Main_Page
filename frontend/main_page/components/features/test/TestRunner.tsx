@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import type { CognitiveDimensionKey } from "@/types/cognitive";
 import { DEFAULT_RADAR_SCORES } from "@/config/dimensions";
 import { updateCognitiveScores } from "@/services/userApi";
-import RadarChart from "@/components/features/home/RadarChart";
+import RadarChart from "@/components/features/dashboard/RadarChart";
 import MemoryNBack from "./memory/MemoryNBack";
 import ChangeDetection from "./memory/ChangeDetection";
 import SternbergMemoryScanning from "./memory/SternbergMemoryScanning";

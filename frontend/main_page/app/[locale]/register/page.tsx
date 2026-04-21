@@ -299,7 +299,7 @@ export default function RegisterPage() {
       if (result.data && result.data.access_token) {
         localStorage.setItem("access_token", result.data.access_token);
         localStorage.setItem("token_expires_in", String(result.data.expires_in || 3600));
-        router.push(`/${locale}/home`);
+        router.push(`/${locale}/dashboard`);
       } else {
         router.push(`/${locale}/login?registered=true`);
       }
@@ -523,7 +523,7 @@ export default function RegisterPage() {
                   setCompleteProfileUsername(opts.username ?? "");
                   setShowCompleteProfile(true);
                 } else {
-                  router.push(`/${locale}/home`);
+                  router.push(`/${locale}/dashboard`);
                 }
               }}
               onError={(code) => {
@@ -568,7 +568,7 @@ export default function RegisterPage() {
           onClose={() => setShowCompleteProfile(false)}
           onSuccess={() => {
             setShowCompleteProfile(false);
-            router.push(`/${locale}/home`);
+            router.push(`/${locale}/dashboard`);
           }}
         />
       </main>

@@ -16,18 +16,18 @@ interface HomesteadBlockProps {
 }
 
 const HAT_OPTIONS = [
-  { id: "none", icon: "😶", labelKey: "none" },
-  { id: "cap", icon: "🧢", labelKey: "cap" },
-  { id: "beanie", icon: "🧶", labelKey: "beanie" },
-  { id: "crown", icon: "👑", labelKey: "crown" },
+  { id: "none", icon: "\uD83D\uDE36", labelKey: "none" },
+  { id: "cap", icon: "\uD83E\uDDE2", labelKey: "cap" },
+  { id: "beanie", icon: "\uD83E\uDDF6", labelKey: "beanie" },
+  { id: "crown", icon: "\uD83D\uDC51", labelKey: "crown" },
 ] as const;
 
 export type SceneType = "island" | "forest" | "city";
 
 const SCENE_OPTIONS: { id: SceneType; icon: string; labelKey: SceneType }[] = [
-  { id: "island", icon: "🏝️", labelKey: "island" },
-  { id: "forest", icon: "🌲", labelKey: "forest" },
-  { id: "city", icon: "🌆", labelKey: "city" },
+  { id: "island", icon: "\uD83C\uDFDD\uFE0F", labelKey: "island" },
+  { id: "forest", icon: "\uD83C\uDF32", labelKey: "forest" },
+  { id: "city", icon: "\uD83C\uDF06", labelKey: "city" },
 ];
 
 const SCENE_ITEM_MAP: Partial<Record<SceneType, string>> = {
@@ -41,13 +41,13 @@ const HEADWEAR_ITEM_MAP: Partial<Record<AvatarConfig["hatType"], string>> = {
   crown: "homestead_headwear_crown",
 };
 
-/** 平滑插值 */
+/** Smooth interpolation */
 function lerp(a: number, b: number, t: number): number {
   return a + (b - a) * t;
 }
 
 /**
- * 家园：猴子在框内自主移动，点击框内时移动到点击位置
+ * Homestead scene: avatar moves autonomously and walks to click target
  */
 export default function HomesteadBlock({
   coins,
@@ -58,7 +58,7 @@ export default function HomesteadBlock({
   expTarget,
   onAssetsChanged,
 }: HomesteadBlockProps) {
-  const tHome = useTranslations("home");
+  const tHome = useTranslations("dashboard");
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const expPercent = expTarget > 0 ? Math.round((expCurrent / expTarget) * 100) : 0;
@@ -75,10 +75,10 @@ export default function HomesteadBlock({
   const [scene, setScene] = useState<SceneType>("island");
   const HOME_POSITION = { x: 50, y: 82 };
 
-  // 活动区边界（百分比）
+  // Movement bounds in percentage
   const BOUNDS = { xMin: 12, xMax: 88, yMin: 18, yMax: 86 };
 
-  // 当前显示位置（平滑后的）
+  // Current rendered position (smoothed)
   const [position, setPosition] = useState(HOME_POSITION);
   const [direction, setDirection] = useState<"left" | "right">("right");
   const [isWalking, setIsWalking] = useState(false);
@@ -87,7 +87,7 @@ export default function HomesteadBlock({
   const positionRef = useRef(HOME_POSITION);
   const returnCenterTimerRef = useRef<number | null>(null);
 
-  // 点击框内：猴子移动到点击位置
+  // Click inside container to move avatar to target position
   const handleContainerClick = (e: React.MouseEvent<HTMLDivElement>) => {
     const el = containerRef.current;
     if (!el) return;
@@ -102,14 +102,14 @@ export default function HomesteadBlock({
       window.clearTimeout(returnCenterTimerRef.current);
       returnCenterTimerRef.current = null;
     }
-    // 点击后 2 秒自动回到中间
+    // Return to center automatically after 2 seconds
     returnCenterTimerRef.current = window.setTimeout(() => {
       returnCenterTimerRef.current = null;
       targetRef.current = HOME_POSITION;
     }, 2000);
   };
 
-  // 每帧向目标移动：默认居中，点击后移动到点击点，随后按定时器回中间
+  // Move toward target every frame; default center and return by timer
   useEffect(() => {
     const WALK_THRESHOLD = 1.2;
 
@@ -141,7 +141,7 @@ export default function HomesteadBlock({
       rafId = requestAnimationFrame(tick);
     };
 
-    // 初始固定在中心
+    // Initialize target at center
     targetRef.current = HOME_POSITION;
 
     rafId = requestAnimationFrame(tick);
@@ -179,7 +179,7 @@ export default function HomesteadBlock({
         setItemCoinCosts(costs);
         setOwnedItemIds(new Set(inventory.filter((row) => row.quantity > 0).map((row) => row.item_id)));
       } catch {
-        // 商店状态读取失败时保持基础功能可用
+        // Keep basic behavior if shop state request fails
       }
     };
 
@@ -230,7 +230,7 @@ export default function HomesteadBlock({
 
   return (
     <div className="h-full relative overflow-hidden rounded-3xl p-6 shadow-sm border border-amber-100/50 transition-all select-none">
-      {/* 场景背景层 */}
+      {/* Scene background layer */}
       <div className="absolute inset-0 rounded-3xl overflow-hidden">
         {scene === "island" && (
           <>
@@ -288,20 +288,20 @@ export default function HomesteadBlock({
             onClick={() => setIsMenuOpen(true)}
             className="flex items-center gap-1.5 rounded-full bg-white/60 backdrop-blur-sm px-3 py-1.5 border border-white/40 shadow-sm hover:bg-white/80 transition-colors text-amber-900 font-medium text-sm"
           >
-            <span className="text-lg">👕</span>
+            <span className="text-lg">{"\uD83D\uDC55"}</span>
             <span>{tHome("changeOutfit")}</span>
           </button>
           <div className="flex flex-col sm:flex-row gap-2">
             <div className="flex items-center gap-1.5 rounded-full bg-white/60 backdrop-blur-sm px-3 py-1.5 border border-white/40 shadow-sm">
-              <span className="text-lg">🪙</span>
+              <span className="text-lg">{"\uD83E\uDE99"}</span>
               <span className="text-sm font-bold text-amber-800 tabular-nums">{coins}</span>
             </div>
             <div className="flex items-center gap-1.5 rounded-full bg-white/60 backdrop-blur-sm px-3 py-1.5 border border-white/40 shadow-sm">
-              <span className="text-lg">💎</span>
+              <span className="text-lg">{"\uD83D\uDC8E"}</span>
               <span className="text-sm font-bold text-sky-800 tabular-nums">{diamonds}</span>
             </div>
             <div className="flex items-center gap-1.5 rounded-full bg-white/60 backdrop-blur-sm px-3 py-1.5 border border-white/40 shadow-sm">
-              <span className="text-lg">🌸</span>
+              <span className="text-lg">{"\uD83C\uDF38"}</span>
               <span className="text-sm font-bold text-pink-700 tabular-nums">{flowers}</span>
             </div>
           </div>
@@ -309,7 +309,7 @@ export default function HomesteadBlock({
         </div>
       </div>
 
-      {/* 角色活动区：自主移动，点击框内则移动到点击位置 */}
+      {/* Avatar movement area */}
       <div ref={containerRef} onClick={handleContainerClick} className="absolute inset-0 top-16 bottom-0 z-0 cursor-pointer">
         <div
           className="absolute will-change-transform"
@@ -419,7 +419,7 @@ export default function HomesteadBlock({
         <div className="absolute inset-0 z-20" onClick={() => setIsMenuOpen(false)} />
       )}
 
-      {/* 走路特效：左右摇摆 + 上下起伏 */}
+      {/* Walking effect: sway and bob */}
       <style jsx global>{`
         @keyframes avatar-walk-keyframes {
           0%   { transform: rotate(-3deg) translateY(0) scale(1); }

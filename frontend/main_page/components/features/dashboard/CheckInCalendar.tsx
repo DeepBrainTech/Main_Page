@@ -10,14 +10,14 @@ interface CheckInCalendarProps {
 }
 
 /**
- * 签到日历：紧凑型设计
+ * Check-in calendar with compact layout
  */
 export default function CheckInCalendar({
   checkIn,
   hasCheckedInToday,
   onCheckIn,
 }: CheckInCalendarProps) {
-  const tHome = useTranslations("home");
+  const tHome = useTranslations("dashboard");
 
   const now = new Date();
   const year = now.getFullYear();
@@ -59,7 +59,7 @@ export default function CheckInCalendar({
 
       <div className="flex-1 flex flex-col justify-center">
         <div className="grid grid-cols-7 gap-1 text-center mb-1">
-          {["日", "一", "二", "三", "四", "五", "六"].map((w) => (
+          {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((w) => (
             <div key={w} className="py-1 text-[10px] text-gray-400 font-medium">
               {w}
             </div>

@@ -34,9 +34,23 @@
     "strategy": "战略规划",
     "spatial": "空间想象力"
   },
-  "home": {
+  "dashboard": {
     "title": "DeepBrain Tech",
     "welcomeUser": "欢迎, {username}",
+    "welcomeBack": "欢迎回来，{username}！👋",
+    "dashboardTab": "仪表盘",
+    "friends": "好友",
+    "friendStatus": "正在玩 Fog of War",
+    "totalPoints": "总积分",
+    "dayStreak": "连续天数",
+    "daysUnit": "天",
+    "gamesPlayed": "游戏局数",
+    "level": "等级",
+    "brainpowerChart": "脑力图谱",
+    "overallBrainScore": "综合脑力分",
+    "keepTraining": "继续训练，还能更强！",
+    "goodCoolIntro": "你好 {username}，GoodCool 已准备好陪你训练。",
+    "goodCoolChatHint": "与 GoodCool 聊天",
     "welcomeUser@": {
       "username": "用户名"
     },

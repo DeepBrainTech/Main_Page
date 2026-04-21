@@ -72,7 +72,7 @@ export default function LoginPage() {
         localStorage.removeItem("remember_me");
       }
 
-      router.push(`/${locale}/home`);
+      router.push(`/${locale}/dashboard`);
     } catch (err: any) {
       setError(err.message || t("login.loginFailed"));
     } finally {
@@ -174,7 +174,7 @@ export default function LoginPage() {
                   setCompleteProfileUsername(opts.username ?? "");
                   setShowCompleteProfile(true);
                 } else {
-                  router.push(`/${locale}/home`);
+                  router.push(`/${locale}/dashboard`);
                 }
               }}
               onError={(code) => setError(t(`auth.${code}`))}
@@ -216,7 +216,7 @@ export default function LoginPage() {
           onClose={() => setShowCompleteProfile(false)}
           onSuccess={() => {
             setShowCompleteProfile(false);
-            router.push(`/${locale}/home`);
+            router.push(`/${locale}/dashboard`);
           }}
         />
       </main>

@@ -34,9 +34,23 @@
     "strategy": "Strategy",
     "spatial": "Spatial"
   },
-  "home": {
+  "dashboard": {
     "title": "DeepBrain Tech",
     "welcomeUser": "Welcome, {username}",
+    "welcomeBack": "Welcome back, {username}! 👋",
+    "dashboardTab": "Dashboard",
+    "friends": "Friends",
+    "friendStatus": "Playing Fog of War",
+    "totalPoints": "Total Points",
+    "dayStreak": "Day Streak",
+    "daysUnit": "Days",
+    "gamesPlayed": "Games Played",
+    "level": "Level",
+    "brainpowerChart": "Brainpower Chart",
+    "overallBrainScore": "Overall Brain Score",
+    "keepTraining": "Keep training to improve!",
+    "goodCoolIntro": "Hello {username}, your game buddy is ready.",
+    "goodCoolChatHint": "Chat with GoodCool",
     "welcomeUser@": {
       "username": "Username"
     },

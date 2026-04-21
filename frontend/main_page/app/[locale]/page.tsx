@@ -20,7 +20,7 @@ import {
 
 /**
  * Landing 页面入口
- * 已登录用户会自动跳转到 home
+ * 已登录用户会自动跳转到 dashboard
  */
 export default function Home() {
   const router = useRouter();
@@ -41,7 +41,7 @@ export default function Home() {
     })
       .then((res) => {
         if (res.ok) {
-          router.push(`/${locale}/home`);
+          router.push(`/${locale}/dashboard`);
           return;
         }
 

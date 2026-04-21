@@ -30,6 +30,22 @@ body {
 }
 
 @layer utilities {
+  .font-\[\'Baloo\'\] {
+    font-family: var(--font-baloo), cursive;
+  }
+
+  .font-\[\'Baloo_2\'\] {
+    font-family: var(--font-baloo-2), cursive;
+  }
+
+  .font-\[\'Titan_One\'\] {
+    font-family: var(--font-titan-one), cursive;
+  }
+
+  .font-\[\'Outfit\'\] {
+    font-family: var(--font-outfit), sans-serif;
+  }
+
   .glass-panel {
     @apply bg-white/70 backdrop-blur-md border border-white/50 shadow-sm;
   }

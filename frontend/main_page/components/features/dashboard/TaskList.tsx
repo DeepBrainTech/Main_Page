@@ -32,7 +32,7 @@ function TaskRow({
   onClaim: () => void;
   isLast?: boolean;
 }) {
-  const tHome = useTranslations("home");
+  const tHome = useTranslations("dashboard");
   const tTasks = useTranslations("tasks");
   const tCommon = useTranslations("common");
   const [claiming, setClaiming] = useState(false);
@@ -94,7 +94,7 @@ function TaskRow({
   );
 }
 
-/** 当月起止日期 */
+/** Current month date range */
 function getMonthDateRange(): string {
   const now = new Date();
   const month = now.getMonth() + 1;
@@ -103,7 +103,7 @@ function getMonthDateRange(): string {
 }
 
 /**
- * 任务列表：更清爽的 List UI
+ * Task list with cleaner list-style UI
  */
 export default function TaskList({
   dailyProgress,
@@ -113,7 +113,7 @@ export default function TaskList({
   monthlyClaimed,
   onClaimTask,
 }: TaskListProps) {
-  const tHome = useTranslations("home");
+  const tHome = useTranslations("dashboard");
   const tTasks = useTranslations("tasks");
   const thisMonth = new Date().toISOString().slice(0, 7);
   const monthlyCount = monthlyProgress.month === thisMonth ? monthlyProgress.count : 0;

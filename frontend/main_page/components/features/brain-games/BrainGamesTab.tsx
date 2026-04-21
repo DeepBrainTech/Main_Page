@@ -53,12 +53,12 @@ function launchForKey(
 }
 
 /**
- * 脑力训练游戏按维度分类展示
+ * Brain training games grouped by dimension
  */
 export default function BrainGamesTab({ onLaunch }: BrainGamesTabProps) {
   const t = useTranslations("brainGames");
   const tDim = useTranslations("dimensions");
-  const tHome = useTranslations("home");
+  const tHome = useTranslations("dashboard");
   const [likes, setLikes] = useState<GameLikeState[]>([]);
   const [pendingLikeKey, setPendingLikeKey] = useState<string | null>(null);
   const [hoveredLikeKey, setHoveredLikeKey] = useState<string | null>(null);
@@ -124,7 +124,7 @@ export default function BrainGamesTab({ onLaunch }: BrainGamesTabProps) {
                     const imageSrc = entry.skipCover
                       ? null
                       : (GAME_COVER_MAP[entry.key] ??
-                        `/brain-games/${entry.key}.gif`); // 其他游戏走 public 静态路径
+                        `/brain-games/${entry.key}.gif`); // Other games use static public assets
 
                     return (
                       <div
@@ -168,7 +168,7 @@ export default function BrainGamesTab({ onLaunch }: BrainGamesTabProps) {
                               likeMap[entry.key]?.liked_by_me ? "bg-rose-50" : "bg-slate-100"
                             }`}
                           >
-                            ❤
+                            {"\u2764"}
                           </span>
                           <span>
                             {hoveredLikeKey === entry.key

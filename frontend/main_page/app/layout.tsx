@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono, Outfit, Titan_One } from "next/font/google";
+import { Baloo_2, Baloo_Bhai_2, Geist, Geist_Mono, Outfit, Titan_One } from "next/font/google";
 import "./globals.css";
 import { defaultLocale } from "../i18n-config";
 import { getSiteUrl } from "@/lib/seo";
@@ -23,6 +23,18 @@ const titanOne = Titan_One({
 const outfit = Outfit({
   variable: "--font-outfit",
   subsets: ["latin"],
+});
+
+const baloo = Baloo_Bhai_2({
+  variable: "--font-baloo",
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700", "800"],
+});
+
+const baloo2 = Baloo_2({
+  variable: "--font-baloo-2",
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700", "800"],
 });
 
 export const metadata: Metadata = {
@@ -86,7 +98,7 @@ export default function RootLayout({
   return (
     <html lang={defaultLocale}>
       <body
-          className={`${geistSans.variable} ${geistMono.variable} ${titanOne.variable} ${outfit.variable} antialiased`}
+          className={`${geistSans.variable} ${geistMono.variable} ${titanOne.variable} ${outfit.variable} ${baloo.variable} ${baloo2.variable} antialiased`}
           suppressHydrationWarning
       >
         {children}

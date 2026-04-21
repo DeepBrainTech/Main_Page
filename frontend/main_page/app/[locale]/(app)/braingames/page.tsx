@@ -1,0 +1,26 @@
+"use client";
+
+import BrainGamesTab from "@/components/features/brain-games/BrainGamesTab";
+import { useGameLauncher } from "@/hooks/useGameLauncher";
+
+export default function BrainGamesPage() {
+  const {
+    handleFogChess,
+    handleSudoku,
+    handleQuantumGo,
+    handleChessMater,
+    handleChessTourmaster,
+  } = useGameLauncher();
+
+  return (
+    <BrainGamesTab
+      onLaunch={{
+        chessMater: handleChessMater,
+        chessTourmaster: handleChessTourmaster,
+        sudoku: handleSudoku,
+        quantumGo: handleQuantumGo,
+        fogChess: handleFogChess,
+      }}
+    />
+  );
+}

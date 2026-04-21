@@ -6,7 +6,7 @@ import { getApiUrl } from "@/lib/api-config";
 import { getUserTimezone } from "@/services/userApi";
 
 /**
- * 游戏启动配置类型
+ * Game launch configuration type
  */
 interface GameConfig {
   gameKey: string;
@@ -16,17 +16,17 @@ interface GameConfig {
 }
 
 /**
- * 游戏启动相关的 Hook
- * 统一处理所有游戏的启动逻辑
+ * Hook for game launching
+ * Handles all game launch flows in one place
  */
 export function useGameLauncher() {
   const router = useRouter();
   const params = useParams();
   const locale = params.locale as string;
-  const tHome = useTranslations("home");
+  const tHome = useTranslations("dashboard");
 
   /**
-   * 启动游戏的通用函数
+   * Generic launcher function
    */
   const launchGame = async (config: GameConfig) => {
     const accessToken = localStorage.getItem("access_token");
@@ -36,7 +36,7 @@ export function useGameLauncher() {
     }
 
     try {
-      // 获取游戏令牌（带用户时区，用于按日任务进度）
+      // Request game token with user timezone for daily progress tracking
       const response = await fetch(getApiUrl(config.apiEndpoint), {
         method: "POST",
         headers: {
@@ -47,26 +47,26 @@ export function useGameLauncher() {
       });
 
       if (!response.ok) {
-        throw new Error("获取游戏令牌失败");
+        throw new Error("Failed to fetch game token");
       }
 
       const data = await response.json();
       const gameToken = data?.data?.game_token;
       const assets = data?.data?.assets ?? { coins: 0, diamonds: 0, flowers: 0 };
       if (!gameToken) {
-        throw new Error("无效的游戏令牌响应");
+        throw new Error("Invalid game token response");
       }
 
-      // 使用配置中的游戏 URL
+      // Use configured game URL
       const gameUrl = config.gameUrl;
       
       if (!gameUrl) {
-        throw new Error(`未配置游戏 URL (${config.gameKey})`);
+        throw new Error(`Missing game URL config (${config.gameKey})`);
       }
       
-      console.log(`[${config.gameKey}] 使用游戏 URL:`, gameUrl);
+      console.log(`[${config.gameKey}] Using game URL:`, gameUrl);
 
-      // 构建完整 URL
+      // Build final launch URL
       const portalApi = getApiUrl("");
       const url =
         `${gameUrl}#token=${encodeURIComponent(gameToken)}` +
@@ -77,7 +77,7 @@ export function useGameLauncher() {
         `&diamonds=${encodeURIComponent(String(assets.diamonds ?? 0))}` +
         `&flowers=${encodeURIComponent(String(assets.flowers ?? 0))}`;
 
-      // 打开游戏
+      // Launch game
       if (config.openInNewTab) {
         window.open(url, "_blank");
       } else {
@@ -89,12 +89,12 @@ export function useGameLauncher() {
     }
   };
 
-  // 各个游戏的启动函数
+  // Launch handlers per game
   const handleFogChess = () => {
     launchGame({
       gameKey: "fogchess",
       apiEndpoint: "/api/games/fogchess/token",
-      // 直接读取环境变量，如果没有设置则使用默认线上地址
+      // Read from env var, fallback to default production URL
       gameUrl: process.env.NEXT_PUBLIC_FOGCHESS_URL || "https://fogchess.deepbraintechnology.com",
       openInNewTab: false,
     });
@@ -113,7 +113,7 @@ export function useGameLauncher() {
     launchGame({
       gameKey: "quantumGo",
       apiEndpoint: "/api/games/quantumgo/token",
-      // 直接读取环境变量，如果没有设置则使用默认线上地址
+      // Read from env var, fallback to default production URL
       gameUrl: process.env.NEXT_PUBLIC_QUANTUMGO_URL || "https://quantumgo.deepbraintechnology.com/",
       openInNewTab: false,
     });
@@ -144,7 +144,7 @@ export function useGameLauncher() {
       return;
     }
 
-    // 必须在用户手势内同步打开窗口，否则触屏/弹窗拦截会阻止打开
+    // Must open synchronously in user gesture to avoid popup blockers
     window.open("https://sudoku.deepbraintechnology.com/", "_blank");
   };
 
