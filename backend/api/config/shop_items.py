@@ -40,37 +40,6 @@ SHOP_ITEMS: dict[str, dict[str, Any]] = {
         "cost": {"coins": 0, "diamonds": 2, "flowers": 0},
     },
 
-
-
-
-
-
-
-    "homestead_scene_forest": {
-        "name": "homestead_scene_forest",
-        "games": ["homestead"],
-        "cost": {"coins": 20, "diamonds": 0, "flowers": 0},
-    },
-    "homestead_scene_city": {
-        "name": "homestead_scene_city",
-        "games": ["homestead"],
-        "cost": {"coins": 20, "diamonds": 0, "flowers": 0},
-    },
-    "homestead_headwear_cap": {
-        "name": "homestead_headwear_cap",
-        "games": ["homestead"],
-        "cost": {"coins": 20, "diamonds": 0, "flowers": 0},
-    },
-    "homestead_headwear_beanie": {
-        "name": "homestead_headwear_beanie",
-        "games": ["homestead"],
-        "cost": {"coins": 20, "diamonds": 0, "flowers": 0},
-    },
-    "homestead_headwear_crown": {
-        "name": "homestead_headwear_crown",
-        "games": ["homestead"],
-        "cost": {"coins": 20, "diamonds": 0, "flowers": 0},
-    },
     "learning_mental_math_making_whole": {
         "name": "learning_mental_math_making_whole",
         "games": ["learning-mental-math"],

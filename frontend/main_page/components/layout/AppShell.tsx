@@ -120,7 +120,7 @@ export default function AppShell({
 
       <div className="flex">
         <aside className="hidden w-64 shrink-0 px-4 py-5 lg:block">
-          <div className="sticky top-24 rounded-3xl border border-white/60 bg-white/70 p-4 shadow-lg backdrop-blur">
+          <div className="sticky top-20 flex h-[calc(100vh-7.5rem)] min-h-[640px] flex-col rounded-3xl border border-white/60 bg-white/70 p-4 shadow-lg backdrop-blur">
             <nav className="space-y-2">
               {tabs.map(({ key, label, iconSrc, iconAlt }) => (
                 <Link

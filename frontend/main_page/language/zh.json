@@ -51,6 +51,11 @@
     "keepTraining": "继续训练，还能更强！",
     "goodCoolIntro": "你好 {username}，GoodCool 已准备好陪你训练。",
     "goodCoolChatHint": "与 GoodCool 聊天",
+    "homesteadCharacterName": "GoodCool",
+    "homesteadHead": "头部",
+    "homesteadBody": "身体",
+    "homesteadHand": "手部",
+    "homesteadBackground": "背景",
     "welcomeUser@": {
       "username": "用户名"
     },
@@ -69,34 +74,6 @@
     "failedToStartGame": "启动游戏失败",
     "homesteadPlaceholder": "卡通形象占位,后续可兑换装扮",
     "tapToInteract": "点击互动",
-    "changeOutfit": "换装",
-    "hats": {
-      "none": "无",
-      "cap": "鸭舌帽",
-      "beanie": "针织帽",
-      "crown": "皇冠"
-    },
-    "labels": {
-      "accessories": "头饰",
-      "scene": "场景",
-      "outfits": "套装"
-    },
-    "outfits": {
-      "default": "基础",
-      "explorer": "探险",
-      "royal": "华服"
-    },
-    "outfitOwned": "已拥有",
-    "outfitBuyWithCoins": "{count} 金币兑换",
-    "outfitRedeemFailed": "兑换失败，请稍后再试",
-    "itemOwned": "已拥有",
-    "itemBuyWithCoins": "{count} 金币",
-    "itemRedeemFailed": "兑换失败，请检查金币是否足够",
-    "scenes": {
-      "island": "海岛",
-      "forest": "森林",
-      "city": "城市"
-    },
     "coins": "金币",
     "diamonds": "钻石",
     "flowers": "鲜花",
@@ -114,7 +91,8 @@
     "taskProgress": "{current}/{target}",
     "radarTitle": "核心认知维度",
     "radarSubtitle": "六维脑力概览",
-    "dailyLabel": "每日"
+    "dailyLabel": "每日",
+    "homesteadNoItemsYet": "更多可选项即将上线"
   },
   "tasks": {
     "dailyPlayChessMater": "完成一局棋艺大师",

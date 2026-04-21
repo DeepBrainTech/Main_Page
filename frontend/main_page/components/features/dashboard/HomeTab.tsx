@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
+import Image from "next/image";
 import HomesteadBlock from "./HomesteadBlock";
 import CheckInCalendar from "./CheckInCalendar";
 import TaskList from "./TaskList";
@@ -13,6 +14,8 @@ import BrainpowerPanel from "@/components/features/dashboard/BrainpowerPanel";
 interface HomeTabProps {
   username?: string;
 }
+
+type HomesteadCustomizeTab = "head" | "body" | "hand" | "background";
 
 /**
  * Dashboard home content: KPI + stage + check-in/tasks + brainpower panel
@@ -34,15 +37,14 @@ export default function HomeTab({ username = "" }: HomeTabProps) {
     taskClaimedToday,
     monthlyClaimed,
     claimTaskReward,
-    refresh,
   } = useRewards();
   const { scores: radarScores } = useCognitiveScores();
+  const [activeHomesteadTab, setActiveHomesteadTab] = useState<HomesteadCustomizeTab | null>(null);
+  const [isHomesteadMenuOpen, setIsHomesteadMenuOpen] = useState(false);
 
   const totalPoints = coins + diamonds * 10 + flowers * 3;
   const expPerLevel = 120;
   const level = Math.max(1, Math.floor(totalPoints / expPerLevel) + 1);
-  const expCurrent = totalPoints % expPerLevel;
-  const expTarget = expPerLevel;
 
   const gamesPlayed = useMemo(
     () =>
@@ -97,25 +99,82 @@ export default function HomeTab({ username = "" }: HomeTabProps) {
 
       <section className="grid grid-cols-1 gap-5 xl:grid-cols-12">
         <div className="space-y-5 xl:col-span-8">
-          <div className="rounded-3xl border border-white/70 bg-white/65 p-4 shadow-lg backdrop-blur">
-            <div className="mb-3 flex items-center justify-between">
-              <div>
-                <h2 className="text-3xl font-extrabold text-sky-800">GoodCool</h2>
-                <p className="text-sm text-slate-600">{tHome("goodCoolIntro", { username })}</p>
+          <div
+            className={`relative min-h-[360px] overflow-visible rounded-3xl border border-white/70 bg-white p-4 shadow-lg backdrop-blur transition-[padding] duration-300 md:min-h-[430px] xl:min-h-[500px] ${
+              isHomesteadMenuOpen ? "pb-[230px]" : ""
+            }`}
+          >
+            <HomesteadBlock
+              level={level}
+              activeCustomizeTab={activeHomesteadTab}
+              menuOpen={isHomesteadMenuOpen}
+              onMenuOpenChange={(isOpen) => {
+                setIsHomesteadMenuOpen(isOpen);
+                if (!isOpen) {
+                  setActiveHomesteadTab(null);
+                }
+              }}
+            />
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+              <div className="font-['Titan_One'] text-2xl font-normal leading-8 tracking-wide text-sky-700">
+                {tHome("homesteadCharacterName")}
               </div>
-              <div className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-500">
-                {tHome("goodCoolChatHint")}
+              <div className="flex flex-wrap items-center gap-2">
+                {[
+                  {
+                    key: "head" as const,
+                    iconSrc: "/home-system/head/head.svg",
+                    label: tHome("homesteadHead"),
+                  },
+                  {
+                    key: "body" as const,
+                    iconSrc: "/home-system/body/body.svg",
+                    label: tHome("homesteadBody"),
+                  },
+                  {
+                    key: "hand" as const,
+                    iconSrc: "/home-system/hand/hand.svg",
+                    label: tHome("homesteadHand"),
+                  },
+                  {
+                    key: "background" as const,
+                    iconSrc: "/home-system/background/background.svg",
+                    label: tHome("homesteadBackground"),
+                  },
+                ].map((tab) => {
+                  const isActive = isHomesteadMenuOpen && activeHomesteadTab === tab.key;
+                  return (
+                    <button
+                      key={tab.key}
+                      type="button"
+                      onClick={() => {
+                        if (isHomesteadMenuOpen && activeHomesteadTab === tab.key) {
+                          setIsHomesteadMenuOpen(false);
+                          setActiveHomesteadTab(null);
+                          return;
+                        }
+                        setActiveHomesteadTab(tab.key);
+                        setIsHomesteadMenuOpen(true);
+                      }}
+                      className="inline-flex items-center gap-2 rounded-full px-4 py-2 text-base font-medium leading-5 font-['Outfit'] transition-colors"
+                      style={{
+                        backgroundColor: isActive ? "#E45C44" : "#EDF4FC",
+                        color: isActive ? "#FFFFFF" : "#045E96",
+                      }}
+                    >
+                      <Image
+                        src={tab.iconSrc}
+                        alt={tab.label}
+                        width={16}
+                        height={16}
+                        className={`h-4 w-4 ${isActive ? "brightness-0 invert" : ""}`}
+                      />
+                      {tab.label}
+                    </button>
+                  );
+                })}
               </div>
             </div>
-            <HomesteadBlock
-              coins={coins}
-              diamonds={diamonds}
-              flowers={flowers}
-              level={level}
-              expCurrent={expCurrent}
-              expTarget={expTarget}
-              onAssetsChanged={refresh}
-            />
           </div>
 
           <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">

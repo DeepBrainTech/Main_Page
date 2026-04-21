@@ -51,6 +51,11 @@
     "keepTraining": "Keep training to improve!",
     "goodCoolIntro": "Hello {username}, your game buddy is ready.",
     "goodCoolChatHint": "Chat with GoodCool",
+    "homesteadCharacterName": "GoodCool",
+    "homesteadHead": "Head",
+    "homesteadBody": "Body",
+    "homesteadHand": "Hand",
+    "homesteadBackground": "Background",
     "welcomeUser@": {
       "username": "Username"
     },
@@ -69,34 +74,6 @@
     "failedToStartGame": "Failed to start game",
     "homesteadPlaceholder": "Avatar placeholder; outfits coming later",
     "tapToInteract": "Tap to interact",
-    "changeOutfit": "Outfit",
-    "hats": {
-      "none": "None",
-      "cap": "Cap",
-      "beanie": "Beanie",
-      "crown": "Crown"
-    },
-    "labels": {
-      "accessories": "Headwear",
-      "scene": "Scene",
-      "outfits": "Outfits"
-    },
-    "outfits": {
-      "default": "Basic",
-      "explorer": "Explorer",
-      "royal": "Royal"
-    },
-    "outfitOwned": "Owned",
-    "outfitBuyWithCoins": "{count} coins",
-    "outfitRedeemFailed": "Redeem failed, please try again",
-    "itemOwned": "Owned",
-    "itemBuyWithCoins": "{count} coins",
-    "itemRedeemFailed": "Redeem failed, please check your coins",
-    "scenes": {
-      "island": "Island",
-      "forest": "Forest",
-      "city": "City"
-    },
     "coins": "Coins",
     "diamonds": "Diamonds",
     "flowers": "Flowers",
@@ -114,7 +91,8 @@
     "taskProgress": "{current}/{target}",
     "radarTitle": "Core Cognitive Dimensions",
     "radarSubtitle": "Six-dimension brain overview",
-    "dailyLabel": "Daily"
+    "dailyLabel": "Daily",
+    "homesteadNoItemsYet": "More options coming soon"
   },
   "tasks": {
     "dailyPlayChessMater": "Complete 1 game of ChessMater",

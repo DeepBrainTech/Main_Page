@@ -39,7 +39,7 @@ export default function AuthedAppLayout({ children }: { children: React.ReactNod
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#FEF6EC]">
+      <div className="flex min-h-screen items-center justify-center bg-[var(--background)]">
         <div className="text-gray-600">{tCommon("loading")}</div>
       </div>
     );
@@ -47,7 +47,7 @@ export default function AuthedAppLayout({ children }: { children: React.ReactNod
 
   if (needsProfileCompletion) {
     return (
-      <div className="min-h-screen bg-[var(--background)] flex items-center justify-center p-4">
+      <div className="flex min-h-screen items-center justify-center bg-[var(--background)] p-4">
         <CompleteProfileDialog
           open={true}
           initialUsername={username}

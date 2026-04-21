@@ -1,32 +1,28 @@
 @import "tailwindcss";
 
 :root {
-  /* 基础背景色：柔和的暖调白/米色 */
-  --background: #FEF6EC; 
-  --foreground: #1F2937;
-  
-  /* 主色调：脑力科技蓝 */
-  --primary: #5E81AC;
-  --primary-hover: #4C6B91;
-  
-  /* 辅助色：活力橙/暖黄 */
-  --accent: #D08770;
-  --accent-hover: #BF6A50;
-  
-  /* 卡片背景 */
-  --card-bg: #FFFFFF;
-  --card-border: #F3F4F6;
+  /* 全局背景：从上到下渐变 */
+  --background: linear-gradient(180deg, #f2f7fc 0%, #e3eef5 100%);
+  --foreground: #1f2937;
+
+  /* 主题色 */
+  --primary: #5e81ac;
+  --primary-hover: #4c6b91;
+
+  /* 辅助色 */
+  --accent: #d08770;
+  --accent-hover: #bf6a50;
+
+  /* 卡片色 */
+  --card-bg: #ffffff;
+  --card-border: #f3f4f6;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
-  /* 添加一个全局的细微噪点或渐变背景，增加质感 */
-  background-image: 
-    radial-gradient(at 0% 0%, hsla(253,16%,7%,0) 0, transparent 50%), 
-    radial-gradient(at 50% 0%, hsla(225,39%,30%,0) 0, transparent 50%), 
-    radial-gradient(at 100% 0%, hsla(339,49%,30%,0) 0, transparent 50%);
+  background-attachment: fixed;
 }
 
 @layer utilities {
@@ -47,29 +43,49 @@ body {
   }
 
   .glass-panel {
-    @apply bg-white/70 backdrop-blur-md border border-white/50 shadow-sm;
+    @apply bg-white/70 border border-white/50 shadow-sm backdrop-blur-md;
   }
-  
+
   .card-hover {
     @apply transition-all duration-300 hover:-translate-y-1 hover:shadow-lg;
   }
 
   /* 角色动画 */
   @keyframes float {
-    0%, 100% { transform: translateY(0px); }
-    50% { transform: translateY(-6px); }
+    0%,
+    100% {
+      transform: translateY(0px);
+    }
+    50% {
+      transform: translateY(-6px);
+    }
   }
 
   @keyframes bounce-custom {
-    0%, 100% { transform: scale(1); }
-    30% { transform: scale(1.15) translateY(-10px); }
-    50% { transform: scale(0.95); }
-    70% { transform: scale(1.05); }
+    0%,
+    100% {
+      transform: scale(1);
+    }
+    30% {
+      transform: scale(1.15) translateY(-10px);
+    }
+    50% {
+      transform: scale(0.95);
+    }
+    70% {
+      transform: scale(1.05);
+    }
   }
 
   @keyframes fade-in-up {
-    0% { opacity: 0; transform: translateY(10px); }
-    100% { opacity: 1; transform: translateY(0); }
+    0% {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
 
   .animate-float {
