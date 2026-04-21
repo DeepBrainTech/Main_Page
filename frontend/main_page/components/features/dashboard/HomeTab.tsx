@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useTranslations } from "next-intl";
 import Image from "next/image";
 import HomesteadBlock from "./HomesteadBlock";
@@ -36,6 +36,7 @@ export default function HomeTab({ username = "" }: HomeTabProps) {
     monthlyTarget,
     taskClaimedToday,
     monthlyClaimed,
+    playedGameCount,
     claimTaskReward,
   } = useRewards();
   const { scores: radarScores } = useCognitiveScores();
@@ -45,13 +46,6 @@ export default function HomeTab({ username = "" }: HomeTabProps) {
   const totalPoints = coins + diamonds * 10 + flowers * 3;
   const expPerLevel = 120;
   const level = Math.max(1, Math.floor(totalPoints / expPerLevel) + 1);
-
-  const gamesPlayed = useMemo(
-    () =>
-      Object.values(dailyProgress).reduce((sum, value) => sum + value, 0) +
-      (monthlyProgress.month === new Date().toISOString().slice(0, 7) ? monthlyProgress.count : 0),
-    [dailyProgress, monthlyProgress]
-  );
 
   if (rewardsLoading) {
     return (
@@ -86,7 +80,7 @@ export default function HomeTab({ username = "" }: HomeTabProps) {
           iconAlt="Games Played"
           iconBgColor="#D4F3E6"
           title={tHome("gamesPlayed")}
-          value={gamesPlayed.toLocaleString()}
+          value={playedGameCount.toLocaleString()}
         />
         <StatCard
           iconSrc="/dashboard/level.svg"

@@ -82,3 +82,18 @@ def ensure_users_table_compatibility():
             "CREATE UNIQUE INDEX IF NOT EXISTS ix_game_likes_user_game_key ON game_likes (user_id, game_key)"
         ))
         conn.execute(text("CREATE INDEX IF NOT EXISTS ix_game_likes_game_key ON game_likes (game_key)"))
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS user_game_played (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER NOT NULL REFERENCES users(id),
+                game_key VARCHAR(100) NOT NULL,
+                first_played_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT NOW()
+            )
+        """))
+        conn.execute(
+            text(
+                "CREATE UNIQUE INDEX IF NOT EXISTS uq_user_game_played_game "
+                "ON user_game_played (user_id, game_key)"
+            )
+        )
+        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_user_game_played_user_id ON user_game_played (user_id)"))

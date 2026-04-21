@@ -34,6 +34,8 @@ export interface RewardsData {
   monthly_target: number;
   task_claimed_today: string[];
   monthly_claimed: boolean;
+  /** Distinct games opened (from user_game_played only; unrelated to rewards). */
+  played_game_count?: number;
 }
 
 export interface CognitiveScoresData {
@@ -146,6 +148,22 @@ export async function fetchRewards(): Promise<RewardsData> {
   const json = await res.json();
   if (!json?.data) throw new Error("invalid_response");
   return json.data as RewardsData;
+}
+
+/** Record that the user opened a game from the portal (counts each game at most once). */
+export async function postGamePlayedRecord(gameKey: string): Promise<{
+  played_game_count: number;
+  is_new: boolean;
+}> {
+  const res = await fetch(getApiUrl("/api/games/play-record"), {
+    method: "POST",
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ game_key: gameKey }),
+  });
+  if (!res.ok) throw new Error("play_record_failed");
+  const json = await res.json();
+  if (!json?.success || !json?.data) throw new Error("invalid_response");
+  return json.data as { played_game_count: number; is_new: boolean };
 }
 
 /** 签到 */

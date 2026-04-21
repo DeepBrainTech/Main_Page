@@ -7,8 +7,8 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from database import get_db
-from models import User, UserGameReward, UserGamePlayByDay, UserRewards, GameLike
-from schemas import APIResponse
+from models import User, UserGameReward, UserGamePlayByDay, UserRewards, GameLike, UserGamePlayed
+from schemas import APIResponse, GamePlayRecordIn
 from auth import (
     get_current_active_user,
     create_fogchess_token,
@@ -42,7 +42,21 @@ SUPPORTED_GAME_KEYS = {
     "fogchess",
     "chess-tourmaster",
     "dash-dot-simulator",
+    "stack_math_chess",
 }
+
+
+def _try_insert_user_game_played(db: Session, user_id: int, game_key: str) -> bool:
+    """Insert first-play row if missing; flush only. Caller commits. Returns True if inserted."""
+    existing = db.query(UserGamePlayed).filter(
+        UserGamePlayed.user_id == user_id,
+        UserGamePlayed.game_key == game_key,
+    ).first()
+    if existing:
+        return False
+    db.add(UserGamePlayed(user_id=user_id, game_key=game_key))
+    db.flush()
+    return True
 
 
 def _today_in_tz(tz: str) -> str:
@@ -199,6 +213,30 @@ def _build_token_response(
     )
 
 
+@router.post("/play-record", response_model=APIResponse)
+async def record_game_played(
+    body: GamePlayRecordIn,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+):
+    """Record that the user opened a game from the portal (distinct games only; independent of rewards)."""
+    if body.game_key not in SUPPORTED_GAME_KEYS:
+        return APIResponse(success=False, message="invalid_game_key", data={"game_key": body.game_key})
+
+    is_new = _try_insert_user_game_played(db, current_user.id, body.game_key)
+    db.commit()
+    total = db.query(UserGamePlayed).filter(UserGamePlayed.user_id == current_user.id).count()
+
+    return APIResponse(
+        success=True,
+        message="ok",
+        data={
+            "played_game_count": total,
+            "is_new": is_new,
+        },
+    )
+
+
 @router.get("/likes", response_model=APIResponse)
 async def get_game_likes(
     current_user: User = Depends(get_current_active_user),
@@ -277,6 +315,8 @@ async def issue_fogchess_token(
     - expires_in: 过期秒数
     - user: 基础身份信息（可选，便于前端展示）
     """
+    _try_insert_user_game_played(db, current_user.id, "fogchess")
+
     claims = {
         "sub": current_user.username,
         "user_id": current_user.id,
@@ -311,6 +351,8 @@ async def issue_sudoku_token(
     - expires_in: 过期秒数
     - user: 基础身份信息（可选，便于前端展示）
     """
+    _try_insert_user_game_played(db, current_user.id, "sudoku")
+
     claims = {
         "sub": current_user.username,
         "user_id": current_user.id,
@@ -345,6 +387,8 @@ async def issue_quantumgo_token(
     - expires_in: 过期秒数
     - user: 基础身份信息（可选，便于前端展示）
     """
+    _try_insert_user_game_played(db, current_user.id, "quantumgo")
+
     claims = {
         "sub": current_user.username,
         "user_id": current_user.id,
@@ -380,6 +424,8 @@ async def issue_chessmater_token(
     tz = (x_user_timezone or "").strip() or DEFAULT_TZ
     today_iso = _today_in_tz(tz)
     _increment_daily_play(db, current_user.id, "chessmater", today_iso)
+
+    _try_insert_user_game_played(db, current_user.id, "chessmater")
 
     claims = {
         "sub": current_user.username,
@@ -417,6 +463,8 @@ async def issue_tourmaster_token(
     today_iso = _today_in_tz(tz)
     _increment_daily_play(db, current_user.id, "chess-tourmaster", today_iso)
 
+    _try_insert_user_game_played(db, current_user.id, "chess-tourmaster")
+
     claims = {
         "sub": current_user.username,
         "user_id": current_user.id,
@@ -443,7 +491,7 @@ async def track_sudoku_play(
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db),
 ):
-    """记录 Sudoku 点击并按 24 小时规则发放花朵奖励。"""
+    _try_insert_user_game_played(db, current_user.id, "sudoku")
     _, reward_status, flowers_awarded = _record_play_and_claim_if_ready(db, current_user, "sudoku")
     total_flowers = _total_flowers_for_user(db, current_user.id)
     return APIResponse(

@@ -10,6 +10,7 @@ import {
   fetchGameLikes,
   likeGame,
   unlikeGame,
+  postGamePlayedRecord,
   type GameLikeState,
 } from "@/services/userApi";
 import chessmaterGif from "../../../public/brain-games/chessmater.gif";
@@ -47,8 +48,14 @@ function launchForKey(
   if (entry.launchKey === "sudoku") return onLaunch.sudoku;
   if (entry.launchKey === "quantumGo") return onLaunch.quantumGo;
   if (entry.launchKey === "fogChess") return onLaunch.fogChess;
-  if (entry.launchKey === "external" && entry.externalUrl)
-    return () => window.open(entry.externalUrl, "_blank");
+  if (entry.launchKey === "external" && entry.externalUrl) {
+    return () => {
+      void postGamePlayedRecord(entry.key).catch(() => {
+        /* open game even if record fails */
+      });
+      window.open(entry.externalUrl, "_blank");
+    };
+  }
   return () => {};
 }
 

@@ -61,6 +61,7 @@ export function useRewards() {
     : { count: 0, month: "" };
   const taskClaimedToday = new Set(data?.task_claimed_today ?? []);
   const monthlyClaimed = data?.monthly_claimed ?? false;
+  const playedGameCount = data?.played_game_count ?? 0;
 
   const doCheckIn = useCallback(async () => {
     if (hasCheckedInToday) return;
@@ -99,6 +100,7 @@ export function useRewards() {
     monthlyTarget: data?.monthly_target ?? 20,
     taskClaimedToday,
     monthlyClaimed,
+    playedGameCount,
     claimTaskReward,
     refresh: load,
   };

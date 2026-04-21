@@ -30,6 +30,7 @@ class User(Base):
     game_accesses = relationship("GameAccess", back_populates="user")
     game_rewards = relationship("UserGameReward", back_populates="user")
     game_likes = relationship("GameLike", back_populates="user")
+    games_played = relationship("UserGamePlayed", back_populates="user")
 
 
 class GameConfig(Base):
@@ -131,6 +132,20 @@ class GameLike(Base):
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
     user = relationship("User", back_populates="game_likes")
+
+
+class UserGamePlayed(Base):
+    """Distinct games the user ever opened from the portal (not tied to rewards)."""
+
+    __tablename__ = "user_game_played"
+    __table_args__ = (UniqueConstraint("user_id", "game_key", name="uq_user_game_played_game"),)
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    game_key = Column(String(100), nullable=False, index=True)
+    first_played_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    user = relationship("User", back_populates="games_played")
 
 
 class UserRewards(Base):

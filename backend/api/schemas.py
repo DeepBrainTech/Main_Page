@@ -148,6 +148,13 @@ class RewardsState(BaseModel):
     monthly_progress: int = 0  # 本月棋境之旅完成局数
     task_claimed_today: List[str] = []  # 今日已领取的 daily task_id
     monthly_claimed: bool = False
+    played_game_count: int = 0  # distinct games from user_game_played only
+
+
+class GamePlayRecordIn(BaseModel):
+    """Report first-time play for dashboard Games Played (no reward side effects)."""
+
+    game_key: str = Field(..., min_length=1, max_length=100)
 
 
 class CognitiveScoresBody(BaseModel):

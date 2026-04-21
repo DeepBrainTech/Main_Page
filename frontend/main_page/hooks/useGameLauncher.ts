@@ -3,7 +3,7 @@
 import { useRouter, useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { getApiUrl } from "@/lib/api-config";
-import { getUserTimezone } from "@/services/userApi";
+import { getUserTimezone, postGamePlayedRecord } from "@/services/userApi";
 
 /**
  * Game launch configuration type
@@ -144,6 +144,9 @@ export function useGameLauncher() {
       return;
     }
 
+    void postGamePlayedRecord("sudoku").catch(() => {
+      /* still open game; count may update on next rewards fetch */
+    });
     // Must open synchronously in user gesture to avoid popup blockers
     window.open("https://sudoku.deepbraintechnology.com/", "_blank");
   };

@@ -17,6 +17,7 @@ from models import (
     UserCognitiveScores,
     UserGameReward,
     UserGamePlayByDay,
+    UserGamePlayed,
     UserItemInventory,
     UserAssessmentSession,
     UserAssessmentTopicStat,
@@ -524,6 +525,10 @@ async def get_rewards(
     task_claimed = _task_claimed_today(db, current_user.id, today_iso)
     monthly_claimed = _monthly_claimed(db, current_user.id, month_ym)
 
+    played_game_count = (
+        db.query(UserGamePlayed).filter(UserGamePlayed.user_id == current_user.id).count()
+    )
+
     return APIResponse(
         success=True,
         message="ok",
@@ -539,6 +544,7 @@ async def get_rewards(
             "monthly_target": MONTHLY_TARGET,
             "task_claimed_today": task_claimed,
             "monthly_claimed": monthly_claimed,
+            "played_game_count": played_game_count,
         },
     )
 
