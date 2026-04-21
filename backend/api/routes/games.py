@@ -1,5 +1,5 @@
-"""游戏相关路由：签发游戏令牌并记录每日奖励。"""
-from datetime import datetime, timedelta
+"""Game routes: JWT for embedded games, play-record, likes, per-mode stats (no cooldown flower grants)."""
+from datetime import datetime
 from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, Header
@@ -28,10 +28,8 @@ from auth import (
 )
 
 
-router = APIRouter(prefix="/api/games", tags=["游戏"])
+router = APIRouter(prefix="/api/games", tags=["Games"])
 
-DAILY_REWARD_FLOWERS = 10
-REWARD_COOLDOWN = timedelta(hours=24)
 DEFAULT_TZ = "UTC"
 SUPPORTED_GAME_KEYS = {
     "sudoku",
@@ -83,23 +81,15 @@ def _increment_daily_play(db: Session, user_id: int, game_mode: str, today_iso: 
 
 
 def _build_reward_status(record: UserGameReward, now: datetime) -> dict:
-    can_claim_now = (
-        record.last_claimed_at is None
-        or (now - record.last_claimed_at) >= REWARD_COOLDOWN
-    )
-    seconds_until_next_claim = 0
-    if not can_claim_now and record.last_claimed_at is not None:
-        remaining = REWARD_COOLDOWN - (now - record.last_claimed_at)
-        seconds_until_next_claim = max(0, int(remaining.total_seconds()))
-
+    _ = now
     return {
         "game_mode": record.game_mode,
         "flowers_earned": record.flowers_earned,
         "click_count": record.click_count,
         "last_played_at": record.last_played_at.isoformat() if record.last_played_at else None,
         "last_claimed_at": record.last_claimed_at.isoformat() if record.last_claimed_at else None,
-        "can_claim_now": can_claim_now,
-        "seconds_until_next_claim": seconds_until_next_claim,
+        "can_claim_now": False,
+        "seconds_until_next_claim": 0,
     }
 
 
@@ -117,16 +107,6 @@ def _get_or_create_reward_record(db: Session, user_id: int, game_mode: str) -> U
     return record
 
 
-def _get_or_create_user_rewards(db: Session, user_id: int) -> UserRewards:
-    row = db.query(UserRewards).filter(UserRewards.user_id == user_id).first()
-    if row:
-        return row
-    row = UserRewards(user_id=user_id)
-    db.add(row)
-    db.flush()
-    return row
-
-
 def _get_asset_balances(db: Session, user_id: int) -> dict:
     rewards = db.query(UserRewards).filter(UserRewards.user_id == user_id).first()
     if rewards is None:
@@ -139,27 +119,19 @@ def _get_asset_balances(db: Session, user_id: int) -> dict:
 
 
 def _record_play_and_claim_if_ready(db: Session, user: User, game_mode: str) -> tuple[UserGameReward, dict, int]:
+    """Updates per-game click stats only; does not grant flowers or touch cooldown."""
     now = datetime.utcnow()
     record = _get_or_create_reward_record(db, user.id, game_mode)
-    account_rewards = _get_or_create_user_rewards(db, user.id)
 
     record.click_count += 1
     record.last_played_at = now
 
-    awarded_flowers = 0
-    if record.last_claimed_at is None or (now - record.last_claimed_at) >= REWARD_COOLDOWN:
-        awarded_flowers = DAILY_REWARD_FLOWERS
-        record.flowers_earned += awarded_flowers
-        account_rewards.flowers += awarded_flowers
-        record.last_claimed_at = now
-
     db.add(record)
-    db.add(account_rewards)
     db.commit()
     db.refresh(record)
 
     reward_status = _build_reward_status(record, now)
-    return record, reward_status, awarded_flowers
+    return record, reward_status, 0
 
 
 def _serialize_like_payload(db: Session, user_id: int) -> list[dict]:
@@ -512,7 +484,7 @@ async def get_reward_status(
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db),
 ):
-    """获取当前用户所有游戏模式的每日奖励状态（以服务端时间为准）。"""
+    """Per-mode play stats and balances (legacy reward-status shape; no active cooldown claims)."""
     now = datetime.utcnow()
     modes = ["fogchess", "sudoku", "quantumgo", "chessmater", "chess-tourmaster"]
     rewards = db.query(UserGameReward).filter(UserGameReward.user_id == current_user.id).all()
@@ -529,7 +501,7 @@ async def get_reward_status(
                     "click_count": 0,
                     "last_played_at": None,
                     "last_claimed_at": None,
-                    "can_claim_now": True,
+                    "can_claim_now": False,
                     "seconds_until_next_claim": 0,
                 }
             )
