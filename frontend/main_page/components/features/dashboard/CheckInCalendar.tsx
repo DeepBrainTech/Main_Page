@@ -1,6 +1,7 @@
 "use client";
 
-import { useTranslations } from "next-intl";
+import Image from "next/image";
+import { useLocale, useTranslations } from "next-intl";
 import type { CheckInState } from "@/hooks/useRewards";
 
 interface CheckInCalendarProps {
@@ -18,13 +19,16 @@ export default function CheckInCalendar({
   onCheckIn,
 }: CheckInCalendarProps) {
   const tHome = useTranslations("dashboard");
+  const locale = useLocale();
 
   const now = new Date();
   const year = now.getFullYear();
   const month = now.getMonth();
-  const today = now.getDate();
   const firstDay = new Date(year, month, 1).getDay();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const monthYearLabel = new Intl.DateTimeFormat(locale, { month: "long", year: "numeric" }).format(
+    new Date(year, month, 1)
+  );
 
   const monthKey = `${year}-${String(month + 1).padStart(2, "0")}`;
   const signedSet = new Set(
@@ -39,8 +43,7 @@ export default function CheckInCalendar({
     <div className="h-full rounded-3xl bg-white p-6 shadow-sm border border-gray-100 flex flex-col">
       <div className="mb-4 flex items-center justify-between">
         <div>
-          <h3 className="font-bold text-gray-800">{tHome("checkInTitle")}</h3>
-          <p className="text-xs text-gray-500 mt-0.5">{tHome("checkInStreak")}</p>
+          <h3 className="text-2xl font-['Titan_One'] font-normal text-[#045E96]">{tHome("checkInTitle")}</h3>
         </div>
         
         <button
@@ -50,7 +53,7 @@ export default function CheckInCalendar({
           className={`rounded-full px-4 py-1.5 text-xs font-bold transition-all shadow-sm ${
             hasCheckedInToday
               ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-              : "bg-gradient-to-r from-amber-400 to-orange-400 text-white hover:shadow-md hover:scale-105 active:scale-95"
+              : "bg-[#E45C44] text-white hover:shadow-md hover:scale-105 active:scale-95"
           }`}
         >
           {hasCheckedInToday ? tHome("signed") : tHome("signToday")}
@@ -58,33 +61,42 @@ export default function CheckInCalendar({
       </div>
 
       <div className="flex-1 flex flex-col justify-center">
+        <div className="mb-2 text-center text-[#106FAA] text-lg font-semibold font-['Outfit'] leading-7">
+          {monthYearLabel}
+        </div>
         <div className="grid grid-cols-7 gap-1 text-center mb-1">
           {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((w) => (
-            <div key={w} className="py-1 text-[10px] text-gray-400 font-medium">
+            <div key={w} className="py-1 text-sm text-[#106FAA] font-medium font-['Outfit']">
               {w}
             </div>
           ))}
         </div>
-        <div className="grid grid-cols-7 gap-1 text-center">
+        <div className="grid grid-cols-7 gap-1 text-center  ">
           {days.map((d, i) => {
             if (d === null)
-              return <div key={`empty-${i}`} className="aspect-square" />;
+              return <div key={`empty-${i}`} className="aspect-square " />;
             const dateStr = `${monthKey}-${String(d).padStart(2, "0")}`;
             const signed = signedSet.has(dateStr);
-            const isToday = d === today;
             
             return (
               <div
                 key={d}
-                className={`aspect-square flex items-center justify-center rounded-lg text-xs font-medium transition-all ${
+                className={`aspect-square transition-all ${
                   signed
-                    ? "bg-amber-100 text-amber-600"
-                    : isToday
-                      ? "ring-2 ring-amber-400 text-amber-600 bg-amber-50"
-                      : "bg-gray-50 text-gray-400"
+                    ? "bg-[#D4EAF8] rounded-xl text-[#106FAA]"
+                    : "bg-[#EDF4FC] rounded-xl text-[#106FAA]"
                 }`}
               >
-                {d}
+                <div className="grid h-full w-full grid-rows-[1fr_auto_1fr_auto_1fr] place-items-center">
+                  <Image
+                    src={signed ? "/dashboard/checkin_icon.svg" : "/dashboard/nocheckin_icon.svg"}
+                    alt={signed ? "checked in" : "not checked in"}
+                    width={20}
+                    height={20}
+                    className="row-start-2 h-5 w-5"
+                  />
+                  <span className="row-start-3 text-sm font-normal font-['Outfit'] leading-4">{d}</span>
+                </div>
               </div>
             );
           })}

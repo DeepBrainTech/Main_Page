@@ -10,6 +10,13 @@ export interface CheckInState {
   streak: number;
 }
 
+export interface CheckInResult {
+  coins: number;
+  diamonds: number;
+  flowers: number;
+  streakAfter: number;
+}
+
 /**
  * 金币/钻石/鲜花、签到、任务进度：全部从后端 API 获取，无 localStorage
  */
@@ -29,15 +36,18 @@ export function useRewards() {
       setLoading(true);
     }
     setError(null);
+    let nextData: RewardsData | null = null;
     try {
       const next = await fetchRewards();
       setData(next);
+      nextData = next;
     } catch (e) {
       setError(e instanceof Error ? e.message : "unknown");
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
+    return nextData;
   }, [data]);
 
   useEffect(() => {
@@ -63,13 +73,18 @@ export function useRewards() {
   const monthlyClaimed = data?.monthly_claimed ?? false;
   const playedGameCount = data?.played_game_count ?? 0;
 
-  const doCheckIn = useCallback(async () => {
-    if (hasCheckedInToday) return;
+  const doCheckIn = useCallback(async (): Promise<CheckInResult | null> => {
+    if (hasCheckedInToday) return null;
     try {
-      await postCheckIn();
-      await load({ background: true });
+      const award = await postCheckIn();
+      const refreshed = await load({ background: true });
+      return {
+        ...award,
+        streakAfter: refreshed?.current_streak ?? 0,
+      };
     } catch (e) {
       setError(e instanceof Error ? e.message : "check_in_failed");
+      return null;
     }
   }, [hasCheckedInToday, load]);
 

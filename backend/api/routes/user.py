@@ -38,8 +38,9 @@ from utils.r2_storage import generate_object_read_url
 
 router = APIRouter(prefix="/api/user", tags=["用户"])
 
-CHECK_IN_COINS = 10
-STREAK_DIAMONDS = 10
+CHECK_IN_COINS = 50
+STREAK_TOTAL_COINS = 200
+STREAK_DIAMONDS = 2
 STREAK_DAYS = 7
 DAILY_TASK_COINS = 10
 MONTHLY_TASK_DIAMONDS = 10
@@ -594,16 +595,23 @@ async def do_check_in(
     rewards.coins += CHECK_IN_COINS
     coins_awarded = CHECK_IN_COINS
     diamonds_awarded = 0
+    # Session is configured with autoflush=False, so persist pending check-in
+    # before querying streak dates; otherwise "today" is missing from all_dates.
+    db.flush()
 
     all_dates = [
         r[0] for r in
         db.query(UserCheckIn.check_in_date).filter(UserCheckIn.user_id == current_user.id).order_by(UserCheckIn.check_in_date).all()
     ]
     streak = _current_streak(db, current_user.id, all_dates, today)
-    if streak >= STREAK_DAYS:
+    if streak >= STREAK_DAYS and streak % STREAK_DAYS == 0:
         streak_start = date.fromisoformat(today) - timedelta(days=STREAK_DAYS - 1)
         streak_start_str = streak_start.isoformat()
         if rewards.last_streak_award_start != streak_start_str:
+            # Milestone day total should be 200 coins, not 200 + daily base.
+            milestone_extra_coins = max(0, STREAK_TOTAL_COINS - CHECK_IN_COINS)
+            rewards.coins += milestone_extra_coins
+            coins_awarded += milestone_extra_coins
             rewards.diamonds += STREAK_DIAMONDS
             rewards.last_streak_award_start = streak_start_str
             diamonds_awarded = STREAK_DIAMONDS
