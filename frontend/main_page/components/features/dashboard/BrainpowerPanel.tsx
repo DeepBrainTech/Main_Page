@@ -38,21 +38,25 @@ export default function BrainpowerPanel({ scores }: BrainpowerPanelProps) {
   );
 
   return (
-    <section className="h-full rounded-3xl border border-white/70 bg-white/65 p-5 shadow-lg backdrop-blur">
-      <h3 className="mb-2 text-2xl font-extrabold text-sky-800">{tHome("brainpowerChart")}</h3>
+    <section className="w-full self-start rounded-[clamp(1.2rem,2vw,1.8rem)] border border-white/70 bg-white/65 p-[clamp(0.9rem,1.6vw,1.25rem)] shadow-lg backdrop-blur">
+      <h3 className="mb-[clamp(0.35rem,0.9vw,0.6rem)] text-[clamp(1.05rem,1.6vw,1.5rem)] font-extrabold text-sky-800">
+        {tHome("brainpowerChart")}
+      </h3>
 
-      <RadarChart scores={scores} size={260} embedded />
+      <div className="mx-auto w-full max-w-[clamp(15rem,32vw,21rem)]">
+        <RadarChart scores={scores} size={320} embedded />
+      </div>
 
-      <div className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <div className="mt-[clamp(0.35rem,0.9vw,0.6rem)] grid grid-cols-1 gap-[clamp(0.4rem,0.9vw,0.75rem)] sm:grid-cols-2">
         {scoreItems.map((item) => (
-          <div key={item.key} className="rounded-2xl bg-indigo-50/70 px-3 py-2">
-            <div className="mb-1 flex items-center justify-between text-sm">
+          <div key={item.key} className="rounded-2xl bg-indigo-50/70 px-[clamp(0.5rem,1vw,0.75rem)] py-[clamp(0.35rem,0.8vw,0.55rem)]">
+            <div className="mb-1 flex items-center justify-between text-[clamp(0.7rem,0.9vw,0.88rem)]">
               <span className="font-semibold text-sky-700">{item.label}</span>
               <span className="font-bold text-rose-500">{item.value}</span>
             </div>
-            <div className="h-2 rounded-full bg-white">
+            <div className="h-[clamp(0.35rem,0.65vw,0.5rem)] rounded-full bg-white">
               <div
-                className="h-2 rounded-full bg-gradient-to-r from-[#0078D4] to-[#0068BD]"
+                className="h-[clamp(0.35rem,0.65vw,0.5rem)] rounded-full bg-gradient-to-r from-[#0078D4] to-[#0068BD]"
                 style={{ width: `${item.value}%` }}
               />
             </div>
@@ -60,10 +64,10 @@ export default function BrainpowerPanel({ scores }: BrainpowerPanelProps) {
         ))}
       </div>
 
-      <div className="mt-4 rounded-3xl bg-gradient-to-r from-blue-100 via-blue-100 to-indigo-50 px-6 py-5 text-center">
-        <div className="text-sm font-semibold text-sky-700">{tHome("overallBrainScore")}</div>
-        <div className="mt-1 text-4xl font-extrabold text-sky-800">{overallScore}</div>
-        <div className="mt-1 text-xs text-sky-600">{tHome("keepTraining")}</div>
+      <div className="mt-[clamp(0.6rem,1.2vw,1rem)] rounded-3xl bg-gradient-to-r from-blue-100 via-blue-100 to-indigo-50 px-[clamp(0.8rem,1.4vw,1.5rem)] py-[clamp(0.7rem,1.3vw,1.1rem)] text-center">
+        <div className="text-[clamp(0.7rem,0.9vw,0.9rem)] font-semibold text-sky-700">{tHome("overallBrainScore")}</div>
+        <div className="mt-1 text-[clamp(1.5rem,3vw,2.1rem)] font-extrabold text-sky-800">{overallScore}</div>
+        <div className="mt-1 text-[clamp(0.62rem,0.8vw,0.76rem)] text-sky-600">{tHome("keepTraining")}</div>
       </div>
     </section>
   );

@@ -193,7 +193,7 @@ export default function HomeTab({ username = "" }: HomeTabProps) {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+          <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-2">
             <CheckInCalendar
               checkIn={checkIn}
               hasCheckedInToday={hasCheckedInToday}

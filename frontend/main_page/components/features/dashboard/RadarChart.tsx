@@ -49,8 +49,8 @@ export default function RadarChart({ scores, size = 220, embedded = false }: Rad
   }).join(" ");
 
   const chartNode = (
-    <div className="flex items-center justify-center py-2">
-      <svg width={size} height={size} className="overflow-visible">
+    <div className="flex items-center justify-center py-[clamp(0.2rem,0.7vw,0.5rem)]">
+      <svg viewBox={`0 0 ${size} ${size}`} className="h-auto w-full max-w-full overflow-visible">
         <defs>
           <linearGradient id="radarGradient" x1="0%" y1="0%" x2="100%" y2="100%">
             <stop offset="0%" stopColor="#ef4444" stopOpacity="0.36" />
@@ -123,7 +123,7 @@ export default function RadarChart({ scores, size = 220, embedded = false }: Rad
   if (embedded) return chartNode;
 
   return (
-    <div className="flex h-full flex-col items-center rounded-3xl border border-gray-100 bg-white p-6 shadow-sm">
+    <div className="flex flex-col items-center rounded-3xl border border-gray-100 bg-white p-6 shadow-sm">
       <div className="mb-2 w-full">
         <h3 className="text-center font-bold text-gray-800">{tHome("radarTitle")}</h3>
       </div>

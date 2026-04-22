@@ -45,37 +45,48 @@ function TaskRow({
   const rewardValue = task.rewardCoins ?? task.rewardDiamonds ?? 0;
   const isCoinReward = (task.rewardCoins ?? 0) > 0;
   const rewardIcon = isCoinReward ? "/dashboard/coin.svg" : "/dashboard/dimond.svg";
-  const rewardBg = done ? "bg-green-500" : "bg-red-500";
-  const statusBorder = done ? "outline-green-400" : "outline-black/0";
+  const rewardBg = done ? "bg-[#22C55E]" : "bg-[#E45C44]";
+  const statusBorder = done ? "border-green-400" : "border-transparent";
   const statusBg = done ? "bg-emerald-100" : "bg-indigo-50";
   const textColor = done ? "text-green-500 line-through" : "text-sky-700";
+  const displayCurrent = target > 0 ? Math.min(current, target) : current;
 
   return (
-    <div className={`w-full rounded-[20.52px] px-4 py-3 outline outline-2 outline-offset-[-2.05px] ${statusBg} ${statusBorder}`}>
-      <div className="flex items-center gap-4">
-        <div className="inline-flex h-6 w-6 items-center justify-center">
+    <div
+      className={`w-full rounded-[clamp(0.9rem,1.3vw,1.3rem)] border-2 px-[clamp(0.7rem,1.2vw,1rem)] py-[clamp(0.55rem,1vw,0.85rem)] ${statusBg} ${statusBorder}`}
+    >
+      <div className="flex flex-wrap items-center gap-[clamp(0.5rem,1vw,1rem)]">
+        <div className="inline-flex h-[clamp(1rem,1.8vw,1.5rem)] w-[clamp(1rem,1.8vw,1.5rem)] items-center justify-center">
           <Image
             src={done ? "/dashboard/checkin_icon.svg" : "/dashboard/nocheckin_icon.svg"}
             alt={done ? "done" : "pending"}
             width={15}
             height={15}
-            className="h-3.5 w-3.5"
+            className="h-[clamp(0.72rem,1.1vw,0.95rem)] w-[clamp(0.72rem,1.1vw,0.95rem)]"
           />
         </div>
 
         <div className="min-w-0 flex-1">
-          <div className={`truncate text-base font-medium font-['Outfit'] leading-6 ${textColor}`}>
+          <div className={`font-['Outfit'] text-[clamp(0.78rem,1vw,1rem)] font-medium text-base leading-[1.25] whitespace-normal break-words ${textColor}`}>
             {tTasks(task.labelKey)}
           </div>
-          <div className="mt-1 text-xs font-medium font-['Outfit'] text-sky-700/70">
-            {current}/{target}
+          <div className="mt-[clamp(0.1rem,0.4vw,0.3rem)] font-['Outfit'] text-[clamp(0.62rem,0.85vw,0.78rem)] font-medium text-sky-700/70">
+            {displayCurrent}/{target}
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <div className={`inline-flex items-center justify-center gap-1 rounded-[102.62px] px-3 py-1.5 ${rewardBg}`}>
-            <Image src={rewardIcon} alt="reward" width={14} height={14} className="h-3.5 w-3.5" />
-            <span className="text-center text-base font-medium font-['Outfit'] leading-5 text-white">{rewardValue}</span>
+        <div className="ml-auto flex shrink-0 items-center gap-[clamp(0.25rem,0.8vw,0.5rem)]">
+          <div className={`inline-flex items-center justify-center gap-1 rounded-full px-[clamp(0.5rem,1vw,0.75rem)] py-[clamp(0.22rem,0.6vw,0.4rem)] ${rewardBg}`}>
+            <Image
+              src={rewardIcon}
+              alt="reward"
+              width={14}
+              height={14}
+              className="h-[clamp(0.68rem,1vw,0.88rem)] w-[clamp(0.68rem,1vw,0.88rem)]"
+            />
+            <span className="text-center font-['Outfit'] text-[clamp(0.72rem,0.95vw,0.95rem)] font-medium leading-[1] text-white">
+              {rewardValue}
+            </span>
           </div>
 
           {done && !claimed ? (
@@ -83,17 +94,12 @@ function TaskRow({
               type="button"
               onClick={handleClaim}
               disabled={claiming}
-              className="rounded-[102.62px] bg-[#E45C44] px-3 py-1.5 text-xs font-medium font-['Outfit'] text-white disabled:opacity-50"
+              className="rounded-full bg-[#E45C44] px-[clamp(0.5rem,1vw,0.75rem)] py-[clamp(0.22rem,0.6vw,0.4rem)] font-['Outfit'] text-[clamp(0.62rem,0.85vw,0.78rem)] font-medium text-white disabled:opacity-50"
             >
               {claiming ? tCommon("loading") : tCommon("claim")}
             </button>
           ) : null}
 
-          {claimed ? (
-            <span className="rounded-[102.62px] bg-green-500 px-3 py-1.5 text-xs font-medium font-['Outfit'] text-white">
-              {tTasks("statusCompleted")}
-            </span>
-          ) : null}
         </div>
       </div>
     </div>
@@ -130,22 +136,24 @@ export default function TaskList({
   const totalGoals = DAILY_TASKS.length + 1;
 
   return (
-    <div className="inline-flex h-full w-full flex-col items-start gap-6 rounded-[32.84px] bg-white/60 px-8 pt-8 shadow-[0px_4px_6px_-4px_rgba(0,0,0,0.10)] shadow-lg outline outline-1 outline-offset-[-1.03px] outline-white/60">
-      <div className="inline-flex h-10 w-full items-center justify-between">
-        <h3 className="text-2xl font-normal font-['Titan_One'] leading-8 tracking-wide text-sky-700">Brain Hub</h3>
-        <div className="flex items-center justify-center gap-1.5 rounded-[102.62px] bg-blue-100 px-2.5 py-2">
-          <span className="text-base font-medium font-['Outfit'] leading-6 text-sky-700">
+    <div className="flex h-full w-full flex-col items-start gap-[clamp(0.9rem,1.8vw,1.5rem)] rounded-[clamp(1.25rem,2.2vw,2rem)] bg-white/60 px-[clamp(0.9rem,2vw,2rem)] py-[clamp(0.9rem,2vw,2rem)] shadow-[0px_4px_6px_-4px_rgba(0,0,0,0.10)] shadow-lg outline outline-1 outline-white/60">
+      <div className="flex w-full items-center justify-between gap-3">
+        <h3 className="font-['Titan_One'] text-[clamp(1.1rem,1.9vw,1.55rem)] font-normal leading-tight tracking-wide text-sky-700">
+          Brain Hub
+        </h3>
+        <div className="flex items-center justify-center gap-1.5 rounded-full bg-blue-100 px-[clamp(0.55rem,1.2vw,0.9rem)] py-[clamp(0.35rem,0.8vw,0.55rem)]">
+          <span className="font-['Outfit'] text-[clamp(0.72rem,1vw,1rem)] font-medium leading-[1.2] text-[#045E96]">
             {totalCompleted}/{totalGoals} Completed
           </span>
         </div>
       </div>
 
-      <div className="flex w-full flex-col gap-6">
-        <div className="flex w-full flex-col gap-5">
-          <div className="text-lg font-semibold font-['Outfit'] leading-5 text-sky-700">
+      <div className="flex w-full flex-col gap-[clamp(0.8rem,1.6vw,1.5rem)]">
+        <div className="flex w-full flex-col gap-[clamp(0.6rem,1.2vw,1.25rem)]">
+          <div className="font-['Outfit'] text-[clamp(0.4rem,1.2vw,1.15rem)] font-semibold leading-[1.2] text-sky-700">
             Daily Goals ({dailyDoneCount}/{DAILY_TASKS.length})
           </div>
-          <div className="flex w-full flex-col gap-3">
+          <div className="flex w-full flex-col gap-[clamp(0.4rem,0.9vw,0.75rem)]">
             {DAILY_TASKS.map((task) => {
               const current = dailyProgress[task.id] ?? 0;
               const target = task.targetCount ?? 1;
@@ -166,10 +174,12 @@ export default function TaskList({
           </div>
         </div>
 
-        <div className="flex w-full flex-col gap-5">
-          <div className="text-lg font-semibold font-['Outfit'] leading-5 text-sky-700">Monthly Goals ({monthlyDone}/1)</div>
-          <div className="text-xs font-medium font-['Outfit'] text-sky-700/70">{monthDateRange}</div>
-          <div className="flex w-full flex-col gap-3">
+        <div className="flex w-full flex-col gap-[clamp(0.6rem,1.2vw,1.25rem)]">
+          <div className="font-['Outfit'] text-[clamp(0.9rem,1.2vw,1.15rem)] font-semibold leading-[1.2] text-sky-700">
+            Monthly Goals ({monthlyDone}/1){" "}
+            <span className="font-medium text-[clamp(0.62rem,0.85vw,0.8rem)] text-sky-700/70">{monthDateRange}</span>
+          </div>
+          <div className="flex w-full flex-col gap-[clamp(0.4rem,0.9vw,0.75rem)]">
             <TaskRow
               task={MONTHLY_TASK}
               current={monthlyCount}
