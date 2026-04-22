@@ -40,17 +40,19 @@ export default function CheckInCalendar({
   for (let d = 1; d <= daysInMonth; d++) days.push(d);
 
   return (
-    <div className="h-full rounded-3xl bg-white p-6 shadow-sm border border-gray-100 flex flex-col">
-      <div className="mb-4 flex items-center justify-between">
+    <div className="flex h-full flex-col rounded-3xl border border-gray-100 bg-white p-[clamp(0.9rem,1.6vw,1.5rem)] shadow-sm">
+      <div className="mb-[clamp(0.6rem,1.2vw,1rem)] flex items-center justify-between gap-3">
         <div>
-          <h3 className="text-2xl font-['Titan_One'] font-normal text-[#045E96]">{tHome("checkInTitle")}</h3>
+          <h3 className="font-['Titan_One'] text-[clamp(1.1rem,2vw,1.5rem)] font-normal text-[#045E96] leading-tight">
+            {tHome("checkInTitle")}
+          </h3>
         </div>
         
         <button
           type="button"
           onClick={onCheckIn}
           disabled={hasCheckedInToday}
-          className={`rounded-full px-4 py-1.5 text-xs font-bold transition-all shadow-sm ${
+          className={`rounded-full px-[clamp(0.6rem,1.2vw,1rem)] py-[clamp(0.3rem,0.8vw,0.45rem)] text-[clamp(0.65rem,1.2vw,0.78rem)] font-bold transition-all shadow-sm ${
             hasCheckedInToday
               ? "bg-gray-100 text-gray-400 cursor-not-allowed"
               : "bg-[#E45C44] text-white hover:shadow-md hover:scale-105 active:scale-95"
@@ -60,18 +62,21 @@ export default function CheckInCalendar({
         </button>
       </div>
 
-      <div className="flex-1 flex flex-col justify-center">
-        <div className="mb-2 text-center text-[#106FAA] text-lg font-semibold font-['Outfit'] leading-7">
+      <div className="flex flex-1 flex-col justify-center">
+        <div className="mb-[clamp(0.35rem,0.9vw,0.6rem)] text-center font-['Outfit'] text-[clamp(0.9rem,1.4vw,1.1rem)] font-semibold leading-[1.35] text-[#106FAA] 2xl:text-[1.35rem]">
           {monthYearLabel}
         </div>
-        <div className="grid grid-cols-7 gap-1 text-center mb-1">
+        <div className="mb-[clamp(0.2rem,0.6vw,0.35rem)] grid grid-cols-7 gap-[clamp(0.2rem,0.45vw,0.35rem)] text-center 2xl:gap-2">
           {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((w) => (
-            <div key={w} className="py-1 text-sm text-[#106FAA] font-medium font-['Outfit']">
+            <div
+              key={w}
+              className="py-[clamp(0.1rem,0.35vw,0.25rem)] font-['Outfit'] text-[clamp(0.62rem,1vw,0.9rem)] font-medium text-[#106FAA] 2xl:text-[1.02rem]"
+            >
               {w}
             </div>
           ))}
         </div>
-        <div className="grid grid-cols-7 gap-1 text-center  ">
+        <div className="grid grid-cols-7 gap-[clamp(0.2rem,0.45vw,0.35rem)] text-center 2xl:gap-2">
           {days.map((d, i) => {
             if (d === null)
               return <div key={`empty-${i}`} className="aspect-square " />;
@@ -93,9 +98,11 @@ export default function CheckInCalendar({
                     alt={signed ? "checked in" : "not checked in"}
                     width={20}
                     height={20}
-                    className="row-start-2 h-5 w-5"
+                    className="row-start-2 h-[clamp(0.85rem,1.5vw,1.25rem)] w-[clamp(0.85rem,1.5vw,1.25rem)] 2xl:h-7 2xl:w-7"
                   />
-                  <span className="row-start-3 text-sm font-normal font-['Outfit'] leading-4">{d}</span>
+                  <span className="row-start-3 font-['Outfit'] text-[clamp(0.68rem,1vw,0.9rem)] font-normal leading-[1.1] 2xl:text-[1.1rem]">
+                    {d}
+                  </span>
                 </div>
               </div>
             );
