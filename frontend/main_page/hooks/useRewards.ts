@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { fetchRewards, postCheckIn, claimTask, type RewardsData } from "@/services/userApi";
 
 /** 签到记录（由后端返回的 check_in_dates 等推导） */
@@ -25,9 +25,10 @@ export function useRewards() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const hasLoadedRef = useRef(false);
 
   const load = useCallback(async (options?: { background?: boolean }) => {
-    const shouldBackgroundRefresh = options?.background === true || data !== null;
+    const shouldBackgroundRefresh = options?.background === true || hasLoadedRef.current;
     if (shouldBackgroundRefresh) {
       // 已有数据时走后台刷新，避免整块 UI 切到 Loading 造成闪屏。
       setRefreshing(true);
@@ -40,6 +41,7 @@ export function useRewards() {
     try {
       const next = await fetchRewards();
       setData(next);
+      hasLoadedRef.current = true;
       nextData = next;
     } catch (e) {
       setError(e instanceof Error ? e.message : "unknown");
@@ -48,10 +50,10 @@ export function useRewards() {
       setRefreshing(false);
     }
     return nextData;
-  }, [data]);
+  }, []);
 
   useEffect(() => {
-    load();
+    void load();
   }, [load]);
 
   const coins = data?.coins ?? 0;

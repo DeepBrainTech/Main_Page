@@ -68,6 +68,9 @@ def ensure_users_table_compatibility():
         conn.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS ix_users_google_id ON users (google_id)"))
         # 兼容旧库：出生日期，用于计算年龄
         conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS date_of_birth DATE"))
+        # Backward compatibility: Google avatar and user-uploaded avatar fields
+        conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS google_avatar_url VARCHAR(1024)"))
+        conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_object_key VARCHAR(512)"))
         # 兼容旧库：统一资产账户新增鲜花字段
         conn.execute(text("ALTER TABLE user_rewards ADD COLUMN IF NOT EXISTS flowers INTEGER DEFAULT 0"))
         conn.execute(text("""

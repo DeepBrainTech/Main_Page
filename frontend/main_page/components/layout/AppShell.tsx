@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import Image from "next/image";
@@ -16,6 +16,8 @@ interface AppShellProps {
   email?: string;
   /** Date of birth in YYYY-MM-DD format */
   dateOfBirth?: string | null;
+  /** Current user avatar URL. Falls back to local default when empty. */
+  avatarUrl?: string | null;
   onLogout: () => void;
   /** Callback after profile update */
   onProfileUpdate?: () => void;
@@ -31,15 +33,21 @@ export default function AppShell({
   username,
   email,
   dateOfBirth,
+  avatarUrl,
   onLogout,
   onProfileUpdate,
   children,
 }: AppShellProps) {
   const tNav = useTranslations("nav");
-  const tCommon = useTranslations("common");
   const tHome = useTranslations("dashboard");
   const [profileOpen, setProfileOpen] = useState(false);
+  const [avatarFailed, setAvatarFailed] = useState(false);
   const { coins, diamonds, flowers } = useRewards();
+  const resolvedAvatarSrc = !avatarFailed && avatarUrl ? avatarUrl : "/dashboard/default.png";
+
+  useEffect(() => {
+    setAvatarFailed(false);
+  }, [avatarUrl]);
 
   const tabs: { key: AppTab; label: string; iconSrc: string; iconAlt: string }[] = [
     { key: "dashboard", label: tHome("dashboardTab"), iconSrc: "/dashboard/dashboard.svg", iconAlt: "Dashboard" },
@@ -91,10 +99,16 @@ export default function AppShell({
 
             <button
               type="button"
-              onClick={onLogout}
-              className="rounded-full bg-red-500 px-4 py-2 text-xs font-semibold text-white hover:bg-red-600"
+              onClick={() => setProfileOpen(true)}
+              className="h-10 w-10 overflow-hidden rounded-full border border-slate-200 bg-white"
+              aria-label={tNav("profile")}
             >
-              {tCommon("logout")}
+              <img
+                src={resolvedAvatarSrc}
+                alt={tNav("profile")}
+                className="h-full w-full object-cover"
+                onError={() => setAvatarFailed(true)}
+              />
             </button>
           </div>
         </div>
@@ -170,6 +184,7 @@ export default function AppShell({
         username={username}
         email={email}
         dateOfBirth={dateOfBirth}
+        avatarUrl={avatarUrl}
         onLogout={onLogout}
         onProfileUpdate={onProfileUpdate}
       />

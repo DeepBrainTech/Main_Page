@@ -654,6 +654,12 @@
   },
   "profile": {
     "title": "Profile",
+    "avatar": "Avatar",
+    "changeAvatar": "Change",
+    "avatarUpdated": "Avatar updated",
+    "avatarUploadFailed": "Avatar upload failed, please try again",
+    "avatarTooLarge": "Avatar must be 2MB or smaller",
+    "avatarUnsupported": "Only PNG, JPG, or WEBP is supported",
     "username": "Username",
     "email": "Email",
     "dateOfBirth": "Birthday",
@@ -785,7 +791,11 @@
     "PASSWORD_RESET_FAILED": "Password reset failed",
     "AUTH_GOOGLE_TOKEN_INVALID": "Google sign-in failed, please try again",
     "AUTH_GOOGLE_NOT_CONFIGURED": "Google sign-in is not configured yet. Please contact admin or use email sign up/sign in.",
-    "AUTH_USERNAME_INVALID": "Username must be 3-50 characters"
+    "AUTH_USERNAME_INVALID": "Username must be 3-50 characters",
+    "AUTH_AVATAR_UNSUPPORTED": "Only PNG, JPG, or WEBP is supported",
+    "AUTH_AVATAR_EMPTY": "Please choose an image file",
+    "AUTH_AVATAR_TOO_LARGE": "Avatar must be 2MB or smaller",
+    "AUTH_AVATAR_UPLOAD_FAILED": "Avatar upload failed, please try again"
   },
   "beforelogin": {
     "hero": {

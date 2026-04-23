@@ -43,3 +43,18 @@ def generate_object_read_url(object_key: str, expires_seconds: int = 600) -> str
         ExpiresIn=expires_seconds,
     )
 
+
+def upload_object_bytes(
+    object_key: str,
+    content: bytes,
+    content_type: str,
+) -> None:
+    client = get_r2_client()
+    bucket = get_r2_bucket_name()
+    client.put_object(
+        Bucket=bucket,
+        Key=object_key,
+        Body=content,
+        ContentType=content_type,
+    )
+

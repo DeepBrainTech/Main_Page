@@ -20,6 +20,8 @@ class User(Base):
     email = Column(String(100), unique=True, index=True, nullable=False)
     hashed_password = Column(String(255), nullable=True)  # Google 登录用户可为空
     google_id = Column(String(255), unique=True, index=True, nullable=True)  # Google 唯一标识
+    google_avatar_url = Column(String(1024), nullable=True)  # Google profile image URL
+    avatar_object_key = Column(String(512), nullable=True)  # User-uploaded avatar object key
     date_of_birth = Column(Date, nullable=True)  # 出生日期，用于计算年龄
     is_active = Column(Boolean, default=True)
     is_superuser = Column(Boolean, default=False)

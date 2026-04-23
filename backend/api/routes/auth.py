@@ -1,7 +1,10 @@
 """
 认证相关路由
 """
-from fastapi import APIRouter, Depends, HTTPException, status
+from uuid import uuid4
+from typing import Optional
+
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from datetime import timedelta
@@ -29,8 +32,27 @@ from auth import (
 from utils.email_service import email_service
 from utils.verification_service import verification_service
 from utils.google_oauth import verify_google_token
+from utils.r2_storage import generate_object_read_url, upload_object_bytes
 
 router = APIRouter(prefix="/api/auth", tags=["认证"])
+
+MAX_AVATAR_UPLOAD_BYTES = 2 * 1024 * 1024
+ALLOWED_AVATAR_MIME_TYPES = {
+    "image/png": "png",
+    "image/jpeg": "jpg",
+    "image/webp": "webp",
+}
+
+
+def _build_avatar_url(user: User) -> Optional[str]:
+    if user.avatar_object_key:
+        try:
+            return generate_object_read_url(object_key=user.avatar_object_key, expires_seconds=86400)
+        except Exception:
+            return None
+    if user.google_avatar_url:
+        return user.google_avatar_url
+    return None
 
 
 @router.post("/send-verification-code", response_model=APIResponse)
@@ -177,6 +199,7 @@ async def google_login(request: GoogleTokenRequest, db: Session = Depends(get_db
     google_id = payload.get("sub")
     email = payload.get("email") or ""
     name = (payload.get("name") or email.split("@")[0] or "user").strip()[:50]
+    google_avatar_url = payload.get("picture") or None
 
     if not google_id or not email:
         raise HTTPException(
@@ -209,8 +232,10 @@ async def google_login(request: GoogleTokenRequest, db: Session = Depends(get_db
                 )
             if not user.google_id:
                 user.google_id = google_id
-                db.commit()
-                db.refresh(user)
+            if google_avatar_url:
+                user.google_avatar_url = google_avatar_url
+            db.commit()
+            db.refresh(user)
         else:
             # 新用户：创建 Google 用户
             base_username = (name or email.split("@")[0] or "user")[:50]
@@ -226,11 +251,17 @@ async def google_login(request: GoogleTokenRequest, db: Session = Depends(get_db
                 email=email,
                 hashed_password=None,
                 google_id=google_id,
+                google_avatar_url=google_avatar_url,
                 is_active=True,
             )
             db.add(user)
             db.commit()
             db.refresh(user)
+
+    if user and google_avatar_url and user.google_avatar_url != google_avatar_url:
+        user.google_avatar_url = google_avatar_url
+        db.commit()
+        db.refresh(user)
 
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
@@ -259,6 +290,7 @@ def _user_to_response(
         is_superuser=user.is_superuser,
         created_at=user.created_at,
         date_of_birth=user.date_of_birth,
+        avatar_url=_build_avatar_url(user),
         age=compute_age(user.date_of_birth),
         access_token=access_token,
         token_type=token_type,
@@ -315,6 +347,57 @@ async def update_current_user_profile(
             expires_in=ACCESS_TOKEN_EXPIRE_MINUTES * 60,
         )
 
+    return _user_to_response(current_user)
+
+
+@router.post("/avatar", response_model=UserResponse)
+async def upload_avatar(
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+):
+    """Upload current user avatar and return the updated profile."""
+    mime_type = (file.content_type or "").lower().strip()
+    ext = ALLOWED_AVATAR_MIME_TYPES.get(mime_type)
+    if not ext:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="AUTH_AVATAR_UNSUPPORTED",
+        )
+
+    content = await file.read()
+    if not content:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="AUTH_AVATAR_EMPTY",
+        )
+    if len(content) > MAX_AVATAR_UPLOAD_BYTES:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="AUTH_AVATAR_TOO_LARGE",
+        )
+
+    object_key = f"Avatar/{current_user.id}/{uuid4().hex}.{ext}"
+    try:
+        upload_object_bytes(
+            object_key=object_key,
+            content=content,
+            content_type=mime_type,
+        )
+    except RuntimeError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(exc),
+        ) from exc
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"AUTH_AVATAR_UPLOAD_FAILED: {str(exc)}",
+        ) from exc
+
+    current_user.avatar_object_key = object_key
+    db.commit()
+    db.refresh(current_user)
     return _user_to_response(current_user)
 
 

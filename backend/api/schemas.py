@@ -44,6 +44,7 @@ class UserResponse(UserBase):
     is_superuser: bool
     created_at: datetime
     date_of_birth: Optional[date] = None
+    avatar_url: Optional[str] = None
     age: Optional[int] = None  # 由 date_of_birth 计算，序列化时由路由填充
     access_token: Optional[str] = None  # 可选：用户名变更后返回新的访问令牌
     token_type: Optional[str] = None

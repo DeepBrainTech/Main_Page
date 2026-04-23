@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, type ChangeEvent } from "react";
 import { useRouter, usePathname, useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { getApiUrl } from "@/lib/api-config";
@@ -13,6 +13,8 @@ interface ProfileDialogProps {
   email?: string;
   /** 出生日期 YYYY-MM-DD，可选 */
   dateOfBirth?: string | null;
+  /** Current user avatar URL */
+  avatarUrl?: string | null;
   onLogout: () => void;
   /** 资料更新后回调（如刷新 useAuth），用于用户名/出生日期修改后同步展示 */
   onProfileUpdate?: () => void;
@@ -21,7 +23,16 @@ interface ProfileDialogProps {
 /**
  * 个人资料弹窗：头像点击后展示，支持修改用户名、语言切换与登出
  */
-export default function ProfileDialog({ open, onClose, username, email, dateOfBirth, onLogout, onProfileUpdate }: ProfileDialogProps) {
+export default function ProfileDialog({
+  open,
+  onClose,
+  username,
+  email,
+  dateOfBirth,
+  avatarUrl,
+  onLogout,
+  onProfileUpdate,
+}: ProfileDialogProps) {
   const router = useRouter();
   const pathname = usePathname();
   const params = useParams();
@@ -34,8 +45,12 @@ export default function ProfileDialog({ open, onClose, username, email, dateOfBi
   const [editingDateOfBirth, setEditingDateOfBirth] = useState(false);
   const [editDateValue, setEditDateValue] = useState(dateOfBirth ?? "");
   const [saving, setSaving] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [avatarFailed, setAvatarFailed] = useState(false);
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const resolvedAvatarSrc = !avatarFailed && avatarUrl ? avatarUrl : "/dashboard/default.png";
 
   useEffect(() => {
     if (open) {
@@ -43,10 +58,11 @@ export default function ProfileDialog({ open, onClose, username, email, dateOfBi
       setEditingUsername(false);
       setEditDateValue(dateOfBirth ?? "");
       setEditingDateOfBirth(false);
+      setAvatarFailed(false);
       setError("");
       setSuccessMessage("");
     }
-  }, [open, username, dateOfBirth]);
+  }, [open, username, dateOfBirth, avatarUrl]);
 
   const currentLocale = (params?.locale as string) ?? "en";
   /** 将 YYYY-MM-DD 格式化为仅月日（不显示年份），用于展示 */
@@ -71,6 +87,60 @@ export default function ProfileDialog({ open, onClose, username, email, dateOfBi
   const handleLogout = () => {
     onClose();
     onLogout();
+  };
+
+  const handleAvatarFileChange = async (evt: ChangeEvent<HTMLInputElement>) => {
+    const file = evt.target.files?.[0];
+    if (!file) return;
+    setError("");
+    setSuccessMessage("");
+
+    if (!["image/png", "image/jpeg", "image/webp"].includes(file.type)) {
+      setError(tProfile("avatarUnsupported"));
+      evt.target.value = "";
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      setError(tProfile("avatarTooLarge"));
+      evt.target.value = "";
+      return;
+    }
+
+    setUploadingAvatar(true);
+    try {
+      const token = localStorage.getItem("access_token");
+      if (!token) {
+        setError(tProfile("avatarUploadFailed"));
+        return;
+      }
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch(getApiUrl("/api/auth/avatar"), {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        const code = data.detail || "AUTH_AVATAR_UPLOAD_FAILED";
+        if (code === "AUTH_AVATAR_TOO_LARGE") {
+          setError(tProfile("avatarTooLarge"));
+        } else if (code === "AUTH_AVATAR_UNSUPPORTED") {
+          setError(tProfile("avatarUnsupported"));
+        } else {
+          setError(code.match(/^[A-Z_]+$/) ? String(tAuth(code)) : String(data.detail || tProfile("avatarUploadFailed")));
+        }
+        return;
+      }
+      setSuccessMessage(tProfile("avatarUpdated"));
+      setAvatarFailed(false);
+      onProfileUpdate?.();
+    } catch {
+      setError(tProfile("avatarUploadFailed"));
+    } finally {
+      setUploadingAvatar(false);
+      evt.target.value = "";
+    }
   };
 
   const handleSaveUsername = async () => {
@@ -187,6 +257,36 @@ export default function ProfileDialog({ open, onClose, username, email, dateOfBi
           </div>
         )}
         <dl className="space-y-2 text-sm">
+          <div>
+            <dt className="text-gray-500">{tProfile("avatar")}</dt>
+            <dd className="mt-1 flex items-center justify-between gap-3">
+              <div className="h-14 w-14 overflow-hidden rounded-full border border-gray-200">
+                <img
+                  src={resolvedAvatarSrc}
+                  alt={tProfile("avatar")}
+                  className="h-full w-full object-cover"
+                  onError={() => setAvatarFailed(true)}
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  className="hidden"
+                  onChange={handleAvatarFileChange}
+                />
+                <button
+                  type="button"
+                  disabled={uploadingAvatar}
+                  onClick={() => fileInputRef.current?.click()}
+                  className="rounded bg-[#5E81AC] px-2 py-1.5 text-xs font-medium text-white hover:bg-[#4a6a8a] disabled:opacity-50"
+                >
+                  {uploadingAvatar ? "..." : tProfile("changeAvatar")}
+                </button>
+              </div>
+            </dd>
+          </div>
           <div>
             <dt className="text-gray-500">{tProfile("username")}</dt>
             {editingUsername ? (

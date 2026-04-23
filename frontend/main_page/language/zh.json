@@ -654,6 +654,12 @@
   },
   "profile": {
     "title": "个人信息",
+    "avatar": "头像",
+    "changeAvatar": "更换",
+    "avatarUpdated": "头像已更新",
+    "avatarUploadFailed": "头像上传失败，请重试",
+    "avatarTooLarge": "头像大小不能超过 2MB",
+    "avatarUnsupported": "仅支持 PNG、JPG、WEBP 格式",
     "username": "用户名",
     "email": "邮箱",
     "dateOfBirth": "生日",
@@ -785,7 +791,11 @@
     "PASSWORD_RESET_FAILED": "密码重置失败",
     "AUTH_GOOGLE_TOKEN_INVALID": "Google 登录无效,请重试",
     "AUTH_GOOGLE_NOT_CONFIGURED": "Google 登录暂未配置，请联系管理员或先使用邮箱注册/登录。",
-    "AUTH_USERNAME_INVALID": "用户名长度需 3-50 个字符"
+    "AUTH_USERNAME_INVALID": "用户名长度需 3-50 个字符",
+    "AUTH_AVATAR_UNSUPPORTED": "仅支持 PNG、JPG、WEBP 格式",
+    "AUTH_AVATAR_EMPTY": "请选择图片文件",
+    "AUTH_AVATAR_TOO_LARGE": "头像大小不能超过 2MB",
+    "AUTH_AVATAR_UPLOAD_FAILED": "头像上传失败，请重试"
   },
   "beforelogin": {
     "hero": {

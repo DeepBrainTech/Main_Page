@@ -10,6 +10,7 @@ export interface AuthUserInfo {
   username: string;
   email?: string;
   date_of_birth?: string | null;
+  avatar_url?: string | null;
 }
 
 /**
@@ -25,6 +26,7 @@ export function useAuth() {
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState<string | undefined>(undefined);
   const [dateOfBirth, setDateOfBirth] = useState<string | null>(null);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   /** 未填写出生日期时必须先补全才能使用（含已有老用户） */
@@ -47,7 +49,9 @@ export function useAuth() {
         setUsername(data.username || "");
         setEmail(data.email);
         const dob = data.date_of_birth ?? null;
+        const avatar = data.avatar_url ?? null;
         setDateOfBirth(dob);
+        setAvatarUrl(avatar);
         setNeedsProfileCompletion(dob == null || dob === undefined);
         setIsAuthenticated(true);
         setLoading(false);
@@ -73,6 +77,7 @@ export function useAuth() {
     username,
     email,
     dateOfBirth,
+    avatarUrl,
     loading,
     isAuthenticated,
     /** 未填出生日期时为 true，需弹窗补全后再使用 */

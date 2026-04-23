@@ -159,14 +159,14 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <div className="my-6 flex items-center gap-4">
-          <div className="h-px flex-1 bg-slate-200" />
-          <span className="text-sm text-slate-400">{t("login.orContinueWith")}</span>
-          <div className="h-px flex-1 bg-slate-200" />
-        </div>
-
-        <div className="flex justify-center">
-          {isGoogleLoginEnabled ? (
+        {isGoogleLoginEnabled && (
+          <>
+            <div className="my-6 flex items-center gap-4">
+              <div className="h-px flex-1 bg-slate-200" />
+              <span className="text-sm text-slate-400">{t("login.orContinueWith")}</span>
+              <div className="h-px flex-1 bg-slate-200" />
+            </div>
+            <div className="flex justify-center">
             <GoogleLoginButton
               variant="signin"
               onSuccess={(opts) => {
@@ -180,15 +180,8 @@ export default function LoginPage() {
               onError={(code) => setError(t(`auth.${code}`))}
               disabled={loading}
             />
-          ) : (
-            <div className="flex h-12 w-[320px] items-center justify-center gap-3 rounded-xl border border-slate-200 bg-slate-100 px-4 text-base font-semibold text-slate-400">
-              <Image src="/login/google.svg" alt="Google" width={22} height={22} />
-              <span>{t("login.signInWithGoogle")}</span>
             </div>
-          )}
-        </div>
-        {!isGoogleLoginEnabled && (
-          <p className="mt-2 text-center text-xs text-slate-500">{t("auth.AUTH_GOOGLE_NOT_CONFIGURED")}</p>
+          </>
         )}
 
         <div className="mt-7 text-center text-sm text-slate-600">
