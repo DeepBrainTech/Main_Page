@@ -212,6 +212,7 @@ class UserCognitiveScores(Base):
     reaction = Column(Integer, default=0)
     strategy = Column(Integer, default=0)
     spatial = Column(Integer, default=0)
+    previous_total_rank = Column(Integer, nullable=True)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 

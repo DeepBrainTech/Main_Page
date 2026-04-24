@@ -52,6 +52,8 @@ export interface LeaderboardEntry {
   user_id: number;
   username: string;
   score: number;
+  trend?: "up" | "down" | "stable";
+  avatar_url?: string | null;
 }
 
 export interface GameLikeState {
