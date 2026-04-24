@@ -2,6 +2,9 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { fetchRewards, postCheckIn, claimTask, type RewardsData } from "@/services/userApi";
+import { useRewardSound } from "@/hooks/useRewardSound";
+
+const REWARDS_UPDATED_EVENT = "main-page:rewards-updated";
 
 /** 签到记录（由后端返回的 check_in_dates 等推导） */
 export interface CheckInState {
@@ -26,6 +29,8 @@ export function useRewards() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const hasLoadedRef = useRef(false);
+  const instanceIdRef = useRef(Math.random().toString(36).slice(2));
+  const playRewardSound = useRewardSound();
 
   const load = useCallback(async (options?: { background?: boolean }) => {
     const shouldBackgroundRefresh = options?.background === true || hasLoadedRef.current;
@@ -56,6 +61,25 @@ export function useRewards() {
     void load();
   }, [load]);
 
+  useEffect(() => {
+    const handleRewardsUpdated = (event: Event) => {
+      const sourceId = event instanceof CustomEvent ? event.detail?.sourceId : null;
+      if (sourceId === instanceIdRef.current) return;
+      void load({ background: true });
+    };
+
+    window.addEventListener(REWARDS_UPDATED_EVENT, handleRewardsUpdated);
+    return () => window.removeEventListener(REWARDS_UPDATED_EVENT, handleRewardsUpdated);
+  }, [load]);
+
+  const notifyRewardsUpdated = useCallback(() => {
+    window.dispatchEvent(
+      new CustomEvent(REWARDS_UPDATED_EVENT, {
+        detail: { sourceId: instanceIdRef.current },
+      })
+    );
+  }, []);
+
   const coins = data?.coins ?? 0;
   const diamonds = data?.diamonds ?? 0;
   const flowers = data?.flowers ?? 0;
@@ -79,7 +103,9 @@ export function useRewards() {
     if (hasCheckedInToday) return null;
     try {
       const award = await postCheckIn();
+      playRewardSound(award);
       const refreshed = await load({ background: true });
+      notifyRewardsUpdated();
       return {
         ...award,
         streakAfter: refreshed?.current_streak ?? 0,
@@ -88,18 +114,20 @@ export function useRewards() {
       setError(e instanceof Error ? e.message : "check_in_failed");
       return null;
     }
-  }, [hasCheckedInToday, load]);
+  }, [hasCheckedInToday, load, notifyRewardsUpdated, playRewardSound]);
 
   const claimTaskReward = useCallback(
     async (taskId: string) => {
       try {
-        await claimTask(taskId);
+        const award = await claimTask(taskId);
+        playRewardSound(award);
         await load({ background: true });
+        notifyRewardsUpdated();
       } catch (e) {
         throw e;
       }
     },
-    [load]
+    [load, notifyRewardsUpdated, playRewardSound]
   );
 
   return {

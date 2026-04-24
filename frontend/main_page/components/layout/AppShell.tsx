@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import Link from "next/link";
 import Image from "next/image";
 import ProfileDialog from "@/components/features/profile/ProfileDialog";
+import BalanceBadge from "@/components/layout/BalanceBadge";
 import { useRewards } from "@/hooks/useRewards";
 
 export type AppTab = "dashboard" | "learning" | "test" | "brainGames" | "leaderboard";
@@ -42,7 +43,7 @@ export default function AppShell({
   const tHome = useTranslations("dashboard");
   const [profileOpen, setProfileOpen] = useState(false);
   const [avatarFailed, setAvatarFailed] = useState(false);
-  const { coins, diamonds, flowers } = useRewards();
+  const { loading: rewardsLoading, coins, diamonds, flowers } = useRewards();
   const resolvedAvatarSrc = !avatarFailed && avatarUrl ? avatarUrl : "/dashboard/default.png";
 
   useEffect(() => {
@@ -74,18 +75,30 @@ export default function AppShell({
 
           <div className="flex items-center gap-2">
             <div className="hidden items-center gap-2 sm:flex">
-              <div className="flex items-center gap-1.5 rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold text-sky-700">
-                <Image src="/dashboard/coin.svg" alt="Coins" width={16} height={16} className="h-4 w-4" />
-                <span>{coins}</span>
-              </div>
-              <div className="flex items-center gap-1.5 rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold text-sky-700">
-                <Image src="/dashboard/dimond.svg" alt="Diamonds" width={16} height={16} className="h-4 w-4" />
-                <span>{diamonds}</span>
-              </div>
-              <div className="flex items-center gap-1.5 rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold text-sky-700">
-                <Image src="/dashboard/flower.svg" alt="Flowers" width={16} height={16} className="h-4 w-4" />
-                <span>{flowers}</span>
-              </div>
+              <BalanceBadge
+                iconSrc="/dashboard/coin.svg"
+                iconAlt="Coins"
+                value={coins}
+                variant="coin"
+                highlight
+                ready={!rewardsLoading}
+              />
+              <BalanceBadge
+                iconSrc="/dashboard/dimond.svg"
+                iconAlt="Diamonds"
+                value={diamonds}
+                variant="diamond"
+                highlight
+                ready={!rewardsLoading}
+              />
+              <BalanceBadge
+                iconSrc="/dashboard/flower.svg"
+                iconAlt="Flowers"
+                value={flowers}
+                variant="flower"
+                highlight
+                ready={!rewardsLoading}
+              />
             </div>
 
             <button
