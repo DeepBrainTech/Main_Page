@@ -10,6 +10,7 @@ import {
 } from "@/config/mental-math-questions";
 import { MENTAL_MATH_CATEGORY_ITEM_IDS, MENTAL_MATH_SHOP_GAME_MODE } from "@/config/mental-math-shop";
 import { useMentalMathPractice } from "@/hooks/useMentalMathPractice";
+import { notifyRewardsUpdated } from "@/lib/reward-events";
 import {
   fetchAssets,
   fetchMakingWholeSecretMedia,
@@ -214,17 +215,19 @@ export default function LearningTab() {
     }
     try {
       setPendingUnlockCategory(key);
-      const redeemed = await redeemShopItem(itemId, MENTAL_MATH_SHOP_GAME_MODE);
+      await redeemShopItem(itemId, MENTAL_MATH_SHOP_GAME_MODE);
+      const assets = await fetchAssets();
       setOwnedLearningItemIds((prev) => {
         const next = new Set(prev);
         next.add(itemId);
         return next;
       });
       setAssetsBalance({
-        coins: redeemed.assets?.coins ?? assetsBalance.coins,
-        diamonds: redeemed.assets?.diamonds ?? assetsBalance.diamonds,
-        flowers: redeemed.assets?.flowers ?? assetsBalance.flowers,
+        coins: assets.coins ?? 0,
+        diamonds: assets.diamonds ?? 0,
+        flowers: assets.flowers ?? 0,
       });
+      notifyRewardsUpdated();
       setUnlockTargetCategory(null);
     } catch {
       alert(t("unlock.failed"));

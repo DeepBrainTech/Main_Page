@@ -3,6 +3,8 @@
 import { useState, useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
 import AvatarCharacter, { type AvatarConfig } from "./AvatarCharacter";
+import GoodCoolChatPrompt from "./GoodCoolChatPrompt";
+import GoodCoolMessageBubble from "./GoodCoolMessageBubble";
 
 interface HomesteadBlockProps {
   level: number;
@@ -106,7 +108,7 @@ export default function HomesteadBlock({
   }, []);
 
   return (
-    <div className="relative h-full min-h-[340px] overflow-visible rounded-3xl border border-amber-100/50 p-6 shadow-sm transition-all select-none md:min-h-[390px] xl:min-h-[440px]">
+    <div className="relative flex h-full min-h-[340px] flex-col overflow-visible rounded-3xl border border-amber-100/50 p-6 shadow-sm transition-all select-none md:min-h-[390px] xl:min-h-[440px]">
       <div className="absolute inset-0 overflow-hidden rounded-3xl">
         <div className="absolute inset-0 overflow-hidden rounded-3xl">
           {scene === "island" && (
@@ -132,11 +134,20 @@ export default function HomesteadBlock({
               transition: "none",
             }}
           >
-            <div className={isWalking ? "avatar-walk" : ""}>
+            <div className={`relative ${isWalking ? "avatar-walk" : ""}`}>
+              <div className="pointer-events-none absolute right-[80%] -top-8 z-20">
+                <GoodCoolMessageBubble message={tHome("goodCoolMessage")} />
+              </div>
               <AvatarCharacter config={avatarConfig} level={level} direction={direction} />
             </div>
             <div className="absolute bottom-2 left-1/2 -z-10 h-4 w-24 -translate-x-1/2 rounded-[100%] bg-black/10 blur-sm" />
           </div>
+        </div>
+      </div>
+
+      <div className="pointer-events-none relative z-20 mt-auto flex justify-end">
+        <div className="pointer-events-auto">
+          <GoodCoolChatPrompt label={tHome("goodCoolChatHint")} />
         </div>
       </div>
 

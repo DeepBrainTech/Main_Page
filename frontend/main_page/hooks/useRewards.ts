@@ -3,8 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { fetchRewards, postCheckIn, claimTask, type RewardsData } from "@/services/userApi";
 import { useRewardSound } from "@/hooks/useRewardSound";
-
-const REWARDS_UPDATED_EVENT = "main-page:rewards-updated";
+import { notifyRewardsUpdated, REWARDS_UPDATED_EVENT } from "@/lib/reward-events";
 
 /** 签到记录（由后端返回的 check_in_dates 等推导） */
 export interface CheckInState {
@@ -72,14 +71,6 @@ export function useRewards() {
     return () => window.removeEventListener(REWARDS_UPDATED_EVENT, handleRewardsUpdated);
   }, [load]);
 
-  const notifyRewardsUpdated = useCallback(() => {
-    window.dispatchEvent(
-      new CustomEvent(REWARDS_UPDATED_EVENT, {
-        detail: { sourceId: instanceIdRef.current },
-      })
-    );
-  }, []);
-
   const coins = data?.coins ?? 0;
   const diamonds = data?.diamonds ?? 0;
   const flowers = data?.flowers ?? 0;
@@ -105,7 +96,7 @@ export function useRewards() {
       const award = await postCheckIn();
       playRewardSound(award);
       const refreshed = await load({ background: true });
-      notifyRewardsUpdated();
+      notifyRewardsUpdated(instanceIdRef.current);
       return {
         ...award,
         streakAfter: refreshed?.current_streak ?? 0,
@@ -114,7 +105,7 @@ export function useRewards() {
       setError(e instanceof Error ? e.message : "check_in_failed");
       return null;
     }
-  }, [hasCheckedInToday, load, notifyRewardsUpdated, playRewardSound]);
+  }, [hasCheckedInToday, load, playRewardSound]);
 
   const claimTaskReward = useCallback(
     async (taskId: string) => {
@@ -122,12 +113,12 @@ export function useRewards() {
         const award = await claimTask(taskId);
         playRewardSound(award);
         await load({ background: true });
-        notifyRewardsUpdated();
+        notifyRewardsUpdated(instanceIdRef.current);
       } catch (e) {
         throw e;
       }
     },
-    [load, notifyRewardsUpdated, playRewardSound]
+    [load, playRewardSound]
   );
 
   return {
