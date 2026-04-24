@@ -125,21 +125,17 @@ export default function LeaderboardTab() {
                 key={user.user_id}
                 className="relative rounded-[32px] bg-white/80 border border-white/60 p-6 shadow-[0px_10px_15px_0px_rgba(0,0,0,0.1)] backdrop-blur-md flex flex-col items-center"
               >
-                {/* Avatar Placeholder */}
+                {/* Avatar */}
                 <div className="absolute -top-[65px] flex h-[130px] w-[130px] items-center justify-center overflow-hidden rounded-full border-8 border-white/80 bg-white shadow-lg">
-                  {user.avatar_url ? (
-                    <img 
-                      src={user.avatar_url} 
-                      alt={user.username} 
-                      className="h-full w-full object-cover"
-                      onError={(e) => {
-                        e.currentTarget.onerror = null;
-                        e.currentTarget.src = "/dashboard/default.png";
-                      }}
-                    />
-                  ) : (
-                    <span className="text-5xl">{user.rank === 1 ? "👦" : user.rank === 2 ? "👩" : "🧑"}</span>
-                  )}
+                  <img
+                    src={user.avatar_url || "/dashboard/default.png"}
+                    alt={user.username}
+                    className="h-full w-full object-cover"
+                    onError={(e) => {
+                      e.currentTarget.onerror = null;
+                      e.currentTarget.src = "/dashboard/default.png";
+                    }}
+                  />
                 </div>
 
                 {/* Name */}
