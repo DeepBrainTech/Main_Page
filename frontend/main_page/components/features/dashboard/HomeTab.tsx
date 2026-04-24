@@ -117,7 +117,7 @@ export default function HomeTab({ username = "" }: HomeTabProps) {
         <div className="space-y-5 xl:col-span-8">
           <div
             className={`relative min-h-[360px] overflow-visible rounded-3xl border border-white/70 bg-white p-4 shadow-lg backdrop-blur transition-[padding] duration-300 md:min-h-[430px] xl:min-h-[500px] ${
-              isHomesteadMenuOpen ? "pb-[230px]" : ""
+              isHomesteadMenuOpen ? "pb-[clamp(16rem,38vw,20rem)] sm:pb-[clamp(14rem,28vw,16.25rem)]" : ""
             }`}
           >
             <HomesteadBlock
@@ -131,7 +131,7 @@ export default function HomeTab({ username = "" }: HomeTabProps) {
                 }
               }}
             />
-            <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+            <div className="relative z-20 mt-3 flex flex-wrap items-center justify-between gap-3">
               <div className="font-['Titan_One'] text-2xl font-normal leading-8 tracking-wide text-sky-700">
                 {tHome("homesteadCharacterName")}
               </div>

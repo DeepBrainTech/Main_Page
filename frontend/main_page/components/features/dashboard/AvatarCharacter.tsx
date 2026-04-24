@@ -53,7 +53,7 @@ export default function AvatarCharacter({ config, level, onClick, direction = "r
 
   return (
     <div
-      className={`relative w-64 h-64 cursor-pointer transition-transform duration-300 ${
+      className={`relative h-[clamp(10rem,24vw,16rem)] w-[clamp(10rem,24vw,16rem)] cursor-pointer transition-transform duration-300 ${
         isAnimating ? "animate-bounce-custom" : ""
       }`}
       onClick={handleClick}

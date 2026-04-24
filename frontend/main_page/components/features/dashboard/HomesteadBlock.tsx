@@ -38,8 +38,8 @@ export default function HomesteadBlock({
     outfitType: "default",
   });
   const scene: SceneType = "island";
-  const HOME_POSITION = { x: 50, y: 82 };
-  const BOUNDS = { xMin: 12, xMax: 88, yMin: 18, yMax: 86 };
+  const HOME_POSITION = { x: 50, y: 78 };
+  const BOUNDS = { xMin: 20, xMax: 80, yMin: 20, yMax: 84 };
 
   const [position, setPosition] = useState(HOME_POSITION);
   const [direction, setDirection] = useState<"left" | "right">("right");
@@ -107,10 +107,15 @@ export default function HomesteadBlock({
     };
   }, []);
 
+  // Keep the bar in the right column on narrow cards; avoid lg-only min(18rem) which ignored column width.
+  const chatWidth =
+    "w-[max(5rem,min(24rem,30%,calc(100%-1.5rem),calc(50%-0.5rem)))] min-w-0 max-w-full";
+
   return (
-    <div className="relative flex h-full min-h-[340px] flex-col overflow-visible rounded-3xl border border-amber-100/50 p-6 shadow-sm transition-all select-none md:min-h-[390px] xl:min-h-[440px]">
-      <div className="absolute inset-0 overflow-hidden rounded-3xl">
-        <div className="absolute inset-0 overflow-hidden rounded-3xl">
+    <div className="relative flex h-full min-h-[340px] flex-col rounded-3xl border border-amber-100/50 p-[clamp(0.75rem,2vw,1.5rem)] shadow-sm transition-all select-none md:min-h-[390px] xl:min-h-[440px]">
+      {/* Clips scene + avatar + chat to the card; customize panel is a sibling so it is not cut off. */}
+      <div className="absolute inset-0 z-0 overflow-hidden rounded-3xl">
+        <div className="absolute inset-0 z-0">
           {scene === "island" && (
             <>
               <div className="absolute inset-0 bg-gradient-to-b from-[#87CEEB] via-[#98D8F0] to-[#5BA3E8]" />
@@ -123,36 +128,42 @@ export default function HomesteadBlock({
           )}
         </div>
 
-        <div ref={containerRef} onClick={handleContainerClick} className="absolute inset-0 top-16 z-0 cursor-pointer">
-          <div
-            className="absolute will-change-transform"
-            style={{
-              left: `${position.x}%`,
-              top: `${position.y}%`,
-              transform: "translate(-50%, -50%)",
-              zIndex: Math.floor(position.y),
-              transition: "none",
-            }}
-          >
-            <div className={`relative ${isWalking ? "avatar-walk" : ""}`}>
-              <div className="pointer-events-none absolute right-[80%] -top-8 z-20">
-                <GoodCoolMessageBubble message={tHome("goodCoolMessage")} />
-              </div>
-              <AvatarCharacter config={avatarConfig} level={level} direction={direction} />
+        <div
+          ref={containerRef}
+          onClick={handleContainerClick}
+          className="@container/hs absolute left-0 right-0 top-[clamp(5rem,10vw,6rem)] bottom-[clamp(0.5rem,1.8vw,1.25rem)] z-20 cursor-pointer px-[clamp(0.25rem,1.2vw,0.5rem)] lg:top-16"
+        >
+        <div
+          className="absolute will-change-transform"
+          style={{
+            left: `${position.x}%`,
+            top: `${position.y}%`,
+            transform: "translate(-50%, -50%)",
+            zIndex: Math.floor(position.y),
+            transition: "none",
+          }}
+        >
+          <div className={`relative min-w-0 ${isWalking ? "avatar-walk" : ""}`}>
+            <div className="pointer-events-none absolute right-full -top-1 z-30 min-w-0 w-max max-w-[min(18rem,34cqi)] pr-0 -mr-1.5">
+              <GoodCoolMessageBubble message={tHome("goodCoolMessage")} />
             </div>
-            <div className="absolute bottom-2 left-1/2 -z-10 h-4 w-24 -translate-x-1/2 rounded-[100%] bg-black/10 blur-sm" />
+            <AvatarCharacter config={avatarConfig} level={level} direction={direction} />
+          </div>
+          <div className="absolute bottom-2 left-1/2 -z-10 h-4 w-24 -translate-x-1/2 rounded-[100%] bg-black/10 blur-sm" />
+        </div>
+        </div>
+
+        <div
+          className={`pointer-events-none absolute bottom-[clamp(1rem,2.5vw,1.5rem)] right-[clamp(1rem,2.5vw,1.5rem)] z-20 flex justify-end ${chatWidth}`}
+        >
+          <div className="pointer-events-auto w-full min-w-0">
+            <GoodCoolChatPrompt label={tHome("goodCoolChatHint")} />
           </div>
         </div>
       </div>
 
-      <div className="pointer-events-none relative z-20 mt-auto flex justify-end">
-        <div className="pointer-events-auto">
-          <GoodCoolChatPrompt label={tHome("goodCoolChatHint")} />
-        </div>
-      </div>
-
       <div
-        className={`absolute left-0 right-0 top-[calc(100%+56px)] z-40 rounded-b-3xl bg-white px-5 pb-5 pt-3 transition-opacity duration-300 ${
+        className={`absolute left-0 right-0 top-[calc(100%+96px)] z-40 rounded-b-3xl bg-white px-5 pb-5 pt-3 transition-opacity duration-300 sm:top-[calc(100%+56px)] ${
           menuOpen && activeCustomizeTab ? "opacity-100" : "pointer-events-none opacity-0"
         }`}
       >
