@@ -28,11 +28,30 @@ async def get_leaderboard(
         subq = db.query(
             UserCognitiveScores.user_id,
             UserCognitiveScores.previous_total_rank,
+            UserCognitiveScores.memory,
+            UserCognitiveScores.logic,
+            UserCognitiveScores.focus,
+            UserCognitiveScores.reaction,
+            UserCognitiveScores.strategy,
+            UserCognitiveScores.spatial,
             ((UserCognitiveScores.memory + UserCognitiveScores.logic + UserCognitiveScores.focus
               + UserCognitiveScores.reaction + UserCognitiveScores.strategy + UserCognitiveScores.spatial) / 6).label("score"),
         ).subquery()
         rows = (
-            db.query(User.id, User.username, subq.c.score, subq.c.previous_total_rank, User.avatar_object_key, User.google_avatar_url)
+            db.query(
+                User.id,
+                User.username,
+                subq.c.score,
+                subq.c.previous_total_rank,
+                User.avatar_object_key,
+                User.google_avatar_url,
+                subq.c.memory,
+                subq.c.logic,
+                subq.c.focus,
+                subq.c.reaction,
+                subq.c.strategy,
+                subq.c.spatial,
+            )
             .join(subq, User.id == subq.c.user_id)
             .order_by(desc(subq.c.score))
             .limit(limit)
@@ -82,7 +101,13 @@ async def get_leaderboard(
             "username": r[1],
             "score": score,
             "trend": trend,
-            "avatar_url": avatar_url
+            "avatar_url": avatar_url,
+            "memory": round(r[6]) if len(r) > 6 and r[6] is not None else None,
+            "logic": round(r[7]) if len(r) > 7 and r[7] is not None else None,
+            "focus": round(r[8]) if len(r) > 8 and r[8] is not None else None,
+            "reaction": round(r[9]) if len(r) > 9 and r[9] is not None else None,
+            "strategy": round(r[10]) if len(r) > 10 and r[10] is not None else None,
+            "spatial": round(r[11]) if len(r) > 11 and r[11] is not None else None,
         })
         
     return APIResponse(success=True, message="ok", data={"list": result})

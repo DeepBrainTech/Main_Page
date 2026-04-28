@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { COGNITIVE_DIMENSION_KEYS } from "@/types/cognitive";
 import { fetchLeaderboard, type LeaderboardEntry } from "@/services/userApi";
-import Image from "next/image";
 
 type LeaderboardTabType = "global" | "dimension";
 
@@ -14,7 +13,7 @@ const DIMENSIONS_MAP = [
   { key: "strategy", label: "Strategy" },
   { key: "logic", label: "Logic" },
   { key: "focus", label: "Focus" },
-  { key: "speed", label: "Speed" },
+  { key: "reaction", label: "Speed" },
 ];
 
 export default function LeaderboardTab() {
@@ -145,18 +144,23 @@ export default function LeaderboardTab() {
                 <div className="mt-6 flex w-full justify-between px-2 text-center">
                   <div className="flex-1">
                     <p className="text-base font-medium text-[#106FAA]">Rank</p>
-                    <div
-                      className={`mt-2 mx-auto flex h-[36px] w-[36px] items-center justify-center rounded-full shadow-sm text-lg font-bold ${getRankTextColor(
-                        user.rank
-                      )}`}
-                      style={{ background: getRankGradient(user.rank) }}
-                    >
-                      {user.rank}
+                    <div className="mt-2 mx-auto flex items-center justify-center gap-2">
+                      <div
+                        className={`flex h-[36px] w-[36px] items-center justify-center rounded-full shadow-sm text-lg font-bold ${getRankTextColor(
+                          user.rank
+                        )}`}
+                        style={{ background: getRankGradient(user.rank) }}
+                      >
+                        {user.rank}
+                      </div>
+                      <span className={`text-sm font-bold ${getTrendIcon(user.trend).color}`}>
+                        {getTrendIcon(user.trend).symbol}
+                      </span>
                     </div>
                   </div>
                   <div className="flex-1">
                     <p className="text-base font-medium text-[#106FAA]">Brainpower</p>
-                    <p className="mt-2 text-[32px] font-semibold text-[#0075FF] leading-9">{user.score}</p>
+                    <p className="mt-2 text-[32px] font-semibold leading-9 text-[#0075FF]">{user.score}</p>
                   </div>
                   <div className="flex-1">
                     <p className="text-base font-medium text-[#106FAA]">Country</p>
@@ -172,7 +176,9 @@ export default function LeaderboardTab() {
                       className="flex items-center justify-between rounded-[12.8px] bg-[#EDF4FC] px-4 py-2"
                     >
                       <span className="text-[13px] font-semibold text-[#045E96]">{dim.label}</span>
-                      <span className="text-[14px] font-medium text-[#E45C44]">100</span>
+                      <span className="text-[14px] font-medium text-[#E45C44]">
+                        {(user[dim.key as keyof LeaderboardEntry] as number | null | undefined) ?? 0}
+                      </span>
                     </div>
                   ))}
                 </div>

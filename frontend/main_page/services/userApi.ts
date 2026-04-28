@@ -54,6 +54,12 @@ export interface LeaderboardEntry {
   score: number;
   trend?: "up" | "down" | "stable";
   avatar_url?: string | null;
+  memory?: number | null;
+  logic?: number | null;
+  focus?: number | null;
+  reaction?: number | null;
+  strategy?: number | null;
+  spatial?: number | null;
 }
 
 export interface GameLikeState {
