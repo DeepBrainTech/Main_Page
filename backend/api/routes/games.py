@@ -2,7 +2,7 @@
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
-from fastapi import APIRouter, Depends, Header
+from fastapi import APIRouter, Depends, Header, Response
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
@@ -177,6 +177,49 @@ def _build_token_response(
             "reward_status": reward_status,
             "total_flowers": total_flowers,
             "assets": assets,
+            "user": {
+                "id": current_user.id,
+                "username": current_user.username,
+            },
+        },
+    )
+
+
+def _build_chessmater_session_response(current_user: User, game_token: str, expires_in: int) -> APIResponse:
+    """
+    Build lightweight ChessMater session-refresh response.
+    This endpoint is for silent refresh and should not mutate play stats.
+    """
+    return APIResponse(
+        success=True,
+        message="ok",
+        data={
+            "game_token": game_token,
+            "expires_in": expires_in,
+            "user_id": current_user.id,
+            "username": current_user.username,
+            "user": {
+                "id": current_user.id,
+                "username": current_user.username,
+            },
+        },
+    )
+
+
+def _build_game_session_response(
+    current_user: User,
+    game_token: str,
+    expires_in: int,
+) -> APIResponse:
+    """Build lightweight game session-refresh response."""
+    return APIResponse(
+        success=True,
+        message="ok",
+        data={
+            "game_token": game_token,
+            "expires_in": expires_in,
+            "user_id": current_user.id,
+            "username": current_user.username,
             "user": {
                 "id": current_user.id,
                 "username": current_user.username,
@@ -421,6 +464,55 @@ async def issue_chessmater_token(
     )
 
 
+@router.get("/chessmater/session", response_model=APIResponse)
+async def refresh_chessmater_session(
+    response: Response,
+    current_user: User = Depends(get_current_active_user),
+):
+    """
+    Silent refresh endpoint for ChessMater.
+    Requires current portal authentication and only issues a fresh short-lived game token.
+    """
+    claims = {
+        "sub": current_user.username,
+        "user_id": current_user.id,
+        "username": current_user.username,
+    }
+    token = create_chessmater_token(claims)
+    # Prevent token responses from being cached by browsers/proxies.
+    response.headers["Cache-Control"] = "no-store"
+    response.headers["Pragma"] = "no-cache"
+    return _build_game_session_response(
+        current_user=current_user,
+        game_token=token,
+        expires_in=CHESSMATER_TOKEN_EXPIRE_SECONDS,
+    )
+
+
+@router.get("/quantumgo/session", response_model=APIResponse)
+async def refresh_quantumgo_session(
+    response: Response,
+    current_user: User = Depends(get_current_active_user),
+):
+    """
+    Silent refresh endpoint for QuantumGo.
+    Requires current portal authentication and only issues a fresh short-lived game token.
+    """
+    claims = {
+        "sub": current_user.username,
+        "user_id": current_user.id,
+        "username": current_user.username,
+    }
+    token = create_quantumgo_token(claims)
+    response.headers["Cache-Control"] = "no-store"
+    response.headers["Pragma"] = "no-cache"
+    return _build_game_session_response(
+        current_user=current_user,
+        game_token=token,
+        expires_in=QUANTUMGO_TOKEN_EXPIRE_SECONDS,
+    )
+
+
 @router.post("/chess-tourmaster/token", response_model=APIResponse)
 async def issue_tourmaster_token(
     current_user: User = Depends(get_current_active_user),
@@ -455,6 +547,30 @@ async def issue_tourmaster_token(
         flowers_awarded=flowers_awarded,
         total_flowers=total_flowers,
         assets=assets,
+    )
+
+
+@router.get("/chess-tourmaster/session", response_model=APIResponse)
+async def refresh_tourmaster_session(
+    response: Response,
+    current_user: User = Depends(get_current_active_user),
+):
+    """
+    Silent refresh endpoint for Chess-Tourmaster.
+    Requires current portal authentication and only issues a fresh short-lived game token.
+    """
+    claims = {
+        "sub": current_user.username,
+        "user_id": current_user.id,
+        "username": current_user.username,
+    }
+    token = create_tourmaster_token(claims)
+    response.headers["Cache-Control"] = "no-store"
+    response.headers["Pragma"] = "no-cache"
+    return _build_game_session_response(
+        current_user=current_user,
+        game_token=token,
+        expires_in=TOURMASTER_TOKEN_EXPIRE_SECONDS,
     )
 
 
