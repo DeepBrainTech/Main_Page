@@ -195,7 +195,7 @@ export default function LeaderboardTab() {
               <div>Brainpower</div>
             </div>
 
-            <div className="space-y-2 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+            <div className="space-y-2 max-h-[210px] overflow-y-auto pr-2 custom-scrollbar">
               {rest.length === 0 ? (
                 <div className="text-center py-8 text-gray-500">{t("noData")}</div>
               ) : (

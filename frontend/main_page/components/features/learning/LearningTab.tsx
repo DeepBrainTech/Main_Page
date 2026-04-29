@@ -189,7 +189,7 @@ export default function LearningTab() {
                 {lessonCards.map((card) => (
                   <article
                     key={card.key}
-                    className={`relative rounded-[24px] border border-white/70 p-4 shadow-[0px_10px_15px_0px_rgba(0,0,0,0.1)] ${
+                    className={`relative flex h-full flex-col rounded-[24px] border border-white/70 p-4 shadow-[0px_10px_15px_0px_rgba(0,0,0,0.1)] ${
                       card.locked ? "overflow-hidden bg-[#7A7A7A]/90" : "bg-white/80"
                     }`}
                   >
@@ -223,14 +223,20 @@ export default function LearningTab() {
                       )}
                     </div>
 
-                    <p className={`mt-4 text-base ${card.locked ? "text-[#CFE7F7]" : "text-[#106FAA]"}`}>{card.label}</p>
-                    <h3 className={`mt-1 text-3xl font-semibold ${card.locked ? "text-white" : "text-[#045E96]"}`}>
-                      {card.title}
-                    </h3>
-                    <div className={`my-5 h-px ${card.locked ? "bg-white/20" : "bg-slate-200"}`} />
+                    <div className="mt-4 min-h-[78px]">
+                      <p className={`text-[14px] leading-5 ${card.locked ? "text-[#CFE7F7]" : "text-[#106FAA]"}`}>{card.label}</p>
+                      <h3
+                        className={`mt-1 overflow-hidden text-ellipsis whitespace-nowrap text-[20px] font-semibold leading-7 ${
+                          card.locked ? "text-white" : "text-[#045E96]"
+                        }`}
+                      >
+                        {card.title}
+                      </h3>
+                    </div>
+                    <div className={`mb-5 mt-4 h-px ${card.locked ? "bg-white/20" : "bg-slate-200"}`} />
 
                     {card.locked ? (
-                      <div className="space-y-1 text-sm text-white">
+                      <div className="mt-auto space-y-1 text-sm text-white">
                         <p>💎 100 &nbsp; 3-Month Limited Unlock</p>
                         <p>💎 200 &nbsp; Lifetime Unlock</p>
                         <p className="font-semibold text-[#FFD55C]">⭐ Upgrade to Premium</p>
@@ -244,7 +250,7 @@ export default function LearningTab() {
                         </div>
                       </div>
                     ) : (
-                      <div className="flex items-center justify-between">
+                      <div className="mt-auto flex items-center justify-between">
                         <p className="text-base font-semibold text-[#333]">Progress: 80%</p>
                         <button
                           type="button"

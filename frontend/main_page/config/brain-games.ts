@@ -43,7 +43,7 @@ export const GAMES_BY_DIMENSION: Record<CognitiveDimensionKey, GameEntry[]> = {
     { key: "chess-tourmaster", nameKey: "chessTourmaster", launchKey: "chessTourmaster" },
     {
       key: "stack_math_chess",
-      nameKey: "stackMathChsee",
+      nameKey: "stackMathChess",
       launchKey: "external",
       externalUrl: "https://stack-math-chess.deepbraintechnology.com/",
     },
