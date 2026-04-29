@@ -1,773 +1,271 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useRef, useState } from "react";
-import { useTranslations } from "next-intl";
+import { useMemo, useState } from "react";
 import MentalMathAssessmentPanel from "@/components/features/learning/MentalMathAssessmentPanel";
-import {
-  generateMentalMathQuestion,
-  MENTAL_MATH_SECRET_ORDER,
-} from "@/config/mental-math-questions";
-import { MENTAL_MATH_CATEGORY_ITEM_IDS, MENTAL_MATH_SHOP_GAME_MODE } from "@/config/mental-math-shop";
-import { useMentalMathPractice } from "@/hooks/useMentalMathPractice";
-import { notifyRewardsUpdated } from "@/lib/reward-events";
-import {
-  fetchAssets,
-  fetchMakingWholeSecretMedia,
-  fetchShopInventory,
-  fetchShopItems,
-  redeemShopItem,
-} from "@/services/userApi";
-import type { MentalMathCategoryKey, MentalMathSecretKey } from "@/types/learning";
 
-interface AssetCost {
-  coins: number;
-  diamonds: number;
-  flowers: number;
+const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul"];
+const badgePlaceholders = ["Number Igniter", "Focus Pilot", "Logic Explorer"];
+const completedMonthCount = 4;
+const chartMinPercent = 25;
+const chartMaxPercent = 100;
+const chartMinHeightPx = 30;
+const chartMaxHeightPx = 124;
+
+const lessonCards = [
+  { key: "assessment", label: "Quiz", title: "Lesson 0: Self-Assessment", status: "free" as const, locked: false },
+  { key: "makingWhole", label: "Course", title: "Lesson 1: Making Whole", status: "free" as const, locked: false },
+  { key: "breakIntoParts", label: "Course", title: "Lesson 2: Break into Parts", status: "locked" as const, locked: true },
+  { key: "rearrange", label: "Quiz", title: "Lesson 3: Rearrange", status: "limited" as const, locked: false },
+  { key: "roundAdjust", label: "Course", title: "Lesson 4: Round & Adjust", status: "full" as const, locked: false },
+];
+
+function createWeeklyProgressData() {
+  let seed = 42;
+  const nextRandom = () => {
+    seed = (seed * 1664525 + 1013904223) % 4294967296;
+    return seed / 4294967296;
+  };
+
+  return months.map((month, monthIndex) => ({
+    month,
+    weeklyProgress: Array.from({ length: 4 }, () => {
+      if (monthIndex >= completedMonthCount) {
+        return 72;
+      }
+      return Math.round(chartMinPercent + nextRandom() * (chartMaxPercent - chartMinPercent));
+    }),
+  }));
 }
 
 export default function LearningTab() {
-  const t = useTranslations("learning");
-  const [showMentalMathCategories, setShowMentalMathCategories] = useState(false);
-  const [showMakingWholeSecrets, setShowMakingWholeSecrets] = useState(false);
-  const [selectedMentalMathCategory, setSelectedMentalMathCategory] = useState<MentalMathCategoryKey | null>(null);
-  const [selectedSecretKey, setSelectedSecretKey] = useState<MentalMathSecretKey | null>(null);
-  const [ownedLearningItemIds, setOwnedLearningItemIds] = useState<Set<string>>(new Set());
-  const [categoryCosts, setCategoryCosts] = useState<Partial<Record<MentalMathCategoryKey, AssetCost>>>({});
-  const [assetsBalance, setAssetsBalance] = useState<AssetCost>({ coins: 0, diamonds: 0, flowers: 0 });
-  const [unlockTargetCategory, setUnlockTargetCategory] = useState<MentalMathCategoryKey | null>(null);
-  const [pendingUnlockCategory, setPendingUnlockCategory] = useState<MentalMathCategoryKey | null>(null);
-  const [secretMediaUrls, setSecretMediaUrls] = useState<string[]>([]);
-  const [secretMediaLoading, setSecretMediaLoading] = useState(false);
-  const [secretMediaError, setSecretMediaError] = useState<string | null>(null);
-  const [showSecretTipCard, setShowSecretTipCard] = useState(false);
-  const answerInputRef = useRef<HTMLInputElement | null>(null);
-  const nextButtonRef = useRef<HTMLButtonElement | null>(null);
+  const weeklyProgressByMonth = useMemo(() => createWeeklyProgressData(), []);
+  const [showLessonBoard, setShowLessonBoard] = useState(false);
+  const [activeLessonKey, setActiveLessonKey] = useState<string | null>(null);
 
-  const categoryKeys = [
-    "assessment",
-    "makingWhole",
-    "breakIntoParts",
-    "rearrange",
-    "roundAndAdjust",
-    "leftToRightFlow",
-  ] as const;
-  const makingWholeSecretKeys = [
-    "secret1",
-    "secret2",
-    "secret3",
-    "secret4",
-    "secret5",
-    "secret6",
-    "secret7",
-    "secret8",
-    "secret9",
-    "secret10",
-  ] as const;
-  const lockableCategoryKeys = [
-    "makingWhole",
-    "breakIntoParts",
-    "rearrange",
-    "roundAndAdjust",
-    "leftToRightFlow",
-  ] as const;
-  const practice = useMentalMathPractice({
-    generateQuestion: () => (selectedSecretKey ? generateMentalMathQuestion(selectedSecretKey) : null),
-    milestoneSize: 10,
-  });
-
-  useEffect(() => {
-    if (!showMentalMathCategories) {
-      return;
-    }
-    let cancelled = false;
-
-    const loadShopState = async () => {
-      try {
-        const [items, inventory, assets] = await Promise.all([
-          fetchShopItems(MENTAL_MATH_SHOP_GAME_MODE),
-          fetchShopInventory(),
-          fetchAssets(),
-        ]);
-        if (cancelled) {
-          return;
-        }
-        const nextCosts: Partial<Record<MentalMathCategoryKey, AssetCost>> = {};
-        (Object.keys(MENTAL_MATH_CATEGORY_ITEM_IDS) as MentalMathCategoryKey[]).forEach((categoryKey) => {
-          const itemId = MENTAL_MATH_CATEGORY_ITEM_IDS[categoryKey];
-          if (!itemId) {
-            return;
-          }
-          nextCosts[categoryKey] = {
-            coins: items[itemId]?.cost?.coins ?? 0,
-            diamonds: items[itemId]?.cost?.diamonds ?? 0,
-            flowers: items[itemId]?.cost?.flowers ?? 0,
-          };
-        });
-        setCategoryCosts(nextCosts);
-        setOwnedLearningItemIds(new Set(inventory.filter((item) => item.quantity > 0).map((item) => item.item_id)));
-        setAssetsBalance({
-          coins: assets.coins ?? 0,
-          diamonds: assets.diamonds ?? 0,
-          flowers: assets.flowers ?? 0,
-        });
-      } catch {
-        setCategoryCosts({});
-        setOwnedLearningItemIds(new Set());
-        setAssetsBalance({ coins: 0, diamonds: 0, flowers: 0 });
-      }
-    };
-
-    void loadShopState();
-    return () => {
-      cancelled = true;
-    };
-  }, [showMentalMathCategories]);
-
-  useEffect(() => {
-    if (!selectedSecretKey) {
-      setSecretMediaUrls([]);
-      setSecretMediaLoading(false);
-      setSecretMediaError(null);
-      return;
-    }
-
-    let cancelled = false;
-    const loadSecretMedia = async () => {
-      setSecretMediaLoading(true);
-      setSecretMediaError(null);
-      try {
-        const data = await fetchMakingWholeSecretMedia(selectedSecretKey);
-        if (cancelled) {
-          return;
-        }
-        setSecretMediaUrls(data.urls ?? []);
-      } catch {
-        if (cancelled) {
-          return;
-        }
-        setSecretMediaUrls([]);
-        setSecretMediaError("load_failed");
-      } finally {
-        if (!cancelled) {
-          setSecretMediaLoading(false);
-        }
-      }
-    };
-
-    void loadSecretMedia();
-    return () => {
-      cancelled = true;
-    };
-  }, [selectedSecretKey]);
-
-  const isCategoryUnlocked = (key: MentalMathCategoryKey) => {
-    if (key === "assessment") {
-      return true;
-    }
-    if (!(lockableCategoryKeys as readonly MentalMathCategoryKey[]).includes(key)) {
-      return true;
-    }
-    const itemId = MENTAL_MATH_CATEGORY_ITEM_IDS[key];
-    if (!itemId) {
-      return false;
-    }
-    return ownedLearningItemIds.has(itemId);
+  const toBarHeight = (percent: number) => {
+    const clamped = Math.min(chartMaxPercent, Math.max(chartMinPercent, percent));
+    const ratio = (clamped - chartMinPercent) / (chartMaxPercent - chartMinPercent);
+    return Math.round(chartMinHeightPx + ratio * (chartMaxHeightPx - chartMinHeightPx));
   };
-
-  const formatDuration = (seconds: number) => {
-    const minutes = Math.floor(seconds / 60);
-    const rest = seconds % 60;
-    return `${minutes}:${String(rest).padStart(2, "0")}`;
-  };
-
-  const handleBackToMath = () => {
-    setShowMentalMathCategories(false);
-    setShowMakingWholeSecrets(false);
-    setSelectedMentalMathCategory(null);
-    setSelectedSecretKey(null);
-    setShowSecretTipCard(false);
-    practice.reset();
-  };
-
-  const handleBackToMentalMath = () => {
-    setShowMakingWholeSecrets(false);
-    setSelectedMentalMathCategory(null);
-    setSelectedSecretKey(null);
-    setShowSecretTipCard(false);
-    practice.reset();
-  };
-
-  const handleSelectSecret = (key: MentalMathSecretKey) => {
-    setSelectedSecretKey(key);
-    setShowSecretTipCard(false);
-    practice.reset();
-  };
-
-  const handleUnlockCategory = async () => {
-    if (!unlockTargetCategory) {
-      return;
-    }
-    const key = unlockTargetCategory;
-    const itemId = MENTAL_MATH_CATEGORY_ITEM_IDS[key];
-    if (!itemId) {
-      return;
-    }
-    try {
-      setPendingUnlockCategory(key);
-      await redeemShopItem(itemId, MENTAL_MATH_SHOP_GAME_MODE);
-      const assets = await fetchAssets();
-      setOwnedLearningItemIds((prev) => {
-        const next = new Set(prev);
-        next.add(itemId);
-        return next;
-      });
-      setAssetsBalance({
-        coins: assets.coins ?? 0,
-        diamonds: assets.diamonds ?? 0,
-        flowers: assets.flowers ?? 0,
-      });
-      notifyRewardsUpdated();
-      setUnlockTargetCategory(null);
-    } catch {
-      alert(t("unlock.failed"));
-    } finally {
-      setPendingUnlockCategory(null);
-    }
-  };
-
-  const handleOpenMentalMathCategory = (key: MentalMathCategoryKey) => {
-    if (key === "makingWhole") {
-      if (!isCategoryUnlocked(key)) {
-        return;
-      }
-      setShowMakingWholeSecrets(true);
-      setSelectedMentalMathCategory(null);
-      setSelectedSecretKey(null);
-      practice.reset();
-      return;
-    }
-
-    if (!isCategoryUnlocked(key)) {
-      return;
-    }
-
-    setSelectedMentalMathCategory(key);
-  };
-
-  const handleRetryCurrentSecret = () => {
-    practice.start();
-  };
-
-  const handleGoToNextSecret = () => {
-    if (!selectedSecretKey) {
-      return;
-    }
-    const currentIndex = MENTAL_MATH_SECRET_ORDER.indexOf(selectedSecretKey);
-    if (currentIndex < 0 || currentIndex >= MENTAL_MATH_SECRET_ORDER.length - 1) {
-      return;
-    }
-    const nextKey = MENTAL_MATH_SECRET_ORDER[currentIndex + 1];
-    setSelectedSecretKey(nextKey);
-    practice.reset();
-  };
-
-  const hasNextSecret =
-    selectedSecretKey !== null &&
-    MENTAL_MATH_SECRET_ORDER.indexOf(selectedSecretKey) < MENTAL_MATH_SECRET_ORDER.length - 1;
-  const unlockCost = unlockTargetCategory
-    ? categoryCosts[unlockTargetCategory] ?? { coins: 0, diamonds: 0, flowers: 0 }
-    : { coins: 0, diamonds: 0, flowers: 0 };
-  const hasEnoughForUnlock =
-    assetsBalance.coins >= unlockCost.coins &&
-    assetsBalance.diamonds >= unlockCost.diamonds &&
-    assetsBalance.flowers >= unlockCost.flowers;
-
-  useEffect(() => {
-    if (practice.phase !== "inProgress") {
-      return;
-    }
-    const timer = window.requestAnimationFrame(() => {
-      answerInputRef.current?.focus();
-      answerInputRef.current?.select();
-    });
-    return () => window.cancelAnimationFrame(timer);
-  }, [practice.phase, practice.currentIndex]);
-
-  useEffect(() => {
-    if (practice.phase !== "questionResult") {
-      return;
-    }
-    const timer = window.requestAnimationFrame(() => {
-      nextButtonRef.current?.focus();
-    });
-    return () => window.cancelAnimationFrame(timer);
-  }, [practice.phase, practice.currentIndex]);
 
   return (
-    <div className="space-y-6">
-      <h2 className="text-xl font-bold text-gray-800">{t("title")}</h2>
-
-      <section className="rounded-2xl bg-[#FFFFFF] p-5 shadow-md">
-        {!showMentalMathCategories ? (
-          <>
-            <h3 className="mb-4 text-2xl font-semibold text-gray-800">{t("math")}</h3>
-            <div className="flex flex-wrap gap-4">
-              <button
-                type="button"
-                onClick={() => setShowMentalMathCategories(true)}
-                className="flex w-52 flex-col items-center rounded-xl bg-white p-3 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
-              >
-                <div className="h-32 w-full overflow-hidden rounded-lg bg-gray-100">
-                  <Image
-                    src="/learning/mental_math/mental_math.png"
-                    alt={t("mentalMath")}
-                    width={208}
-                    height={128}
-                    className="h-full w-full object-cover"
-                  />
-                </div>
-                <span className="mt-2 text-1xl font-medium text-gray-800">{t("mentalMath")}</span>
-              </button>
+    <div className="grid grid-cols-1 items-stretch gap-5 pb-10 font-['Outfit'] xl:grid-cols-12 xl:grid-rows-[auto_1fr]">
+      <section className="grid grid-cols-1 gap-4 md:grid-cols-3 xl:col-span-8 xl:row-start-1">
+        {[
+          { title: "Completed", value: "14%", icon: "◎" },
+          { title: "Lessons", value: "1/10", icon: "📘" },
+          { title: "Hours", value: "11", icon: "🕒" },
+        ].map((item) => (
+          <article
+            key={item.title}
+            className="rounded-[20px] border border-white/70 bg-white/70 p-5 shadow-[0px_10px_15px_0px_rgba(0,0,0,0.1)] backdrop-blur-md"
+          >
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-[#106FAA]">{item.title}</h3>
+              <span className="text-lg text-[#106FAA]">{item.icon}</span>
             </div>
-          </>
-        ) : (
-          <>
-            <div className="mb-4 flex flex-wrap items-center gap-2 text-xl font-semibold text-gray-800">
-              <button
-                type="button"
-                onClick={handleBackToMath}
-                className="text-blue-700 transition hover:text-blue-800"
-              >
-                {t("math")}
-              </button>
-              <span className="text-gray-400">&gt;</span>
-              {!showMakingWholeSecrets ? (
-                !selectedMentalMathCategory ? (
-                  <span className="font-semibold text-gray-900">{t("mentalMath")}</span>
-                ) : (
-                  <>
-                    <button
-                      type="button"
-                      onClick={() => setSelectedMentalMathCategory(null)}
-                      className="text-blue-700 transition hover:text-blue-800"
-                    >
-                      {t("mentalMath")}
-                    </button>
-                    <span className="text-gray-400">&gt;</span>
-                    <span className="font-semibold text-gray-900">{t(`mentalMathCategories.${selectedMentalMathCategory}`)}</span>
-                  </>
-                )
-              ) : (
-                <>
-                  <button
-                    type="button"
-                    onClick={handleBackToMentalMath}
-                    className="text-blue-700 transition hover:text-blue-800"
-                  >
-                    {t("mentalMath")}
-                  </button>
-                  <span className="text-gray-400">&gt;</span>
-                  {!selectedSecretKey ? (
-                    <span className="font-semibold text-gray-900">{t("mentalMathCategories.makingWhole")}</span>
-                  ) : (
-                    <>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setSelectedSecretKey(null);
-                          setShowSecretTipCard(false);
-                          practice.reset();
-                        }}
-                        className="text-blue-700 transition hover:text-blue-800"
-                      >
-                        {t("mentalMathCategories.makingWhole")}
-                      </button>
-                      <span className="text-gray-400">&gt;</span>
-                      <span className="font-semibold text-gray-900">{t(`makingWholeSecrets.${selectedSecretKey}`)}</span>
-                    </>
-                  )}
-                </>
-              )}
-            </div>
-            {!selectedSecretKey && !selectedMentalMathCategory ? (
-              !showMakingWholeSecrets ? (
-                <div className="flex flex-wrap gap-4">
-                  {categoryKeys.map((key) => (
-                    <button
-                      key={key}
-                      type="button"
-                      onClick={() => {
-                        if (key !== "assessment" && !isCategoryUnlocked(key)) {
-                          setUnlockTargetCategory(key);
-                          return;
-                        }
-                        handleOpenMentalMathCategory(key);
-                      }}
-                      className="flex w-52 flex-col items-center rounded-xl bg-white p-3 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
-                    >
-                      <div className="relative h-32 w-full overflow-hidden rounded-lg bg-gray-100">
-                        <Image
-                          src="/learning/mental_math/mental_math.png"
-                          alt={t(`mentalMathCategories.${key}`)}
-                          width={208}
-                          height={128}
-                          className={`h-full w-full object-cover transition ${
-                            key !== "assessment" && !isCategoryUnlocked(key)
-                              ? "scale-[1.02] blur-[1.5px] brightness-110"
-                              : ""
-                          }`}
-                        />
-                        {!isCategoryUnlocked(key) && key !== "assessment" && (
-                          <>
-                            <div className="absolute inset-0 bg-white/45" />
-                            <span className="absolute right-2 top-2 rounded-full bg-black/70 px-2 py-1 text-xs font-medium text-white">
-                              {t("unlock.locked")}
-                            </span>
-                          </>
-                        )}
-                      </div>
-                      <span className="mt-2 text-center text-base font-medium text-gray-800">
-                        {t(`mentalMathCategories.${key}`)}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              ) : (
-                <div className="flex flex-wrap gap-4">
-                  {makingWholeSecretKeys.map((key) => (
-                    <button
-                      key={key}
-                      type="button"
-                      onClick={() => handleSelectSecret(key)}
-                      className="flex w-52 flex-col items-center rounded-xl bg-white p-3 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
-                    >
-                      <div className="h-32 w-full overflow-hidden rounded-lg bg-gray-100">
-                        <Image
-                          src="/learning/mental_math/mental_math.png"
-                          alt={t(`makingWholeSecrets.${key}`)}
-                          width={208}
-                          height={128}
-                          className="h-full w-full object-cover"
-                        />
-                      </div>
-                      <span className="mt-2 text-center text-base font-medium text-gray-800">
-                        {t(`makingWholeSecrets.${key}`)}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              )
-            ) : selectedMentalMathCategory ? (
-              selectedMentalMathCategory === "assessment" ? (
-                <MentalMathAssessmentPanel />
-              ) : (
-                <div className="rounded-xl bg-gray-50 p-5" />
-              )
-            ) : (
-              <div className="rounded-xl bg-gray-50 p-5">
-                {practice.phase !== "ready" && (
-                  <div className="mb-4 rounded-lg border border-gray-200 bg-white p-3">
-                    <button
-                      type="button"
-                      onClick={() => setShowSecretTipCard((prev) => !prev)}
-                      className="rounded-md border border-gray-300 px-3 py-1 text-sm font-medium text-gray-700 transition hover:bg-gray-100"
-                    >
-                      {showSecretTipCard ? t("practice.hideSecretTip") : t("practice.showSecretTip")}
-                    </button>
-                    {showSecretTipCard && (
-                      <div className="mt-3 space-y-3">
-                        {secretMediaLoading && (
-                          <p className="text-sm text-gray-500">{t("media.loading")}</p>
-                        )}
-                        {!secretMediaLoading && secretMediaError && (
-                          <p className="text-sm text-red-600">{t("media.loadFailed")}</p>
-                        )}
-                        {!secretMediaLoading && !secretMediaError && secretMediaUrls.length > 0 && (
-                          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                            {secretMediaUrls.map((url, index) => (
-                              <div
-                                key={`tip-${selectedSecretKey}-${index}`}
-                                className="overflow-hidden rounded-xl border border-gray-200 bg-white"
-                              >
-                                <Image
-                                  src={url}
-                                  alt={`${t(`makingWholeSecrets.${selectedSecretKey}`)} ${index + 1}`}
-                                  width={720}
-                                  height={405}
-                                  unoptimized
-                                  className="h-auto w-full object-contain"
-                                />
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                )}
-                {practice.phase === "ready" && (
-                  <div className="space-y-4">
-                    <h4 className="text-xl font-semibold text-gray-800">{t(`makingWholeSecrets.${selectedSecretKey}`)}</h4>
-                    {secretMediaLoading && (
-                      <p className="text-sm text-gray-500">{t("media.loading")}</p>
-                    )}
-                    {!secretMediaLoading && secretMediaError && (
-                      <p className="text-sm text-red-600">{t("media.loadFailed")}</p>
-                    )}
-                    {!secretMediaLoading && !secretMediaError && secretMediaUrls.length > 0 && (
-                      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                        {secretMediaUrls.map((url, index) => (
-                          <div
-                            key={`${selectedSecretKey}-${index}`}
-                            className="overflow-hidden rounded-xl border border-gray-200 bg-white"
-                          >
-                            <Image
-                              src={url}
-                              alt={`${t(`makingWholeSecrets.${selectedSecretKey}`)} ${index + 1}`}
-                              width={720}
-                              height={405}
-                              unoptimized
-                              className="h-auto w-full object-contain"
-                            />
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    <button
-                      type="button"
-                      onClick={practice.start}
-                      className="rounded-lg bg-blue-600 px-4 py-2 font-medium text-white transition hover:bg-blue-700"
-                    >
-                      {t("practice.startPractice")}
-                    </button>
-                  </div>
-                )}
-
-                {(practice.phase === "inProgress" || practice.phase === "questionResult") &&
-                  practice.currentQuestion && (
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
-                      <div className="rounded-lg border border-gray-200 bg-white px-3 py-2">
-                        <p className="text-xs text-gray-500">{t("practice.questionNumber")}</p>
-                        <p className="text-sm font-semibold text-gray-800">{practice.currentIndex}</p>
-                      </div>
-                      <div className="rounded-lg border border-gray-200 bg-white px-3 py-2">
-                        <p className="text-xs text-gray-500">{t("practice.accuracy")}</p>
-                        <p className="text-sm font-semibold text-gray-800">{practice.accuracy}%</p>
-                      </div>
-                      <div className="rounded-lg border border-gray-200 bg-white px-3 py-2">
-                        <p className="text-xs text-gray-500">{t("practice.avgTime")}</p>
-                        <p className="text-sm font-semibold text-gray-800">
-                          {t("practice.seconds", { value: practice.averageSecondsPerQuestion })}
-                        </p>
-                      </div>
-                      <div className="rounded-lg border border-gray-200 bg-white px-3 py-2">
-                        <p className="text-xs text-gray-500">{t("practice.currentStreak")}</p>
-                        <p className="text-sm font-semibold text-gray-800">{practice.currentStreak}</p>
-                      </div>
-                      <div className="rounded-lg border border-gray-200 bg-white px-3 py-2">
-                        <p className="text-xs text-gray-500">{t("practice.elapsed")}</p>
-                        <p className="text-sm font-semibold text-gray-800">{formatDuration(practice.elapsedSeconds)}</p>
-                      </div>
-                    </div>
-                    <p className="text-sm font-medium text-gray-600">
-                      {t("practice.progressNow", { current: practice.currentIndex })}
-                    </p>
-                    <form
-                      onSubmit={(event) => {
-                        event.preventDefault();
-                        if (practice.phase === "questionResult") {
-                          practice.next();
-                          return;
-                        }
-                        practice.submitCurrentAnswer();
-                      }}
-                      className="space-y-3"
-                    >
-                      <div className="flex flex-wrap items-center gap-3 text-2xl font-semibold text-gray-800">
-                        <span>{practice.currentQuestion.expression.replace("= ?", "").trim()} =</span>
-                        <input
-                          ref={answerInputRef}
-                          type="text"
-                          inputMode="numeric"
-                          value={practice.inputAnswer}
-                          disabled={practice.phase === "questionResult"}
-                          onChange={(event) => {
-                            const value = event.target.value.trim();
-                            if (/^-?\d*$/.test(value)) {
-                              practice.setInputAnswer(value);
-                            }
-                          }}
-                          placeholder={t("practice.answerPlaceholder")}
-                          className="w-72 max-w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-xl font-semibold text-gray-800 placeholder:text-base placeholder:font-medium outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                        />
-                      </div>
-                      <div className="flex flex-col gap-3 sm:max-w-xs">
-                        <button
-                          ref={practice.phase === "questionResult" ? nextButtonRef : null}
-                          type="submit"
-                          disabled={practice.phase === "inProgress" && !practice.canSubmit}
-                          className="rounded-lg bg-blue-600 px-4 py-2 font-medium text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-300"
-                        >
-                          {practice.phase === "questionResult" ? t("practice.nextQuestion") : t("practice.submit")}
-                        </button>
-                        {practice.phase === "inProgress" && (
-                          <button
-                            type="button"
-                            onClick={practice.finishSession}
-                            className="rounded-lg border border-gray-300 px-4 py-2 font-medium text-gray-700 transition hover:bg-gray-100"
-                          >
-                            {t("practice.finishSession")}
-                          </button>
-                        )}
-                      </div>
-                    </form>
-                    {practice.phase === "questionResult" && (
-                      <div className="space-y-2 rounded-lg border border-gray-200 bg-white p-4">
-                        <p
-                          className={`text-lg font-semibold ${
-                            practice.lastIsCorrect ? "text-green-600" : "text-red-600"
-                          }`}
-                        >
-                          {practice.lastIsCorrect ? t("practice.correct") : t("practice.incorrect")}
-                        </p>
-                        <p className="text-gray-700">
-                          {t("practice.yourAnswer", { answer: practice.lastSubmittedAnswer ?? "-" })}
-                        </p>
-                        <p className="text-gray-700">
-                          {t("practice.correctAnswer", { answer: practice.lastCorrectAnswer ?? "-" })}
-                        </p>
-                        <p className="text-gray-700">
-                          {t("practice.questionTime", { duration: practice.lastQuestionDurationSeconds })}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {practice.phase === "milestone" && (
-                  <div className="space-y-4">
-                    <h4 className="text-xl font-semibold text-gray-800">{t("practice.milestoneTitle")}</h4>
-                    <p className="text-gray-700">{t("practice.milestoneHint", { total: practice.answeredCount })}</p>
-                    <p className="text-gray-700">
-                      {t("practice.score", { score: practice.correctCount, total: practice.answeredCount })}
-                    </p>
-                    <p className="text-gray-700">{t("practice.accuracyLine", { value: practice.accuracy })}</p>
-                    <p className="text-gray-700">
-                      {t("practice.avgTimeLine", { value: practice.averageSecondsPerQuestion })}
-                    </p>
-                    <div className="flex flex-wrap gap-3">
-                      <button
-                        type="button"
-                        onClick={practice.continuePractice}
-                        className="rounded-lg bg-blue-600 px-4 py-2 font-medium text-white transition hover:bg-blue-700"
-                      >
-                        {t("practice.continuePractice")}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={practice.finishSession}
-                        className="rounded-lg border border-gray-300 px-4 py-2 font-medium text-gray-700 transition hover:bg-gray-100"
-                      >
-                        {t("practice.finishSession")}
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {practice.phase === "summary" && (
-                  <div className="space-y-4">
-                    <h4 className="text-xl font-semibold text-gray-800">{t("practice.sessionSummaryTitle")}</h4>
-                    <p className="text-gray-700">
-                      {t("practice.score", { score: practice.correctCount, total: practice.answeredCount })}
-                    </p>
-                    <p className="text-gray-700">{t("practice.accuracyLine", { value: practice.accuracy })}</p>
-                    <p className="text-gray-700">
-                      {t("practice.totalTime", { duration: formatDuration(practice.totalDurationSeconds) })}
-                    </p>
-                    <p className="text-gray-700">{t("practice.avgTimeLine", { value: practice.averageSecondsPerQuestion })}</p>
-                    <p className="text-gray-700">{t("practice.bestStreak", { value: practice.bestStreak })}</p>
-                    <div className="flex flex-wrap gap-3">
-                      <button
-                        type="button"
-                        onClick={handleRetryCurrentSecret}
-                        className="rounded-lg bg-blue-600 px-4 py-2 font-medium text-white transition hover:bg-blue-700"
-                      >
-                        {t("practice.retry")}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={handleGoToNextSecret}
-                        disabled={!hasNextSecret}
-                        className="rounded-lg bg-gray-800 px-4 py-2 font-medium text-white transition hover:bg-black disabled:cursor-not-allowed disabled:bg-gray-300"
-                      >
-                        {t("practice.nextCategory")}
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-          </>
-        )}
+            <p className="mt-6 text-left font-['Titan_One'] text-3xl text-[#045E96]">{item.value}</p>
+          </article>
+        ))}
       </section>
 
-      {unlockTargetCategory && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-xl">
-            <h3 className="text-xl font-semibold text-gray-900">{t("unlock.confirmTitle")}</h3>
-            <p className="mt-2 text-sm text-gray-700">
-              {t("unlock.confirmDescription", {
-                category: t(`mentalMathCategories.${unlockTargetCategory}`),
-              })}
-            </p>
-
-            <div className="mt-4 rounded-lg bg-gray-50 p-3">
-              <p className="text-sm font-medium text-gray-800">{t("unlock.currentAssets")}</p>
-              <p className="mt-2 text-sm text-gray-700">
-                {t("unlock.coinsLine", { count: assetsBalance.coins })}
-              </p>
-              <p className="text-sm text-gray-700">{t("unlock.diamondsLine", { count: assetsBalance.diamonds })}</p>
-              <p className="text-sm text-gray-700">{t("unlock.flowersLine", { count: assetsBalance.flowers })}</p>
-            </div>
-
-            <div className="mt-3 rounded-lg bg-amber-50 p-3">
-              <p className="text-sm font-medium text-gray-800">{t("unlock.requiredCost")}</p>
-              <p className="mt-2 text-sm text-gray-700">{t("unlock.coinsLine", { count: unlockCost.coins })}</p>
-              <p className="text-sm text-gray-700">
-                {t("unlock.diamondsLine", { count: unlockCost.diamonds })}
-              </p>
-              <p className="text-sm text-gray-700">{t("unlock.flowersLine", { count: unlockCost.flowers })}</p>
-            </div>
-
-            {!hasEnoughForUnlock && (
-              <p className="mt-3 text-sm font-medium text-red-600">{t("unlock.insufficientAssets")}</p>
-            )}
-
-            <div className="mt-5 flex justify-end gap-3">
-              <button
-                type="button"
-                onClick={() => setUnlockTargetCategory(null)}
-                disabled={pendingUnlockCategory === unlockTargetCategory}
-                className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {t("unlock.cancel")}
-              </button>
-              <button
-                type="button"
-                onClick={() => void handleUnlockCategory()}
-                disabled={
-                  pendingUnlockCategory === unlockTargetCategory || !hasEnoughForUnlock
-                }
-                className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-300"
-              >
-                {pendingUnlockCategory === unlockTargetCategory ? t("unlock.unlocking") : t("unlock.confirm")}
-              </button>
+      <aside className="space-y-5 rounded-[32px] border border-white/70 bg-white/70 p-6 shadow-[0px_10px_15px_0px_rgba(0,0,0,0.1)] backdrop-blur-md xl:col-span-4 xl:row-span-2 xl:row-start-1 xl:h-full xl:min-h-[760px]">
+        <section>
+          <h2 className="font-['Titan_One'] text-3xl text-[#045E96]">Study Track</h2>
+          <div className="mt-4 rounded-[24px] bg-[#E4F2F9] p-5">
+            <h3 className="text-base font-semibold text-[#106FAA]">Learning Progress</h3>
+            <div className="mt-4 h-[168px]">
+              <div className="flex h-[124px] items-end gap-1">
+                {weeklyProgressByMonth.flatMap(({ month, weeklyProgress }, monthIndex) =>
+                  weeklyProgress.map((progressPercent, weekIndex) => (
+                    <div
+                      key={`${month}-${weekIndex}`}
+                      className="w-[9px] rounded-full"
+                      style={{
+                        height: `${toBarHeight(progressPercent)}px`,
+                        backgroundColor: monthIndex < completedMonthCount ? "#045E96" : "#A6C4D7",
+                      }}
+                      aria-hidden
+                    />
+                  ))
+                )}
+              </div>
+              <div className="mt-2 grid grid-cols-7 text-center text-xs text-black">
+                {months.map((month) => (
+                  <span key={month}>{month}</span>
+                ))}
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        </section>
+
+        <section>
+          <h2 className="font-['Titan_One'] text-3xl text-[#045E96]">Badges</h2>
+          <div className="mt-4 grid grid-cols-3 gap-3">
+            {badgePlaceholders.map((badgeName) => (
+              <div key={badgeName} className="flex flex-col items-center gap-2">
+                <div className="flex h-[76px] w-[76px] items-center justify-center rounded-full border-2 border-[#D8E8F4] bg-[#F7FBFF] text-2xl">
+                  🏅
+                </div>
+                <p className="text-center text-xs font-medium text-black">{badgeName}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+      </aside>
+
+      <section className="space-y-3 xl:col-span-8 xl:row-start-2">
+        {!showLessonBoard ? (
+          <div className="space-y-3">
+            <h2 className="text-xl font-semibold text-[#106FAA]">Lessons</h2>
+            <article className="rounded-[32px] border border-white/70 bg-white/80 p-4 shadow-[0px_10px_15px_0px_rgba(0,0,0,0.1)] backdrop-blur-md">
+              <div className="flex flex-col gap-4 md:flex-row md:items-center">
+                <div className="overflow-hidden rounded-3xl md:w-[36%]">
+                  <Image
+                    src="/learning/mental_math/mental_math.png"
+                    alt="Mental Math"
+                    width={420}
+                    height={240}
+                    className="h-[190px] w-full object-cover"
+                  />
+                </div>
+
+                <div className="flex-1">
+                  <h3 className="font-['Titan_One'] text-2xl text-[#045E96]">Mental Math</h3>
+                  <p className="mt-2 text-sm leading-6 text-[#045E96]">
+                    Course Intro Course Intro Course Intro Course Intro Course Intro Course Intro Course Intro.
+                  </p>
+                  <p className="mt-2 text-sm font-medium text-[#106FAA]">Age 6-12</p>
+                  <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+                    <span className="rounded-full bg-[#EDF4FC] px-4 py-1.5 text-sm text-[#106FAA]">
+                      10 Lessons • 24 Hours
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setShowLessonBoard(true)}
+                      className="rounded-full bg-[#045E96] px-5 py-2 text-sm font-semibold text-[#EDF4FC] transition hover:opacity-95"
+                    >
+                      Start Learning
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </article>
+          </div>
+        ) : (
+          <div className="space-y-5">
+            <div className="text-2xl font-semibold text-[#106FAA]">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowLessonBoard(false);
+                  setActiveLessonKey(null);
+                }}
+                className="text-[#8CBBD8] transition hover:text-[#106FAA]"
+              >
+                Lessons
+              </button>
+              <span className="mx-2 text-[#8CBBD8]">{">"}</span>
+              <span>Mental Maths</span>
+            </div>
+
+            {activeLessonKey === "assessment" ? (
+              <section className="rounded-[24px] border border-white/70 bg-white/80 p-4 shadow-[0px_10px_15px_0px_rgba(0,0,0,0.1)]">
+                <div className="mb-3 flex items-center justify-between">
+                  <h3 className="text-xl font-semibold text-[#045E96]">Lesson 0: Self-Assessment</h3>
+                  <button
+                    type="button"
+                    onClick={() => setActiveLessonKey(null)}
+                    className="rounded-full bg-[#EDF4FC] px-4 py-1.5 text-sm font-semibold text-[#045E96]"
+                  >
+                    Back to Lessons
+                  </button>
+                </div>
+                <MentalMathAssessmentPanel />
+              </section>
+            ) : (
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+                {lessonCards.map((card) => (
+                  <article
+                    key={card.key}
+                    className={`relative rounded-[24px] border border-white/70 p-4 shadow-[0px_10px_15px_0px_rgba(0,0,0,0.1)] ${
+                      card.locked ? "overflow-hidden bg-[#7A7A7A]/90" : "bg-white/80"
+                    }`}
+                  >
+                    <div className="relative overflow-hidden rounded-2xl">
+                      <Image
+                        src="/learning/mental_math/mental_math.png"
+                        alt={card.title}
+                        width={276}
+                        height={100}
+                        className={`h-[90px] w-full object-cover ${card.locked ? "brightness-75" : ""}`}
+                      />
+                      {card.status === "free" && (
+                        <span className="absolute right-2 top-2 rounded-md bg-[#4ADE80] px-2 py-0.5 text-sm font-semibold text-white">
+                          Free
+                        </span>
+                      )}
+                      {card.status === "limited" && (
+                        <span className="absolute right-2 top-2 rounded-md bg-[#FFD773] px-2 py-0.5 text-sm font-semibold text-[#9A6500]">
+                          60 Days Left
+                        </span>
+                      )}
+                      {card.status === "full" && (
+                        <span className="absolute right-2 top-2 rounded-md bg-[#E6F2FF] px-2 py-0.5 text-sm font-semibold text-[#045E96]">
+                          Full Access
+                        </span>
+                      )}
+                      {card.locked && (
+                        <span className="absolute right-2 top-2 rounded-md bg-black/50 px-2 py-0.5 text-xs font-medium text-white">
+                          Locked
+                        </span>
+                      )}
+                    </div>
+
+                    <p className={`mt-4 text-base ${card.locked ? "text-[#CFE7F7]" : "text-[#106FAA]"}`}>{card.label}</p>
+                    <h3 className={`mt-1 text-3xl font-semibold ${card.locked ? "text-white" : "text-[#045E96]"}`}>
+                      {card.title}
+                    </h3>
+                    <div className={`my-5 h-px ${card.locked ? "bg-white/20" : "bg-slate-200"}`} />
+
+                    {card.locked ? (
+                      <div className="space-y-1 text-sm text-white">
+                        <p>💎 100 &nbsp; 3-Month Limited Unlock</p>
+                        <p>💎 200 &nbsp; Lifetime Unlock</p>
+                        <p className="font-semibold text-[#FFD55C]">⭐ Upgrade to Premium</p>
+                        <div className="mt-2 flex justify-end">
+                          <button
+                            type="button"
+                            className="rounded-full bg-[#D6E9F8] px-5 py-1.5 text-base font-semibold text-[#045E96]"
+                          >
+                            Unlock
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-between">
+                        <p className="text-base font-semibold text-[#333]">Progress: 80%</p>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (card.key === "assessment") {
+                              setActiveLessonKey("assessment");
+                            }
+                          }}
+                          className="rounded-full bg-[#045E96] px-6 py-1.5 text-base font-semibold text-[#EDF4FC]"
+                        >
+                          Start
+                        </button>
+                      </div>
+                    )}
+                  </article>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </section>
     </div>
   );
 }
