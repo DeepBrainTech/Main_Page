@@ -268,9 +268,9 @@ export default function BrainGamesTab({ onLaunch }: BrainGamesTabProps) {
               }`}
             >
               {/* 贴图层：独立于色块之上，溢出到网格空隙；不接收点击 */}
-              <div className="pointer-events-none relative z-20 ml-auto mr-2 flex h-[108px] w-[112px] -mb-[60px] translate-y-1 items-end justify-center drop-shadow-[0_6px_14px_rgba(0,0,0,0.18)]">
+              <div className="pointer-events-none relative z-20 ml-auto mr-2 flex h-[124px] w-[129px] -mb-[60px] translate-y-1 items-end justify-center drop-shadow-[0_6px_14px_rgba(0,0,0,0.18)]">
                 {dimKey === "memory" ? (
-                  <div className="relative h-[100px] w-full max-w-[112px]">
+                  <div className="relative h-[115px] w-full max-w-[129px]">
                     <Image
                       src={meta.sticker}
                       alt=""
@@ -278,7 +278,7 @@ export default function BrainGamesTab({ onLaunch }: BrainGamesTabProps) {
                       className="object-contain"
                       sizes="120px"
                     />
-                    <div className="absolute bottom-0 right-1 z-10 h-[88px] w-[78px] rotate-[8deg] -scale-x-100 opacity-90">
+                    <div className="absolute bottom-0 right-8 z-10 h-[101px] w-[90px] rotate-[8deg] -scale-x-100 opacity-90">
                       <Image
                         src={meta.sticker}
                         alt=""
@@ -289,7 +289,15 @@ export default function BrainGamesTab({ onLaunch }: BrainGamesTabProps) {
                     </div>
                   </div>
                 ) : (
-                  <div className="relative h-[100px] w-[100px]">
+                  <div
+                    className={`relative ${
+                      dimKey === "logic"
+                        ? "h-[109px] w-[109px]"
+                        : dimKey === "spatial"
+                          ? "h-[138px] w-[138px]"
+                          : "h-[115px] w-[115px]"
+                    }`}
+                  >
                     <Image
                       src={meta.sticker}
                       alt=""
