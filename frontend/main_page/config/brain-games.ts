@@ -47,6 +47,12 @@ export const GAMES_BY_DIMENSION: Record<CognitiveDimensionKey, GameEntry[]> = {
       launchKey: "external",
       externalUrl: "https://stack-math-chess.deepbraintechnology.com/",
     },
+    {
+      key: "recon_chess",
+      nameKey: "reconChess",
+      launchKey: "external",
+      externalUrl: "https://rbc.deepbraintechnology.com/",
+    },
   ],
   spatial: [
     {

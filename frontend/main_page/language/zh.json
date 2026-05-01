@@ -70,6 +70,7 @@
     "intercontinentalChess": "洲际象棋",
     "mathChess": "数学象棋",
     "stackMathChess": "堆叠数学象棋",
+    "reconChess": "侦察盲棋",
     "dashDotSimulator": "Dash & Dot 模拟器",
     "flowersCount": "花朵: {count}",
     "failedToStartGame": "启动游戏失败",
