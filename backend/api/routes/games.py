@@ -41,6 +41,7 @@ SUPPORTED_GAME_KEYS = {
     "chess-tourmaster",
     "dash-dot-simulator",
     "stack_math_chess",
+    "recon_chess",
 }
 
 
