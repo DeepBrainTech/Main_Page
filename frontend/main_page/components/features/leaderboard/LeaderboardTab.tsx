@@ -7,15 +7,6 @@ import { fetchLeaderboard, type LeaderboardEntry } from "@/services/userApi";
 
 type LeaderboardTabType = "global" | "dimension";
 
-const DIMENSIONS_MAP = [
-  { key: "memory", label: "Memory" },
-  { key: "spatial", label: "Spatial" },
-  { key: "strategy", label: "Strategy" },
-  { key: "logic", label: "Logic" },
-  { key: "focus", label: "Focus" },
-  { key: "reaction", label: "Speed" },
-];
-
 export default function LeaderboardTab() {
   const t = useTranslations("leaderboard");
   const tDim = useTranslations("dimensions");
@@ -88,7 +79,7 @@ export default function LeaderboardTab() {
   };
 
   return (
-    <div className="space-y-10 pb-10 font-['Outfit']">
+    <div className="space-y-10 pb-10 font-app-body">
       {/* Header Tabs */}
       <div className="flex justify-center relative z-10">
         <div className="flex rounded-[20px] bg-white/80 p-[2px] shadow-sm backdrop-blur-md border border-white/60">
@@ -100,7 +91,7 @@ export default function LeaderboardTab() {
                 : "text-[#106FAA] hover:bg-white/50"
             }`}
           >
-            Global Brainpower Leaderboard
+            {t("tabGlobal")}
           </button>
           <button
             onClick={() => setActiveTab("dimension")}
@@ -110,7 +101,7 @@ export default function LeaderboardTab() {
                 : "text-[#106FAA] hover:bg-white/50"
             }`}
           >
-            Leaderboards by Dimension
+            {t("tabByDimension")}
           </button>
         </div>
       </div>
@@ -143,7 +134,7 @@ export default function LeaderboardTab() {
                 {/* Main Stats */}
                 <div className="mt-6 flex w-full justify-between px-2 text-center">
                   <div className="flex-1">
-                    <p className="text-base font-medium text-[#106FAA]">Rank</p>
+                    <p className="text-base font-medium text-[#106FAA]">{t("rankShort")}</p>
                     <div className="mt-2 mx-auto flex items-center justify-center gap-2">
                       <div
                         className={`flex h-[36px] w-[36px] items-center justify-center rounded-full shadow-sm text-lg font-bold ${getRankTextColor(
@@ -159,25 +150,25 @@ export default function LeaderboardTab() {
                     </div>
                   </div>
                   <div className="flex-1">
-                    <p className="text-base font-medium text-[#106FAA]">Brainpower</p>
+                    <p className="text-base font-medium text-[#106FAA]">{t("brainpowerShort")}</p>
                     <p className="mt-2 text-[32px] font-semibold leading-9 text-[#0075FF]">{user.score}</p>
                   </div>
                   <div className="flex-1">
-                    <p className="text-base font-medium text-[#106FAA]">Country</p>
+                    <p className="text-base font-medium text-[#106FAA]">{t("countryShort")}</p>
                     <p className="mt-2 text-[32px] leading-9">🇺🇸</p>
                   </div>
                 </div>
 
                 {/* Dimensions */}
                 <div className="mt-6 grid w-full grid-cols-2 gap-x-4 gap-y-3">
-                  {DIMENSIONS_MAP.map((dim) => (
+                  {COGNITIVE_DIMENSION_KEYS.map((dimKey) => (
                     <div
-                      key={dim.key}
+                      key={dimKey}
                       className="flex items-center justify-between rounded-[12.8px] bg-[#EDF4FC] px-4 py-2"
                     >
-                      <span className="text-[13px] font-semibold text-[#045E96]">{dim.label}</span>
+                      <span className="text-[13px] font-semibold text-[#045E96]">{tDim(dimKey)}</span>
                       <span className="text-[14px] font-medium text-[#E45C44]">
-                        {(user[dim.key as keyof LeaderboardEntry] as number | null | undefined) ?? 0}
+                        {(user[dimKey as keyof LeaderboardEntry] as number | null | undefined) ?? 0}
                       </span>
                     </div>
                   ))}
@@ -188,11 +179,11 @@ export default function LeaderboardTab() {
 
           {/* Rank 4+ Table */}
           <div className="rounded-[32px] bg-white/60 border border-white/60 p-8 shadow-[0px_10px_15px_0px_rgba(0,0,0,0.1)] backdrop-blur-md">
-            <div className="grid grid-cols-4 gap-4 rounded-xl bg-[#EDF4FC] px-6 py-4 text-base font-medium text-gray-800 mb-3">
-              <div>Ranking</div>
-              <div>Name</div>
-              <div>Country</div>
-              <div>Brainpower</div>
+                <div className="grid grid-cols-4 gap-4 rounded-xl bg-[#EDF4FC] px-6 py-4 text-base font-medium text-gray-800 mb-3">
+              <div>{t("rankingColumn")}</div>
+              <div>{t("nameShort")}</div>
+              <div>{t("countryShort")}</div>
+              <div>{t("brainpowerShort")}</div>
             </div>
 
             <div className="space-y-2 max-h-[210px] overflow-y-auto pr-2 custom-scrollbar">
@@ -233,7 +224,9 @@ export default function LeaderboardTab() {
                 key={key}
                 className="rounded-[24px] border border-white/60 bg-white/80 p-6 shadow-md backdrop-blur-sm"
               >
-                <h4 className="mb-6 text-xl font-bold text-[#106FAA]">{tDim(key)} Leaderboard</h4>
+                <h4 className="mb-6 text-xl font-bold text-[#106FAA]">
+                  {t("dimensionLeaderboardTitle", { dimension: tDim(key) })}
+                </h4>
                 {!byDimension[key] || byDimension[key].length === 0 ? (
                   <p className="text-sm text-gray-500">{t("noData")}</p>
                 ) : (

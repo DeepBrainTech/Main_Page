@@ -38,9 +38,10 @@
     "title": "DeepBrain Tech",
     "welcomeUser": "欢迎, {username}",
     "welcomeBack": "欢迎回来，{username}！👋",
-    "dashboardTab": "仪表盘",
+    "dashboardTab": "主页",
+    "todaysReward": "今日奖励",
     "friends": "好友",
-    "friendStatus": "正在玩 Fog of War",
+    "friendStatus": "正在玩 迷雾象棋",
     "totalPoints": "总积分",
     "dayStreak": "连续天数",
     "daysUnit": "天",
@@ -491,17 +492,102 @@
     "user": "用户",
     "score": "分数",
     "noData": "暂无数据",
-    "loading": "加载中..."
+    "loading": "加载中...",
+    "tabGlobal": "全球脑力总榜",
+    "tabByDimension": "六大维度分榜",
+    "rankShort": "排名",
+    "brainpowerShort": "脑力值",
+    "countryShort": "国家/地区",
+    "nameShort": "用户名",
+    "rankingColumn": "名次",
+    "dimensionLeaderboardTitle": "{dimension} 榜单"
   },
   "brainGames": {
     "title": "脑力训练游戏",
     "subtitle": "按认知维度选择游戏",
     "play": "开始游戏",
-    "noData": "暂无游戏"
+    "noData": "暂无游戏",
+    "ribbon": {
+      "newIn": "新作推荐",
+      "topRanking": "热门排行",
+      "gameCategories": "游戏分类",
+      "strategyBadge": "策略游戏",
+      "featuredIntro": "体验融合隐藏信息与长线规划的策略向训练：创新规则与快乐脑力锻炼。",
+      "playNow": "开始游戏",
+      "learnMore": "了解更多"
+    },
+    "categoryComingSoon": "该分类更多精彩游戏敬请期待。",
+    "playersOneTwo": "支持 1–2 人",
+    "playersOne": "单人",
+    "categoryChip": {
+      "memory": "记忆游戏",
+      "logic": "逻辑游戏",
+      "focus": "专注游戏",
+      "reaction": "反应游戏",
+      "strategy": "策略游戏",
+      "spatial": "空间游戏"
+    },
+    "categoryListing": {
+      "memory": "记忆游戏",
+      "logic": "逻辑游戏",
+      "focus": "专注游戏",
+      "reaction": "反应游戏",
+      "strategy": "策略游戏",
+      "spatial": "空间游戏"
+    }
   },
   "learning": {
     "title": "学习",
     "subtitle": "按认知维度选择",
+    "home": {
+      "statCompleted": "学习完成度",
+      "statLessons": "课时进度",
+      "statHours": "学习时长(小时)",
+      "studyTrack": "学习轨迹",
+      "learningProgress": "进度概览",
+      "badges": "成就徽章",
+      "badgeNumberIgniter": "数字火花",
+      "badgeFocusPilot": "专注领航",
+      "badgeLogicExplorer": "逻辑探索者",
+      "lessonsHeading": "课程列表",
+      "mentalMathTitle": "心算训练",
+      "mentalMathIntro": "通过短课时建立数感——清晰讲解 + 闯关练习，更轻松坚持。",
+      "ageBand": "适合 6–12 岁",
+      "lessonMeta": "共 {lessonCount} 课 · 约 {hours} 小时",
+      "startLearning": "开始学习",
+      "breadcrumbLessons": "课程列表",
+      "breadcrumbMentalMath": "心算训练",
+      "backToLessons": "返回课程列表",
+      "pillQuiz": "测验",
+      "pillCourse": "课程",
+      "statusFree": "免费",
+      "statusLimited": "剩余 {days} 天",
+      "statusFull": "畅享",
+      "lockedPill": "未解锁",
+      "unlockLineShort": "{price} 钻 · {label}",
+      "unlockThreeMonth": "限时 90 天解锁",
+      "unlockLifetime": "终身解锁",
+      "upgradePremium": "升级会员畅享",
+      "unlockButton": "解锁",
+      "progressPercent": "进度 {value}%",
+      "startLesson": "开始学习",
+      "month": {
+        "jan": "1月",
+        "feb": "2月",
+        "mar": "3月",
+        "apr": "4月",
+        "may": "5月",
+        "jun": "6月",
+        "jul": "7月"
+      },
+      "lessons": {
+        "assessment": "第 0 课 · 摸底测评",
+        "makingWhole": "第 1 课 · 凑整补全",
+        "breakIntoParts": "第 2 课 · 拆数计算",
+        "rearrange": "第 3 课 · 重排凑整",
+        "roundAdjust": "第 4 课 · 近似修正"
+      }
+    },
     "math": "数学",
     "mentalMath": "心算",
     "menuButtonLabel": "打开导航菜单",
@@ -509,12 +595,12 @@
       "backOneLevel": "← 返回上一级"
     },
     "mentalMathCategories": {
-      "assessment": "评估（Assessment）",
-      "makingWhole": "整类（Making Whole）",
-      "breakIntoParts": "拆分计算类（Break into Parts）",
-      "rearrange": "重排组合类（Rearrange）",
-      "roundAndAdjust": "近似修正类（Round & Adjust）",
-      "leftToRightFlow": "流式计算类（Left-to-Right / Flow）"
+      "assessment": "测评摸底",
+      "makingWhole": "凑整与补全",
+      "breakIntoParts": "拆数运算",
+      "rearrange": "重排凑整",
+      "roundAndAdjust": "近似修正",
+      "leftToRightFlow": "从左到右流式心算"
     },
     "makingWholeSecrets": {
       "secret1": "秘诀 1：朋友数",
@@ -569,7 +655,7 @@
     },
     "assessment": {
       "title": "评估",
-      "subject": "测试科目：mental-math",
+      "subject": "测试科目：心算训练（mental-math）",
       "rules": "每题限时 {seconds} 秒，总 topic 数：{count}。",
       "start": "开始评估",
       "metricAccuracy": "正确率",
@@ -591,8 +677,8 @@
       "reportWeakest": "较弱方面：{area}",
       "reportStrongestLabel": "较强方面",
       "reportWeakestLabel": "待提升方面",
-      "topicPerformance": "Topic 表现",
-      "resultBreakdown": "结果分布",
+      "topicPerformance": "各专题表现",
+      "resultBreakdown": "结果汇总",
       "answerReview": "答题明细",
       "tableQuestion": "题目",
       "tableYourAnswer": "你的答案",
@@ -816,7 +902,7 @@
         "description": "体验融合量子计算机制的古老围棋游戏,挑战你的战略思维。"
       },
       "fogOfWar": {
-        "name": "战争迷雾国际象棋",
+        "name": "迷雾象棋",
         "tagline": "黑暗中的国际象棋。未知中的策略。",
         "description": "在有限的视野下掌握国际象棋,挑战你在不完整信息下做决策的能力。"
       },
@@ -855,7 +941,7 @@
       },
       "adaptability": {
         "title": "适应能力",
-        "game": "战争迷雾国际象棋"
+        "game": "迷雾象棋"
       },
       "focus": {
         "title": "专注力",

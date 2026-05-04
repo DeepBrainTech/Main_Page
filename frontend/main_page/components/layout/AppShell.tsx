@@ -161,7 +161,7 @@ export default function AppShell({
                   }`}
                 >
                   <Image src={iconSrc} alt={iconAlt} width={18} height={18} className="h-[18px] w-[18px]" />
-                  <span className="font-['Outfit'] text-base font-normal leading-5">{label}</span>
+                  <span className="font-app-body text-base font-normal leading-5">{label}</span>
                 </Link>
               ))}
             </nav>

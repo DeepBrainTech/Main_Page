@@ -63,14 +63,14 @@ export default function CheckInCalendar({
       </div>
 
       <div className="flex flex-col">
-        <div className="mb-[clamp(0.35rem,0.9vw,0.6rem)] text-center font-['Outfit'] text-[clamp(0.9rem,1.4vw,1.35rem)] font-semibold leading-[1.35] text-[#106FAA]">
+        <div className="mb-[clamp(0.35rem,0.9vw,0.6rem)] text-center font-app-body text-[clamp(0.9rem,1.4vw,1.35rem)] font-semibold leading-[1.35] text-[#106FAA]">
           {monthYearLabel}
         </div>
         <div className="mb-[clamp(0.2rem,0.6vw,0.35rem)] grid grid-cols-7 gap-[clamp(0.2rem,0.6vw,0.5rem)] text-center">
           {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((w) => (
             <div
               key={w}
-              className="py-[clamp(0.1rem,0.35vw,0.25rem)] font-['Outfit'] text-[clamp(0.62rem,1vw,1.02rem)] font-medium text-[#106FAA]"
+              className="py-[clamp(0.1rem,0.35vw,0.25rem)] font-app-body text-[clamp(0.62rem,1vw,1.02rem)] font-medium text-[#106FAA]"
             >
               {w}
             </div>
@@ -100,7 +100,7 @@ export default function CheckInCalendar({
                     height={20}
                     className="row-start-2 h-[clamp(0.5rem,1.25vw,1.7rem)] w-[clamp(0.5rem,1.25vw,1.7rem)]"
                   />
-                  <span className="row-start-3 font-['Outfit'] text-[clamp(0.68rem,1vw,1.1rem)] font-normal leading-[1.1]">
+                  <span className="row-start-3 font-app-body text-[clamp(0.68rem,1vw,1.1rem)] font-normal leading-[1.1]">
                     {d}
                   </span>
                 </div>

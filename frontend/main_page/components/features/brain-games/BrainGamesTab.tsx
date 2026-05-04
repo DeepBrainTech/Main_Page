@@ -1,12 +1,18 @@
 "use client";
 
 import Image, { type StaticImageData } from "next/image";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { GAMES_BY_DIMENSION } from "@/config/brain-games";
 import { COGNITIVE_DIMENSION_KEYS } from "@/types/cognitive";
 import type { GameEntry } from "@/config/brain-games";
-import { postGamePlayedRecord } from "@/services/userApi";
+import {
+  type GameLikeState,
+  fetchGameLikes,
+  likeGame,
+  unlikeGame,
+  postGamePlayedRecord,
+} from "@/services/userApi";
 import chessmaterGif from "../../../public/brain-games/chessmater.gif";
 import sudokuGif from "../../../public/brain-games/sudoku.gif";
 import chessTourmasterGif from "../../../public/brain-games/chessTourmaster.gif";
@@ -40,9 +46,144 @@ const FEATURED_GAMES: { key: FeaturedKey; title: string; subtitle: string }[] = 
   { key: "quantumgo", title: "Quantum Go", subtitle: "Uncertain moves, precise planning." },
 ];
 
-const TOP_RANKING_GAMES = ["chessmater", "quantumgo", "fogchess"] as const;
+/** When Top-3 still has empty slots among 0-like games, pull from these keys first; order shuffled once per load/refresh. */
+const RIBBON_ZERO_FILL_KEYS = ["chessmater", "quantumgo", "fogchess"] as const;
 
 const RANK_MEDAL_SRC = ["/brain-games/gold.svg", "/brain-games/silver.svg", "/brain-games/bronze.svg"] as const;
+
+function likesMapFromStates(states: GameLikeState[]): Map<string, { count: number; likedByMe: boolean }> {
+  const m = new Map<string, { count: number; likedByMe: boolean }>();
+  for (const s of states) {
+    m.set(s.game_key, { count: s.like_count, likedByMe: s.liked_by_me });
+  }
+  return m;
+}
+
+/** Keys accepted by `POST/DELETE /api/games/likes/{game_key}` (see backend `SUPPORTED_GAME_KEYS`). */
+const BACKEND_LIKE_GAME_KEYS = new Set<string>([
+  "sudoku",
+  "intercontinental-chess",
+  "mathchess",
+  "chessmater",
+  "quantumgo",
+  "fogchess",
+  "chess-tourmaster",
+  "dash-dot-simulator",
+  "stack_math_chess",
+  "recon_chess",
+]);
+
+function shuffleInPlace<T>(arr: T[]): T[] {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+/** Likeable games that actually appear in this portal (brain-games config). */
+const PORTAL_LIKEABLE_GAME_KEYS: string[] = (() => {
+  const s = new Set<string>();
+  for (const dim of COGNITIVE_DIMENSION_KEYS) {
+    for (const e of GAMES_BY_DIMENSION[dim]) {
+      if (BACKEND_LIKE_GAME_KEYS.has(e.key)) s.add(e.key);
+    }
+  }
+  return Array.from(s);
+})();
+
+function findBrainGameEntry(gameKey: string): GameEntry | undefined {
+  for (const dim of COGNITIVE_DIMENSION_KEYS) {
+    const found = GAMES_BY_DIMENSION[dim].find((e) => e.key === gameKey);
+    if (found) return found;
+  }
+  return undefined;
+}
+
+/**
+ * Ribbon top-3: global sort by like count (all portal likeable games).
+ * Remaining slots when likes are sparse: fill with 0-like picks from `zeroFillOrder`
+ * (shuffled chessmater / quantumgo / fogchess), then any other 0-like portal games if still short.
+ */
+function computeRibbonTopThree(
+  likeCount: (k: string) => number,
+  portalKeys: readonly string[],
+  zeroFillOrder: readonly string[]
+): string[] {
+  const picked = new Set<string>();
+  const out: string[] = [];
+
+  const positive = portalKeys
+    .filter((k) => likeCount(k) > 0)
+    .sort((a, b) => likeCount(b) - likeCount(a) || a.localeCompare(b));
+
+  for (const k of positive) {
+    if (out.length >= 3) break;
+    out.push(k);
+    picked.add(k);
+  }
+
+  for (const k of zeroFillOrder) {
+    if (out.length >= 3) break;
+    if (!portalKeys.includes(k)) continue;
+    if (picked.has(k)) continue;
+    if (likeCount(k) !== 0) continue;
+    out.push(k);
+    picked.add(k);
+  }
+
+  if (out.length < 3) {
+    const rest = portalKeys
+      .filter((k) => !picked.has(k) && likeCount(k) === 0)
+      .sort((a, b) => a.localeCompare(b));
+    for (const k of rest) {
+      if (out.length >= 3) break;
+      out.push(k);
+      picked.add(k);
+    }
+  }
+
+  return out.slice(0, 3);
+}
+
+function GameLikeButton(props: {
+  gameKey: string;
+  count: number;
+  likedByMe: boolean;
+  busy: boolean;
+  onToggle: (gameKey: string, currentlyLiked: boolean) => void;
+}) {
+  const { gameKey, count, likedByMe, busy, onToggle } = props;
+  return (
+    <div className="flex shrink-0 items-center gap-0.5">
+      <button
+        type="button"
+        aria-pressed={likedByMe}
+        aria-label={likedByMe ? "Unlike" : "Like"}
+        disabled={busy}
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          void onToggle(gameKey, likedByMe);
+        }}
+        className={`inline-flex h-9 w-9 items-center justify-center rounded-full transition ${
+          likedByMe ? "text-rose-500" : "text-slate-400 hover:bg-rose-50 hover:text-rose-400"
+        } disabled:opacity-50`}
+      >
+        <svg viewBox="0 0 24 24" className="h-[18px] w-[18px]" aria-hidden>
+          <path
+            d="M12 21s-6.716-4.577-9-8.5C.5 9.45 2.08 5.7 6.04 5.04 8.8 4.56 11 6.52 12 8.42c1-1.9 3.2-3.86 5.96-3.38 3.96.66 5.54 4.41 3.04 7.46C18.716 16.423 12 21 12 21Z"
+            fill={likedByMe ? "currentColor" : "none"}
+            stroke="currentColor"
+            strokeWidth="1.6"
+            strokeLinejoin="round"
+          />
+        </svg>
+      </button>
+      <span className="min-w-[1.25rem] text-left text-[13px] font-medium tabular-nums text-[#106FAA]">{count}</span>
+    </div>
+  );
+}
 
 /** Featured + ranking row unified min-height (prior ~280→308, then +≈10% for breathing room). */
 const FEATURE_ROW_MIN_H_PX = 339;
@@ -57,37 +198,31 @@ const CATEGORY_ORDER: (typeof COGNITIVE_DIMENSION_KEYS)[number][] = [
 
 const CATEGORY_META: Record<
   (typeof COGNITIVE_DIMENSION_KEYS)[number],
-  { sticker: string; bgClass: string; gameTitle: string }
+  { sticker: string; bgClass: string }
 > = {
   memory: {
     sticker: "/brain-games/Memory.svg",
     bgClass: "from-[#59A8F0] to-[#0D5FA4]",
-    gameTitle: "Memory Game",
   },
   logic: {
     sticker: "/brain-games/Logic.svg",
     bgClass: "from-[#F0B16F] to-[#CB7A12]",
-    gameTitle: "Logic Game",
   },
   focus: {
     sticker: "/brain-games/Focus.svg",
     bgClass: "from-[#C37AF0] to-[#8B2BC4]",
-    gameTitle: "Focus Game",
   },
   reaction: {
     sticker: "/brain-games/Reaction.svg",
     bgClass: "from-[#8DDCD2] to-[#11A68F]",
-    gameTitle: "Reaction Game",
   },
   strategy: {
     sticker: "/brain-games/Chess.svg",
     bgClass: "from-[#DFC267] to-[#B38813]",
-    gameTitle: "Strategy Game",
   },
   spatial: {
     sticker: "/brain-games/Spatial.svg",
     bgClass: "from-[#E45B43] to-[#9F1508]",
-    gameTitle: "Spatial Game",
   },
 };
 
@@ -116,8 +251,15 @@ function launchForKey(
  */
 export default function BrainGamesTab({ onLaunch }: BrainGamesTabProps) {
   const tHome = useTranslations("dashboard");
+  const tBrain = useTranslations("brainGames");
   const [activeCategory, setActiveCategory] = useState<(typeof COGNITIVE_DIMENSION_KEYS)[number]>("strategy");
   const [featuredIndex, setFeaturedIndex] = useState(0);
+  const [likeStates, setLikeStates] = useState<Map<string, { count: number; likedByMe: boolean }>>(
+    () => new Map()
+  );
+  const [likeBusyKey, setLikeBusyKey] = useState<string | null>(null);
+  /** New shuffle on browser refresh / remount — zeros slots follow this order among chessmater / quantumgo / fogchess. */
+  const [ribbonZeroFillOrder] = useState(() => shuffleInPlace([...RIBBON_ZERO_FILL_KEYS]));
 
   useEffect(() => {
     const timer = window.setInterval(() => {
@@ -129,15 +271,88 @@ export default function BrainGamesTab({ onLaunch }: BrainGamesTabProps) {
     };
   }, []);
 
+  const applyLikesList = useCallback((list: GameLikeState[]) => {
+    setLikeStates(likesMapFromStates(list));
+  }, []);
+
+  /** Re-sync from GET /api/games/likes after a failed like/unlike, or anytime we need DB truth. */
+  const reloadLikesFromApi = useCallback(async () => {
+    try {
+      applyLikesList(await fetchGameLikes());
+    } catch {
+      /* network / auth — leave previous map */
+    }
+  }, [applyLikesList]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const list = await fetchGameLikes();
+        if (!cancelled) applyLikesList(list);
+      } catch {
+        /* Guest or error — ribbons/cards stay at zeros */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [applyLikesList]);
+
+  const rankedTopKeys = useMemo(() => {
+    const likeCount = (k: string) => likeStates.get(k)?.count ?? 0;
+    return computeRibbonTopThree(likeCount, PORTAL_LIKEABLE_GAME_KEYS, ribbonZeroFillOrder);
+  }, [likeStates, ribbonZeroFillOrder]);
+
+  const handleToggleGameLike = useCallback(
+    async (gameKey: string, currentlyLiked: boolean) => {
+      setLikeBusyKey(gameKey);
+      try {
+        /* Backend commits row then returns full `likes[]` rebuilt from DB (same shape as GET). */
+        const list = currentlyLiked ? await unlikeGame(gameKey) : await likeGame(gameKey);
+        applyLikesList(list);
+      } catch {
+        /* POST failed — pull full snapshot from backend */
+        await reloadLikesFromApi();
+      } finally {
+        setLikeBusyKey(null);
+      }
+    },
+    [applyLikesList, reloadLikesFromApi]
+  );
+
   const selectedGames = GAMES_BY_DIMENSION[activeCategory] ?? [];
 
   return (
-    <div className="space-y-5 pb-8 font-['Outfit']">
+    <div className="space-y-5 pb-8 font-app-body">
       <section className="flex flex-col gap-3 lg:flex-row lg:gap-4 lg:items-stretch">
         <div className="flex min-h-0 min-w-0 flex-[1.89] flex-col gap-2">
-          <h2 className="text-[22px] font-semibold text-[#106FAA]">New In</h2>
+          <div className="flex min-h-[32px] items-center justify-between gap-3">
+            <h2 className="text-[22px] font-semibold leading-tight text-[#106FAA]">{tBrain("ribbon.newIn")}</h2>
+            <div className="flex shrink-0 items-center gap-[6px]" role="tablist" aria-label="Featured games">
+              {FEATURED_GAMES.map((_, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  role="tab"
+                  aria-selected={i === featuredIndex}
+                  aria-label={`${i + 1} / ${FEATURED_GAMES.length}`}
+                  onClick={() => setFeaturedIndex(i)}
+                  className="inline-flex items-center justify-center px-2 py-[10px] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#106FAA]/40 focus-visible:ring-offset-2"
+                >
+                  <span
+                    className={`block h-[9px] shrink-0 rounded-[20px] transition-[width,background-color] duration-300 ${
+                      i === featuredIndex
+                        ? "w-[49px] bg-[rgba(160,196,219,0.6)]"
+                        : "w-[18px] bg-[rgba(255,255,255,0.6)] hover:bg-[rgba(255,255,255,0.82)]"
+                    }`}
+                  />
+                </button>
+              ))}
+            </div>
+          </div>
           <div
-            className="relative flex min-h-[308px] flex-1 flex-col overflow-hidden rounded-[32px] border border-white/60 bg-white/80 shadow-[0px_10px_15px_0px_rgba(0,0,0,0.1),0px_4px_6px_0px_rgba(0,0,0,0.1)]"
+            className="relative min-h-[308px] flex-1 overflow-hidden rounded-[32px] border border-white/60 bg-white/80 shadow-[0px_10px_15px_0px_rgba(0,0,0,0.1),0px_4px_6px_0px_rgba(0,0,0,0.1)]"
             style={{ minHeight: FEATURE_ROW_MIN_H_PX }}
           >
             {FEATURED_GAMES.map((feature, idx) => {
@@ -147,20 +362,19 @@ export default function BrainGamesTab({ onLaunch }: BrainGamesTabProps) {
               return (
                 <div
                   key={feature.key}
-                  className={`absolute inset-0 flex flex-col gap-4 p-5 sm:flex-row sm:items-stretch sm:gap-6 sm:p-6 transition-opacity duration-700 ${
+                  className={`absolute inset-0 flex h-full min-h-0 flex-col transition-opacity duration-700 sm:flex-row sm:items-stretch ${
                     isActive ? "opacity-100" : "pointer-events-none opacity-0"
                   }`}
                 >
-                  <div className="flex min-w-0 flex-1 flex-col justify-center bg-[#F6FAFE] sm:rounded-2xl sm:px-2 sm:py-1">
+                  <div className="flex min-h-0 min-w-0 flex-1 flex-col justify-center bg-[#F6FAFE] p-5 sm:max-w-[min(56%,520px)] sm:flex-[1.15] sm:p-6 sm:pr-5">
                     <span className="inline-flex w-fit rounded-full bg-[#EDF4FC] px-4 py-1.5 text-[14px] font-semibold text-[#045E96]">
-                      Strategy Game
+                      {tBrain("ribbon.strategyBadge")}
                     </span>
                     <h3 className="mt-2 font-['Titan_One'] text-[40px] leading-[1.1] text-[#045E96] sm:text-[48px] sm:leading-[60px]">
-                      {feature.key === "fogchess" ? "Fog of War" : "Quantum Go"}
+                      {feature.key === "fogchess" ? tHome("startFogChess") : tHome("quantumGo")}
                     </h3>
                     <p className="mt-3 max-w-[420px] text-[16px] leading-5 text-[#106FAA]">
-                      Game intro Game introGame introGame introGame introGame introGame introGame introGame
-                      introGame introGame introGame introGame intro
+                      {tBrain("ribbon.featuredIntro")}
                     </p>
                     <div className="mt-4 flex flex-wrap gap-3">
                       {launchEntry ? (
@@ -169,24 +383,25 @@ export default function BrainGamesTab({ onLaunch }: BrainGamesTabProps) {
                           onClick={launchForKey(launchEntry, onLaunch)}
                           className="h-[45px] min-w-[125px] rounded-full bg-[#045E96] px-6 text-[16px] font-semibold text-white shadow-[0px_3.2px_4.8px_rgba(4,94,150,0.3)]"
                         >
-                          Play Now
+                          {tBrain("ribbon.playNow")}
                         </button>
                       ) : null}
                       <button
                         type="button"
                         className="h-[45px] min-w-[129px] rounded-full bg-[#DDEDFF] px-6 text-[16px] font-semibold text-[#045E96]"
                       >
-                        Learn More
+                        {tBrain("ribbon.learnMore")}
                       </button>
                     </div>
                   </div>
-                  <div className="pointer-events-none relative mx-auto h-[220px] w-full max-w-[381px] shrink-0 overflow-hidden rounded-[24px] bg-slate-100 sm:mx-0 sm:h-[246px] sm:w-[min(42%,381px)]">
+                  <div className="relative min-h-[220px] w-full flex-1 overflow-hidden bg-slate-100 sm:min-h-0 sm:min-w-0 sm:flex-[0.95]">
                     {imageSrc ? (
                       <Image
                         src={imageSrc}
-                        alt={feature.key}
+                        alt={feature.key === "fogchess" ? tHome("startFogChess") : tHome("quantumGo")}
                         fill
-                        className="object-cover"
+                        className="object-cover object-center"
+                        sizes="(max-width: 640px) 100vw, 42vw"
                         unoptimized
                       />
                     ) : null}
@@ -194,23 +409,18 @@ export default function BrainGamesTab({ onLaunch }: BrainGamesTabProps) {
                 </div>
               );
             })}
-            <div className="absolute right-5 top-4 z-10 flex gap-1.5">
-              {FEATURED_GAMES.map((_, i) => (
-                <span
-                  key={i}
-                  className={`h-1.5 rounded-full transition-all ${i === featuredIndex ? "w-7 bg-[#7eb6dd]" : "w-4 bg-[#c8dff1]"}`}
-                />
-              ))}
-            </div>
           </div>
         </div>
 
         <div className="flex min-h-0 min-w-[260px] flex-1 flex-col gap-2 lg:max-w-none">
-          <h2 className="text-[22px] font-semibold text-[#106FAA]">Top Ranking Games</h2>
-          <div className="flex min-h-0 flex-1 flex-col justify-between gap-3">
-            {TOP_RANKING_GAMES.map((gameKey, index) => {
-              const rankingEntry = GAMES_BY_DIMENSION.strategy.find((entry) => entry.key === gameKey);
-              const imageSrc = GAME_COVER_MAP[gameKey];
+          <h2 className="text-[22px] font-semibold text-[#106FAA]">{tBrain("ribbon.topRanking")}</h2>
+          <div
+            className="flex min-h-0 flex-1 flex-col justify-evenly gap-2"
+            style={{ minHeight: FEATURE_ROW_MIN_H_PX }}
+          >
+            {rankedTopKeys.map((gameKey, index) => {
+              const rankingEntry = findBrainGameEntry(gameKey);
+              const imageSrc = GAME_COVER_MAP[gameKey] ?? `/brain-games/${gameKey}.gif`;
               if (!rankingEntry) return null;
 
               return (
@@ -239,12 +449,12 @@ export default function BrainGamesTab({ onLaunch }: BrainGamesTabProps) {
                       />
                     ) : null}
                   </div>
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-semibold text-slate-800">
-                      {rankingEntry.key === "fogchess" ? "Fog of War" : tHome(rankingEntry.nameKey)}
+                      {tHome(rankingEntry.nameKey)}
                     </p>
                   </div>
-                  <span className="ml-auto text-xl text-[#0B6FB4]">›</span>
+                  <span className="shrink-0 text-xl text-[#0B6FB4]">›</span>
                 </button>
               );
             })}
@@ -252,9 +462,11 @@ export default function BrainGamesTab({ onLaunch }: BrainGamesTabProps) {
         </div>
       </section>
 
-      <section className="space-y-2">
-        <h2 className="text-[22px] font-semibold text-[#106FAA]">Game Categories</h2>
-        <div className="grid grid-cols-2 gap-x-3 gap-y-10 pt-6 md:grid-cols-3 xl:grid-cols-6">
+      <section className="relative">
+        <h2 className="relative z-20 pb-0 text-[22px] font-semibold leading-tight text-[#106FAA]">
+          {tBrain("ribbon.gameCategories")}
+        </h2>
+        <div className="grid grid-cols-2 gap-x-3 gap-y-10 pb-px pt-0 mt-[1cm] md:grid-cols-3 xl:grid-cols-6">
         {CATEGORY_ORDER.map((dimKey) => {
           const meta = CATEGORY_META[dimKey];
           const isActive = activeCategory === dimKey;
@@ -267,55 +479,64 @@ export default function BrainGamesTab({ onLaunch }: BrainGamesTabProps) {
                 isActive ? "" : "hover:-translate-y-0.5"
               }`}
             >
-              {/* 贴图层：独立于色块之上，溢出到网格空隙；不接收点击 */}
-              <div className="pointer-events-none relative z-20 ml-auto mr-2 flex h-[124px] w-[129px] -mb-[60px] translate-y-1 items-end justify-center drop-shadow-[0_6px_14px_rgba(0,0,0,0.18)]">
-                {dimKey === "memory" ? (
-                  <div className="relative h-[115px] w-full max-w-[129px]">
-                    <Image
-                      src={meta.sticker}
-                      alt=""
-                      fill
-                      className="object-contain"
-                      sizes="120px"
-                    />
-                    <div className="absolute bottom-0 right-8 z-10 h-[101px] w-[90px] rotate-[8deg] -scale-x-100 opacity-90">
+              <div className="relative w-full">
+                {/* 贴图层：absolute；负 top 只够叠在卡片圆角附近，不把实体插画伸到标题行 */}
+                <div
+                  className={`pointer-events-none absolute right-2 z-30 ml-auto flex w-[85%] items-end justify-end drop-shadow-[0_6px_14px_rgba(0,0,0,0.18)] sm:w-[129px] ${
+                    dimKey === "spatial"
+                      ? "-top-[4.25rem] h-[138px] max-w-[140px]"
+                      : "-top-[2.875rem] h-[124px] max-w-[129px]"
+                  }`}
+                >
+                  {dimKey === "memory" ? (
+                    <div className="relative h-[115px] w-full max-w-[129px]">
                       <Image
                         src={meta.sticker}
                         alt=""
                         fill
                         className="object-contain"
-                        sizes="88px"
+                        sizes="120px"
+                      />
+                      <div className="absolute bottom-0 right-8 z-10 h-[101px] w-[90px] rotate-[8deg] -scale-x-100 opacity-90">
+                        <Image
+                          src={meta.sticker}
+                          alt=""
+                          fill
+                          className="object-contain"
+                          sizes="88px"
+                        />
+                      </div>
+                    </div>
+                  ) : (
+                    <div
+                      className={`relative ${
+                        dimKey === "logic"
+                          ? "h-[109px] w-[109px]"
+                          : dimKey === "spatial"
+                            ? "h-[138px] w-[138px]"
+                            : "h-[115px] w-[115px]"
+                      }`}
+                    >
+                      <Image
+                        src={meta.sticker}
+                        alt=""
+                        fill
+                        className="object-contain"
+                        sizes="108px"
                       />
                     </div>
-                  </div>
-                ) : (
-                  <div
-                    className={`relative ${
-                      dimKey === "logic"
-                        ? "h-[109px] w-[109px]"
-                        : dimKey === "spatial"
-                          ? "h-[138px] w-[138px]"
-                          : "h-[115px] w-[115px]"
-                    }`}
-                  >
-                    <Image
-                      src={meta.sticker}
-                      alt=""
-                      fill
-                      className="object-contain"
-                      sizes="108px"
-                    />
-                  </div>
-                )}
-              </div>
+                  )}
+                </div>
 
-              {/* 渐变色块：贴纸负 margin 叠上来，看起来像「压住」下边条 */}
-              <div
-                className={`relative z-10 flex min-h-[118px] flex-col justify-end rounded-[21.75px] border-[0.75px] border-white/60 bg-gradient-to-b px-4 pb-4 pt-11 text-white shadow-[0px_7.25px_10.877px_0px_rgba(0,0,0,0.1),0px_2.9px_4.351px_0px_rgba(0,0,0,0.1)] ${meta.bgClass} ${
-                  isActive ? "ring-2 ring-sky-200 ring-offset-2 ring-offset-slate-100/80" : ""
-                }`}
-              >
-                <h3 className="text-[16px] font-semibold leading-snug">{meta.gameTitle}</h3>
+                <div
+                  className={`relative z-10 flex min-h-[118px] flex-col justify-end rounded-[21.75px] border-[0.75px] border-white/60 bg-gradient-to-b px-4 pb-4 pt-11 text-white shadow-[0px_7.25px_10.877px_0px_rgba(0,0,0,0.1),0px_2.9px_4.351px_0px_rgba(0,0,0,0.1)] ${meta.bgClass} ${
+                    isActive ? "ring-2 ring-sky-200 ring-offset-2 ring-offset-slate-100/80" : ""
+                  }`}
+                >
+                  <h3 className="text-[16px] font-semibold leading-snug">
+                    {tBrain(`categoryChip.${dimKey}` as "categoryChip.memory")}
+                  </h3>
+                </div>
               </div>
             </button>
           );
@@ -324,11 +545,13 @@ export default function BrainGamesTab({ onLaunch }: BrainGamesTabProps) {
       </section>
 
       <section className="space-y-3">
-        <h2 className="text-[22px] font-semibold text-[#106FAA]">{CATEGORY_META[activeCategory].gameTitle.replace("Game", "Games")}</h2>
+        <h2 className="text-[22px] font-semibold text-[#106FAA]">
+          {tBrain(`categoryListing.${activeCategory}` as "categoryListing.memory")}
+        </h2>
 
         {selectedGames.length === 0 ? (
           <p className="rounded-2xl bg-[#EDF4FC] px-4 py-6 text-sm text-slate-500">
-            Games for this category are coming soon.
+            {tBrain("categoryComingSoon")}
           </p>
         ) : (
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -336,30 +559,35 @@ export default function BrainGamesTab({ onLaunch }: BrainGamesTabProps) {
               const imageSrc = entry.skipCover
                 ? null
                 : (GAME_COVER_MAP[entry.key] ?? `/brain-games/${entry.key}.gif`);
-              const playerText = entry.key === "quantumgo" || entry.key === "fogchess" ? "1-2 Players" : "1 Player";
+              const playerText =
+                entry.key === "quantumgo" || entry.key === "fogchess" ? tBrain("playersOneTwo") : tBrain("playersOne");
+              const launch = launchForKey(entry, onLaunch);
+              const likeable = BACKEND_LIKE_GAME_KEYS.has(entry.key);
+              const likeInfo = likeStates.get(entry.key);
+              const likeCount = likeInfo?.count ?? 0;
+              const likedByMe = likeInfo?.likedByMe ?? false;
+
               return (
-                <button
+                <div
                   key={entry.key}
-                  type="button"
-                  onClick={launchForKey(entry, onLaunch)}
                   className="rounded-[32px] border border-white/60 bg-white/90 p-[15px] text-left shadow-[0px_10px_15px_0px_rgba(0,0,0,0.1),0px_4px_6px_0px_rgba(0,0,0,0.1)] transition hover:translate-y-[-2px]"
                 >
-                  <div className="relative mx-auto h-[217px] w-full max-w-[344px] overflow-hidden rounded-[24px] bg-slate-200">
-                    {imageSrc ? (
-                      <Image
-                        src={imageSrc}
-                        alt={tHome(entry.nameKey)}
-                        fill
-                        className="object-cover"
-                        unoptimized
-                      />
-                    ) : null}
-                  </div>
+                  <button type="button" onClick={launch} className="block w-full text-left">
+                    <div className="relative mx-auto h-[217px] w-full max-w-[344px] overflow-hidden rounded-[24px] bg-slate-200">
+                      {imageSrc ? (
+                        <Image
+                          src={imageSrc}
+                          alt={tHome(entry.nameKey)}
+                          fill
+                          className="object-cover"
+                          unoptimized
+                        />
+                      ) : null}
+                    </div>
+                  </button>
                   <div className="mt-4 flex items-start justify-between gap-3 px-1">
-                    <div className="min-w-0">
-                      <p className="truncate font-['Titan_One'] text-[20px] leading-snug text-[#045E96]">
-                        {entry.key === "fogchess" ? "Fog of War" : tHome(entry.nameKey)}
-                      </p>
+                    <button type="button" onClick={launch} className="min-w-0 flex-1 text-left">
+                      <p className="truncate font-['Titan_One'] text-[20px] leading-snug text-[#045E96]">{tHome(entry.nameKey)}</p>
                       <div className="mt-2 flex items-center gap-2 text-[14px] leading-5 text-[#106FAA]">
                         <span className="inline-flex h-[18px] w-[18px] shrink-0 text-[#106FAA]" aria-hidden>
                           <svg viewBox="0 0 24 24" fill="none" className="h-full w-full" stroke="currentColor" strokeWidth="1.6">
@@ -371,12 +599,30 @@ export default function BrainGamesTab({ onLaunch }: BrainGamesTabProps) {
                         </span>
                         <span>{playerText}</span>
                       </div>
+                    </button>
+                    <div className="mt-0.5 flex shrink-0 items-center gap-2">
+                      {likeable ? (
+                        <GameLikeButton
+                          gameKey={entry.key}
+                          count={likeCount}
+                          likedByMe={likedByMe}
+                          busy={likeBusyKey === entry.key}
+                          onToggle={handleToggleGameLike}
+                        />
+                      ) : null}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          launch();
+                        }}
+                        className="inline-flex h-[33px] shrink-0 items-center justify-center rounded-full bg-[#DDEDFF] px-6 text-[14px] font-medium text-[#045E96]"
+                      >
+                        {tBrain("ribbon.playNow")}
+                      </button>
                     </div>
-                    <span className="mt-0.5 inline-flex h-[33px] shrink-0 items-center justify-center rounded-full bg-[#DDEDFF] px-6 text-[14px] font-medium text-[#045E96]">
-                      Play Now
-                    </span>
                   </div>
-                </button>
+                </div>
               );
             })}
           </div>

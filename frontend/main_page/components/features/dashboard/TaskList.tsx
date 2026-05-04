@@ -67,10 +67,10 @@ function TaskRow({
         </div>
 
         <div className="min-w-0 flex-1">
-          <div className={`font-['Outfit'] text-[clamp(0.78rem,1vw,1rem)] font-medium text-base leading-[1.25] whitespace-normal break-words ${textColor}`}>
+          <div className={`font-app-body text-[clamp(0.78rem,1vw,1rem)] font-medium text-base leading-[1.25] whitespace-normal break-words ${textColor}`}>
             {tTasks(task.labelKey)}
           </div>
-          <div className="mt-[clamp(0.1rem,0.4vw,0.3rem)] font-['Outfit'] text-[clamp(0.62rem,0.85vw,0.78rem)] font-medium text-sky-700/70">
+          <div className="mt-[clamp(0.1rem,0.4vw,0.3rem)] font-app-body text-[clamp(0.62rem,0.85vw,0.78rem)] font-medium text-sky-700/70">
             {displayCurrent}/{target}
           </div>
         </div>
@@ -84,7 +84,7 @@ function TaskRow({
               height={14}
               className="h-[clamp(0.68rem,1vw,0.88rem)] w-[clamp(0.68rem,1vw,0.88rem)]"
             />
-            <span className="text-center font-['Outfit'] text-[clamp(0.72rem,0.95vw,0.95rem)] font-medium leading-[1] text-white">
+            <span className="text-center font-app-body text-[clamp(0.72rem,0.95vw,0.95rem)] font-medium leading-[1] text-white">
               {rewardValue}
             </span>
           </div>
@@ -94,7 +94,7 @@ function TaskRow({
               type="button"
               onClick={handleClaim}
               disabled={claiming}
-              className="rounded-full bg-[#E45C44] px-[clamp(0.5rem,1vw,0.75rem)] py-[clamp(0.22rem,0.6vw,0.4rem)] font-['Outfit'] text-[clamp(0.62rem,0.85vw,0.78rem)] font-medium text-white disabled:opacity-50"
+              className="rounded-full bg-[#E45C44] px-[clamp(0.5rem,1vw,0.75rem)] py-[clamp(0.22rem,0.6vw,0.4rem)] font-app-body text-[clamp(0.62rem,0.85vw,0.78rem)] font-medium text-white disabled:opacity-50"
             >
               {claiming ? tCommon("loading") : tCommon("claim")}
             </button>
@@ -142,7 +142,7 @@ export default function TaskList({
           Brain Hub
         </h3>
         <div className="flex items-center justify-center gap-1.5 rounded-full bg-blue-100 px-[clamp(0.55rem,1.2vw,0.9rem)] py-[clamp(0.35rem,0.8vw,0.55rem)]">
-          <span className="font-['Outfit'] text-[clamp(0.72rem,1vw,1rem)] font-medium leading-[1.2] text-[#045E96]">
+          <span className="font-app-body text-[clamp(0.72rem,1vw,1rem)] font-medium leading-[1.2] text-[#045E96]">
             {totalCompleted}/{totalGoals} Completed
           </span>
         </div>
@@ -150,7 +150,7 @@ export default function TaskList({
 
       <div className="flex w-full flex-col gap-[clamp(0.8rem,1.6vw,1.5rem)]">
         <div className="flex w-full flex-col gap-[clamp(0.6rem,1.2vw,1.25rem)]">
-          <div className="font-['Outfit'] text-[clamp(0.4rem,1.2vw,1.15rem)] font-semibold leading-[1.2] text-sky-700">
+          <div className="font-app-body text-[clamp(0.4rem,1.2vw,1.15rem)] font-semibold leading-[1.2] text-sky-700">
             Daily Goals ({dailyDoneCount}/{DAILY_TASKS.length})
           </div>
           <div className="flex w-full flex-col gap-[clamp(0.4rem,0.9vw,0.75rem)]">
@@ -175,7 +175,7 @@ export default function TaskList({
         </div>
 
         <div className="flex w-full flex-col gap-[clamp(0.6rem,1.2vw,1.25rem)]">
-          <div className="font-['Outfit'] text-[clamp(0.9rem,1.2vw,1.15rem)] font-semibold leading-[1.2] text-sky-700">
+          <div className="font-app-body text-[clamp(0.9rem,1.2vw,1.15rem)] font-semibold leading-[1.2] text-sky-700">
             Monthly Goals ({monthlyDone}/1){" "}
             <span className="font-medium text-[clamp(0.62rem,0.85vw,0.8rem)] text-sky-700/70">{monthDateRange}</span>
           </div>

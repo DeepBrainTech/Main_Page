@@ -9,7 +9,7 @@ interface GoodCoolChatPromptProps {
 export default function GoodCoolChatPrompt({ label }: GoodCoolChatPromptProps) {
   return (
     <div className="flex h-[clamp(2.5rem,5vw,3rem)] w-full min-w-0 items-center gap-[clamp(0.35rem,1vw,0.5rem)] rounded-full border border-white/60 bg-white/80 px-[clamp(0.75rem,2vw,1.25rem)] shadow-sm backdrop-blur-md">
-      <span className="min-w-0 flex-1 truncate font-['Outfit'] text-[clamp(0.78rem,1.7vw,1rem)] font-normal leading-6 text-zinc-800/60">
+      <span className="min-w-0 flex-1 truncate font-app-body text-[clamp(0.78rem,1.7vw,1rem)] font-normal leading-6 text-zinc-800/60">
         {label}
       </span>
 
