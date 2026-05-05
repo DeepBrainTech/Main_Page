@@ -12,7 +12,7 @@ export default function CoinHelpPopover() {
       rewardIconSrc="/dashboard/coin.svg"
       rewardIconAlt="Coins"
       rows={[
-        { label: tNav("coinHelpDailyTasks"), value: 50 },
+        { label: tNav("coinHelpDailyTasks") },
         { label: tNav("coinHelpDailyCheckIn"), value: 50 },
         { label: tNav("coinHelpSevenDayStreak"), value: 200 },
         { label: tNav("coinHelpGameBadges") },
