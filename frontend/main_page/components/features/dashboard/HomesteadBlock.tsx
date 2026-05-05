@@ -1,10 +1,12 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import AvatarCharacter, { type AvatarConfig } from "./AvatarCharacter";
 import GoodCoolChatPrompt from "./GoodCoolChatPrompt";
+import GoodCoolConversationPanel from "./GoodCoolConversationPanel";
 import GoodCoolMessageBubble from "./GoodCoolMessageBubble";
+import { sendMonkeyChatMessage, type MonkeyChatMessage } from "@/services/monkeyChatApi";
 
 interface HomesteadBlockProps {
   level: number;
@@ -30,6 +32,7 @@ export default function HomesteadBlock({
   onMenuOpenChange,
 }: HomesteadBlockProps) {
   const tHome = useTranslations("dashboard");
+  const locale = useLocale();
   const containerRef = useRef<HTMLDivElement>(null);
 
   const [avatarConfig] = useState<AvatarConfig>({
@@ -44,10 +47,56 @@ export default function HomesteadBlock({
   const [position, setPosition] = useState(HOME_POSITION);
   const [direction, setDirection] = useState<"left" | "right">("right");
   const [isWalking, setIsWalking] = useState(false);
+  const [chatInput, setChatInput] = useState("");
+  const [chatMessage, setChatMessage] = useState(tHome("goodCoolMessage"));
+  const [chatHistory, setChatHistory] = useState<MonkeyChatMessage[]>([]);
+  const [isChatLoading, setIsChatLoading] = useState(false);
+  const [isChatPanelOpen, setIsChatPanelOpen] = useState(false);
 
   const targetRef = useRef(HOME_POSITION);
   const positionRef = useRef(HOME_POSITION);
   const returnCenterTimerRef = useRef<number | null>(null);
+
+  const displayedChatMessages: MonkeyChatMessage[] = [
+    { role: "assistant", content: tHome("goodCoolMessage") },
+    ...chatHistory,
+  ];
+  const lastDisplayedMessage = displayedChatMessages[displayedChatMessages.length - 1];
+  if (chatMessage && (!lastDisplayedMessage || lastDisplayedMessage.content !== chatMessage)) {
+    displayedChatMessages.push({ role: "assistant", content: chatMessage });
+  }
+
+  const handleChatSubmit = async () => {
+    const message = chatInput.trim();
+    if (!message || isChatLoading) return;
+
+    const nextHistory: MonkeyChatMessage[] = [...chatHistory, { role: "user" as const, content: message }].slice(-8);
+    setChatInput("");
+    setChatMessage(tHome("goodCoolThinking"));
+    setChatHistory(nextHistory);
+    setIsChatLoading(true);
+
+    try {
+      const result = await sendMonkeyChatMessage({
+        message,
+        locale: locale.startsWith("zh") ? "zh" : "en",
+        history: chatHistory.slice(-8),
+      });
+      setChatMessage(result.answer);
+      setChatHistory([...nextHistory, { role: "assistant" as const, content: result.answer }].slice(-8));
+    } catch {
+      const fallback = tHome("goodCoolError");
+      setChatMessage(fallback);
+      setChatHistory([...nextHistory, { role: "assistant" as const, content: fallback }].slice(-8));
+    } finally {
+      setIsChatLoading(false);
+    }
+  };
+
+  const handleCloseChatPanel = () => {
+    setIsChatPanelOpen(false);
+    setChatMessage(tHome("goodCoolMessage"));
+  };
 
   // 点击场景移动角色
   const handleContainerClick = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -107,10 +156,6 @@ export default function HomesteadBlock({
     };
   }, []);
 
-  // Keep the bar in the right column on narrow cards; avoid lg-only min(18rem) which ignored column width.
-  const chatWidth =
-    "w-[max(5rem,min(24rem,30%,calc(100%-1.5rem),calc(50%-0.5rem)))] min-w-0 max-w-full";
-
   return (
     <div className="relative flex h-full min-h-[340px] flex-col rounded-3xl border border-amber-100/50 p-[clamp(0.75rem,2vw,1.5rem)] shadow-sm transition-all select-none md:min-h-[390px] xl:min-h-[440px]">
       {/* Clips scene + avatar + chat to the card; customize panel is a sibling so it is not cut off. */}
@@ -144,9 +189,18 @@ export default function HomesteadBlock({
           }}
         >
           <div className={`relative min-w-0 ${isWalking ? "avatar-walk" : ""}`}>
-            <div className="pointer-events-none absolute right-full -top-1 z-30 min-w-0 w-max max-w-[min(18rem,34cqi)] pr-0 -mr-1.5">
-              <GoodCoolMessageBubble message={tHome("goodCoolMessage")} />
-            </div>
+            {!isChatPanelOpen ? (
+              <div
+                className="pointer-events-auto absolute right-full -top-1 z-30 hidden min-w-0 w-max max-w-[min(18rem,34cqi)] pr-0 -mr-1.5 sm:block"
+                onClick={(event) => event.stopPropagation()}
+              >
+                <GoodCoolMessageBubble
+                  message={chatMessage}
+                  expandLabel={tHome("goodCoolExpandChat")}
+                  onExpand={() => setIsChatPanelOpen(true)}
+                />
+              </div>
+            ) : null}
             <AvatarCharacter config={avatarConfig} level={level} direction={direction} />
           </div>
           <div className="absolute bottom-2 left-1/2 -z-10 h-4 w-24 -translate-x-1/2 rounded-[100%] bg-black/10 blur-sm" />
@@ -154,10 +208,24 @@ export default function HomesteadBlock({
         </div>
 
         <div
-          className={`pointer-events-none absolute bottom-[clamp(1rem,2.5vw,1.5rem)] right-[clamp(1rem,2.5vw,1.5rem)] z-20 flex justify-end ${chatWidth}`}
+          className="@container/chat pointer-events-none absolute bottom-[clamp(1rem,2.5vw,1.5rem)] right-[clamp(1rem,2.5vw,1.5rem)] top-[clamp(0.75rem,2vw,1rem)] z-40 flex w-[min(20rem,38%,calc(100%-2rem))] min-w-[14rem] flex-col items-stretch justify-end gap-2"
         >
+          {isChatPanelOpen ? (
+          <GoodCoolConversationPanel
+            messages={displayedChatMessages}
+            closeLabel={tHome("goodCoolCloseChat")}
+            onClose={handleCloseChatPanel}
+          />
+          ) : null}
+
           <div className="pointer-events-auto w-full min-w-0">
-            <GoodCoolChatPrompt label={tHome("goodCoolChatHint")} />
+            <GoodCoolChatPrompt
+              label={tHome("goodCoolChatHint")}
+              value={chatInput}
+              disabled={isChatLoading}
+              onChange={setChatInput}
+              onSubmit={handleChatSubmit}
+            />
           </div>
         </div>
       </div>

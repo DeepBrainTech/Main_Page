@@ -7,7 +7,7 @@ import os
 load_dotenv()
 
 # 导入路由
-from routes import auth, games, user, leaderboard
+from routes import auth, games, user, leaderboard, monkey_chat
 from database import init_db
 
 # 创建 FastAPI 应用实例
@@ -48,6 +48,7 @@ app.include_router(auth.router)
 app.include_router(games.router)
 app.include_router(user.router)
 app.include_router(leaderboard.router)
+app.include_router(monkey_chat.router)
 
 
 @app.on_event("startup")
