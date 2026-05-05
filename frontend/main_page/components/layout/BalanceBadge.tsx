@@ -64,21 +64,21 @@ export default function BalanceBadge({
 
   return (
     <div
-      className={`relative flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold text-sky-700 transition-all duration-300 ${
+      className={`relative flex min-h-9 min-w-0 items-center gap-1.5 rounded-full px-3 py-1.5 font-app-body text-sm font-medium leading-5 text-sky-700 transition-all duration-300 sm:min-h-10 sm:gap-2 sm:px-4 sm:py-2 md:min-h-11 md:px-5 md:text-lg md:leading-5 ${
         isAnimating ? styles.badge : "bg-indigo-50"
       }`}
     >
       <Image
         src={iconSrc}
         alt={iconAlt}
-        width={16}
-        height={16}
-        className={`h-4 w-4 ${isAnimating ? "animate-bounce-custom" : ""}`}
+        width={20}
+        height={20}
+        className={`h-4 w-4 shrink-0 sm:h-[18px] sm:w-[18px] md:h-5 md:w-5 ${isAnimating ? "animate-bounce-custom" : ""}`}
       />
-      <span className={isAnimating ? styles.text : ""}>{value}</span>
+      <span className={`tabular-nums ${isAnimating ? styles.text : ""}`}>{value}</span>
       {increase > 0 && isAnimating ? (
         <span
-          className={`pointer-events-none absolute -right-1 -top-5 whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-bold leading-4 text-white shadow-sm animate-reward-rise ${styles.floating}`}
+          className={`pointer-events-none absolute -right-1 -top-5 whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-bold leading-4 text-white shadow-sm md:-top-6 md:text-xs md:leading-4 animate-reward-rise ${styles.floating}`}
         >
           +{increase}
         </span>

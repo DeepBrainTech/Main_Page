@@ -24,7 +24,18 @@
     "test": "Cognitive Test",
     "brainGames": "Brain Games",
     "leaderboard": "Leaderboard",
-    "profile": "Profile"
+    "profile": "Profile",
+    "coinHelpTitle": "How to earn Coins?",
+    "coinHelpDailyTasks": "Complete daily tasks:",
+    "coinHelpDailyCheckIn": "Daily check-in:",
+    "coinHelpSevenDayStreak": "Achieve 7-Day Streak:",
+    "coinHelpGameBadges": "Game badges rewards",
+    "coinHelpBuyInShop": "Buy in Shop",
+    "diamondHelpTitle": "How to earn Diamonds?",
+    "diamondHelpAllDailyTasks": "Complete all daily tasks:",
+    "diamondHelpSevenDayStreak": "Achieve 7-Day Streak:",
+    "diamondHelpGameBadges": "Game badges rewards",
+    "diamondHelpBuyInShop": "Buy in Shop"
   },
   "dimensions": {
     "memory": "Memory",

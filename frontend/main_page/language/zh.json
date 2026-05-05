@@ -24,7 +24,18 @@
     "test": "认知测试",
     "brainGames": "脑力训练游戏",
     "leaderboard": "排行榜",
-    "profile": "个人"
+    "profile": "个人",
+    "coinHelpTitle": "如何获得金币？",
+    "coinHelpDailyTasks": "完成每日任务：",
+    "coinHelpDailyCheckIn": "每日签到：",
+    "coinHelpSevenDayStreak": "达成 7 日连续签到：",
+    "coinHelpGameBadges": "游戏徽章奖励",
+    "coinHelpBuyInShop": "商店购买",
+    "diamondHelpTitle": "如何获得钻石？",
+    "diamondHelpAllDailyTasks": "完成全部每日任务：",
+    "diamondHelpSevenDayStreak": "达成 7 日连续签到：",
+    "diamondHelpGameBadges": "游戏徽章奖励",
+    "diamondHelpBuyInShop": "商店购买"
   },
   "dimensions": {
     "memory": "记忆力",
