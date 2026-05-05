@@ -5,6 +5,7 @@ import { createContext, useContext } from "react";
 interface AuthedUserContextValue {
   username: string;
   dateOfBirth?: string | null;
+  avatarUrl?: string | null;
 }
 
 const AuthedUserContext = createContext<AuthedUserContextValue | null>(null);

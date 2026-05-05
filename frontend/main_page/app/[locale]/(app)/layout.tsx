@@ -60,7 +60,7 @@ export default function AuthedAppLayout({ children }: { children: React.ReactNod
   }
 
   return (
-    <AuthedUserProvider value={{ username, dateOfBirth }}>
+    <AuthedUserProvider value={{ username, dateOfBirth, avatarUrl }}>
       <AppShell
         activeTab={activeTab}
         tabHrefMap={tabHrefMap}

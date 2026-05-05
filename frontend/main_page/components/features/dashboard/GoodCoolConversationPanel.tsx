@@ -7,6 +7,7 @@ import type { MonkeyChatMessage } from "@/services/monkeyChatApi";
 
 interface GoodCoolConversationPanelProps {
   messages: MonkeyChatMessage[];
+  userAvatarUrl?: string | null;
   closeLabel: string;
   animateLatestAssistant?: boolean;
   onLatestAssistantAnimationComplete?: () => void;
@@ -15,6 +16,7 @@ interface GoodCoolConversationPanelProps {
 
 export default function GoodCoolConversationPanel({
   messages,
+  userAvatarUrl = null,
   closeLabel,
   animateLatestAssistant = false,
   onLatestAssistantAnimationComplete,
@@ -42,6 +44,7 @@ export default function GoodCoolConversationPanel({
     return -1;
   })();
   const lastMessage = messages[messages.length - 1]?.content ?? "";
+  const userAvatarSrc = userAvatarUrl || "/dashboard/default.png";
 
   useEffect(() => {
     scrollToBottom("smooth");
@@ -111,6 +114,14 @@ export default function GoodCoolConversationPanel({
                     onComplete={shouldAnimate ? onLatestAssistantAnimationComplete : undefined}
                   />
                 </div>
+                {!isAssistant ? (
+                  <img
+                    src={userAvatarSrc}
+                    alt=""
+                    className="mt-1 h-8 w-8 shrink-0 rounded-full object-cover"
+                    aria-hidden
+                  />
+                ) : null}
               </div>
             );
           })}

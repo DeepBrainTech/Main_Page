@@ -10,6 +10,7 @@ import { sendMonkeyChatMessage, type MonkeyChatMessage } from "@/services/monkey
 
 interface HomesteadBlockProps {
   level: number;
+  userAvatarUrl?: string | null;
   activeCustomizeTab: "head" | "body" | "hand" | "background" | null;
   menuOpen: boolean;
   onMenuOpenChange?: (isOpen: boolean) => void;
@@ -27,6 +28,7 @@ function lerp(a: number, b: number, t: number): number {
  */
 export default function HomesteadBlock({
   level,
+  userAvatarUrl = null,
   activeCustomizeTab,
   menuOpen,
   onMenuOpenChange,
@@ -218,6 +220,7 @@ export default function HomesteadBlock({
           {isChatPanelOpen ? (
           <GoodCoolConversationPanel
             messages={displayedChatMessages}
+            userAvatarUrl={userAvatarUrl}
             closeLabel={tHome("goodCoolCloseChat")}
             animateLatestAssistant={shouldAnimateLatestAssistant && !isChatLoading}
             onLatestAssistantAnimationComplete={() => setShouldAnimateLatestAssistant(false)}

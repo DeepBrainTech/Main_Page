@@ -13,6 +13,7 @@ import BrainpowerPanel from "@/components/features/dashboard/BrainpowerPanel";
 
 interface HomeTabProps {
   username?: string;
+  avatarUrl?: string | null;
 }
 
 type HomesteadCustomizeTab = "head" | "body" | "hand" | "background";
@@ -20,7 +21,7 @@ type HomesteadCustomizeTab = "head" | "body" | "hand" | "background";
 /**
  * Dashboard home content: KPI + stage + check-in/tasks + brainpower panel
  */
-export default function HomeTab({ username = "" }: HomeTabProps) {
+export default function HomeTab({ username = "", avatarUrl = null }: HomeTabProps) {
   const tHome = useTranslations("dashboard");
   const tCommon = useTranslations("common");
   const {
@@ -122,6 +123,7 @@ export default function HomeTab({ username = "" }: HomeTabProps) {
           >
             <HomesteadBlock
               level={level}
+              userAvatarUrl={avatarUrl}
               activeCustomizeTab={activeHomesteadTab}
               menuOpen={isHomesteadMenuOpen}
               onMenuOpenChange={(isOpen) => {
