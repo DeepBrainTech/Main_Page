@@ -81,7 +81,7 @@ export default function GoodCoolConversationPanel({
 
       <div
         ref={scrollRef}
-        className="min-h-0 flex-1 overflow-y-auto px-[clamp(0.75rem,2.4vw,1rem)] pb-[clamp(1.75rem,5vw,2.5rem)] pr-[clamp(1rem,3vw,1.4rem)] pt-[clamp(2.75rem,8vw,3.5rem)] scrollbar-thin"
+        className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-[clamp(0.75rem,2.4vw,1rem)] pb-[clamp(1.75rem,5vw,2.5rem)] pr-[clamp(1rem,3vw,1.4rem)] pt-[clamp(2.75rem,8vw,3.5rem)] scrollbar-thin"
       >
         <div className="flex flex-col gap-[clamp(0.75rem,2vw,1rem)]">
           {messages.map((message, index) => {

@@ -14,7 +14,7 @@ export default function GoodCoolMessageBubble({ message, expandLabel, onExpand }
   return (
     <div className="relative flex w-full min-w-0 max-w-full items-start justify-start gap-2.5 rounded-bl-3xl rounded-tl-3xl rounded-tr-3xl bg-sky-50 p-[clamp(0.75rem,2vw,1rem)] pb-[clamp(1.6rem,3.4vw,2rem)] shadow-sm">
       <div
-        className="scrollbar-thin flex-1 overflow-y-auto whitespace-pre-wrap break-words pr-1 font-app-body text-[clamp(0.82rem,1.7vw,1rem)] font-normal leading-[1.45] text-zinc-800"
+        className="scrollbar-thin flex-1 overflow-y-auto overscroll-y-contain whitespace-pre-wrap break-words pr-1 font-app-body text-[clamp(0.82rem,1.7vw,1rem)] font-normal leading-[1.45] text-zinc-800"
         style={{ maxHeight: "5.8em" }}
       >
         {visibleMessage}
