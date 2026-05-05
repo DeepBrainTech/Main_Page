@@ -54,10 +54,10 @@ export default function AppShell({
 
   const tabs: { key: AppTab; label: string; iconSrc: string; iconAlt: string }[] = [
     { key: "dashboard", label: tHome("dashboardTab"), iconSrc: "/dashboard/dashboard.svg", iconAlt: "Dashboard" },
+    { key: "learning", label: tNav("learning"), iconSrc: "/dashboard/learning.svg", iconAlt: "Learning" },
     { key: "brainGames", label: tNav("brainGames"), iconSrc: "/dashboard/brain_game.svg", iconAlt: "Brain Games" },
     { key: "leaderboard", label: tNav("leaderboard"), iconSrc: "/dashboard/leaderboard.svg", iconAlt: "Leaderboard" },
     { key: "test", label: tNav("test"), iconSrc: "/dashboard/test.svg", iconAlt: "Test" },
-    { key: "learning", label: tNav("learning"), iconSrc: "/dashboard/learning.svg", iconAlt: "Learning" },
   ];
 
   return (
