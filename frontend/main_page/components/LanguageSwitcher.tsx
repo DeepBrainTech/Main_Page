@@ -25,14 +25,17 @@ export default function LanguageSwitcher() {
     <button
       type="button"
       onClick={() => switchLanguage(nextLocale)}
-      className="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 inline-flex items-center gap-1.5 transition hover:border-slate-400"
+      className="font-app-body inline-flex min-h-[clamp(1.75rem,calc(1.35rem+2.75vw),3.5rem)] w-fit max-w-full items-center justify-center gap-[clamp(0.25rem,calc(0.12rem+1.1vw),0.625rem)] rounded-full border border-slate-300 bg-white px-[clamp(0.5rem,calc(0.35rem+2.5vw),1.75rem)] text-[clamp(0.6875rem,calc(0.5rem+1.15vw),1.0625rem)] font-semibold text-slate-700 transition hover:border-slate-400"
       aria-label={`Switch language, current ${currentLocaleLabel}`}
       title={`Switch language, current ${currentLocaleLabel}`}
     >
-      <span className="h-3.5 w-3.5 relative overflow-hidden" aria-hidden="true">
+      <span
+        className="relative size-[clamp(0.75rem,calc(0.45rem+1.85vw),1.25rem)] shrink-0 overflow-hidden"
+        aria-hidden="true"
+      >
         <svg
           viewBox="0 0 24 24"
-          className="h-3.5 w-3.5 text-slate-700"
+          className="h-full w-full text-slate-700"
           fill="none"
           stroke="currentColor"
           strokeWidth="2"
@@ -45,9 +48,7 @@ export default function LanguageSwitcher() {
           <path d="M12 3a14 14 0 0 0 0 18" />
         </svg>
       </span>
-      <span className="text-slate-700 text-xs font-semibold leading-none">
-        {currentLocaleLabel}
-      </span>
+      <span className="leading-none text-slate-700">{currentLocaleLabel}</span>
     </button>
   );
 }
