@@ -2,8 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
+import { useParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
+import { type MembershipPlan } from "@/components/features/membership/MembershipPlans";
 import ProfileDialog from "@/components/features/profile/ProfileDialog";
 import BalanceBadge from "@/components/layout/BalanceBadge";
 import CoinHelpPopover from "@/components/layout/CoinHelpPopover";
@@ -13,7 +15,7 @@ import { useRewards } from "@/hooks/useRewards";
 export type AppTab = "dashboard" | "learning" | "test" | "brainGames" | "leaderboard";
 
 interface AppShellProps {
-  activeTab: AppTab;
+  activeTab: AppTab | null;
   tabHrefMap: Record<AppTab, string>;
   username: string;
   email?: string;
@@ -41,12 +43,29 @@ export default function AppShell({
   onProfileUpdate,
   children,
 }: AppShellProps) {
+  const params = useParams();
   const tNav = useTranslations("nav");
   const tHome = useTranslations("dashboard");
+  const tMembership = useTranslations("membership");
   const [profileOpen, setProfileOpen] = useState(false);
+  const [membershipPlan, setMembershipPlan] = useState<MembershipPlan>("free");
   const [avatarFailed, setAvatarFailed] = useState(false);
   const { loading: rewardsLoading, coins, diamonds, flowers } = useRewards();
   const resolvedAvatarSrc = !avatarFailed && avatarUrl ? avatarUrl : "/dashboard/default.png";
+  const locale = (params?.locale as string) ?? "en";
+
+  useEffect(() => {
+    const syncMembershipPlan = () => {
+      const savedPlan = window.localStorage.getItem("membership_plan");
+      if (savedPlan === "free" || savedPlan === "plus" || savedPlan === "premium") {
+        setMembershipPlan(savedPlan);
+      }
+    };
+
+    syncMembershipPlan();
+    window.addEventListener("membership-plan-change", syncMembershipPlan);
+    return () => window.removeEventListener("membership-plan-change", syncMembershipPlan);
+  }, []);
 
   useEffect(() => {
     setAvatarFailed(false);
@@ -137,6 +156,20 @@ export default function AppShell({
             >
               {"\u2699"}
             </button>
+
+            <Link
+              href={`/${locale}/membership`}
+              className="shrink-0 transition hover:scale-105"
+              aria-label={tMembership("statusLabel", { plan: tMembership(`plans.${membershipPlan}`) })}
+            >
+              <Image
+                src={`/membership/${membershipPlan}.png`}
+                alt=""
+                width={196}
+                height={60}
+                className="h-5 w-auto object-contain sm:h-3 md:h-5"
+              />
+            </Link>
 
             <button
               type="button"

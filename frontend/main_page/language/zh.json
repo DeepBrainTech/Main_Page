@@ -37,6 +37,60 @@
     "diamondHelpGameBadges": "游戏徽章奖励",
     "diamondHelpBuyInShop": "商店购买"
   },
+  "membership": {
+    "title": "选择你的计划",
+    "subtitle": "使用 Premium 解锁你的学习潜力",
+    "close": "关闭会员计划",
+    "statusLabel": "{plan} 会员",
+    "perMonth": "/月",
+    "bestValue": "最具价值",
+    "currentPlan": "当前计划",
+    "cancelSubscription": "取消订阅",
+    "downgradeToPlus": "降级到 Plus",
+    "plans": {
+      "free": "Free",
+      "plus": "Plus",
+      "premium": "Premium"
+    },
+    "actions": {
+      "free": "切换到 Free",
+      "plus": "升级到 Plus",
+      "premium": "升级到 Premium"
+    },
+    "features": {
+      "noDailyDiamonds": {
+        "title": "无每日钻石",
+        "description": "可通过其他方式获得"
+      },
+      "payPerCourse": {
+        "title": "按课程付费",
+        "description": "每门课程 100"
+      },
+      "adsIncluded": {
+        "title": "包含广告"
+      },
+      "dailyDiamonds": {
+        "title": "每日 5 钻石",
+        "description": "登录即可领取奖励"
+      },
+      "premiumRewards": {
+        "title": "5 钻石 +",
+        "coins": "10 金币"
+      },
+      "adFree": {
+        "title": "无广告体验",
+        "description": "不被打扰"
+      },
+      "catchUp": {
+        "title": "补签功能",
+        "description": "补回错过的天数"
+      },
+      "allContent": {
+        "title": "解锁全部内容",
+        "description": "立即访问所有课程"
+      }
+    }
+  },
   "dimensions": {
     "memory": "记忆力",
     "logic": "逻辑推理",

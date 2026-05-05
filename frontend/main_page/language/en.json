@@ -37,6 +37,60 @@
     "diamondHelpGameBadges": "Game badges rewards",
     "diamondHelpBuyInShop": "Buy in Shop"
   },
+  "membership": {
+    "title": "Choose Your Plan",
+    "subtitle": "Unlock your learning potential with Premium",
+    "close": "Close membership plans",
+    "statusLabel": "{plan} membership",
+    "perMonth": "/month",
+    "bestValue": "BEST VALUE",
+    "currentPlan": "Current Plan",
+    "cancelSubscription": "Cancel Subscription",
+    "downgradeToPlus": "Downgrade to Plus",
+    "plans": {
+      "free": "Free",
+      "plus": "Plus",
+      "premium": "Premium"
+    },
+    "actions": {
+      "free": "Switch to Free",
+      "plus": "Upgrade to Plus",
+      "premium": "Upgrade to Premium"
+    },
+    "features": {
+      "noDailyDiamonds": {
+        "title": "No daily diamonds",
+        "description": "Earn through other methods"
+      },
+      "payPerCourse": {
+        "title": "Pay per course",
+        "description": "100 per course"
+      },
+      "adsIncluded": {
+        "title": "Ads included"
+      },
+      "dailyDiamonds": {
+        "title": "5 Daily Diamonds",
+        "description": "Login to claim rewards"
+      },
+      "premiumRewards": {
+        "title": "5 Diamonds +",
+        "coins": "10 Coins"
+      },
+      "adFree": {
+        "title": "Ad-free experience",
+        "description": "No interruptions"
+      },
+      "catchUp": {
+        "title": "Catch-up feature",
+        "description": "Make up missed days"
+      },
+      "allContent": {
+        "title": "All content unlocked",
+        "description": "Access every course instantly"
+      }
+    }
+  },
   "dimensions": {
     "memory": "Memory",
     "logic": "Logic",

@@ -27,7 +27,7 @@ export default function AuthedAppLayout({ children }: { children: React.ReactNod
   const { username, email, dateOfBirth, avatarUrl, loading, needsProfileCompletion, refetch, logout } = useAuth();
 
   const currentSegment = pathname.split("/").filter(Boolean).pop()?.toLowerCase() ?? "dashboard";
-  const activeTab = SEGMENT_TO_TAB[currentSegment] ?? "dashboard";
+  const activeTab = SEGMENT_TO_TAB[currentSegment] ?? null;
 
   const tabHrefMap: Record<AppTab, string> = {
     dashboard: `/${locale}/dashboard`,
