@@ -45,6 +45,7 @@
     "perMonth": "/月",
     "bestValue": "最具价值",
     "currentPlan": "当前计划",
+    "freePlan": "Free Plan",
     "cancelSubscription": "取消订阅",
     "downgradeToPlus": "降级到 Plus",
     "plans": {

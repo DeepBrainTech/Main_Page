@@ -107,6 +107,7 @@ export default function MembershipPlans({ currentPlan, onPlanChange }: Membershi
         {planConfigs.map((plan) => {
           const styles = planStyles[plan.key];
           const isCurrent = currentPlan === plan.key;
+          const isFreePreview = plan.key === "free" && currentPlan !== "free";
           const actionLabelKey =
             currentPlan === "premium" && plan.key === "plus" ? "downgradeToPlus" : `actions.${plan.key}`;
 
@@ -174,16 +175,16 @@ export default function MembershipPlans({ currentPlan, onPlanChange }: Membershi
                 <button
                   type="button"
                   onClick={() => onPlanChange(plan.key)}
-                  disabled={isCurrent}
+                  disabled={isCurrent || isFreePreview}
                   className={`h-12 w-full rounded-full font-app-body text-base font-semibold leading-6 transition ${
-                    isCurrent
+                    isCurrent || isFreePreview
                       ? plan.key === "free"
                         ? "cursor-default bg-indigo-50 text-sky-700 opacity-95"
                         : "cursor-default bg-white/20 text-white"
                       : `${styles.button} hover:-translate-y-0.5 hover:shadow-xl`
                   }`}
                 >
-                  {isCurrent ? t("currentPlan") : t(actionLabelKey)}
+                  {isFreePreview ? t("freePlan") : isCurrent ? t("currentPlan") : t(actionLabelKey)}
                 </button>
 
                 {isCurrent && plan.key !== "free" ? (

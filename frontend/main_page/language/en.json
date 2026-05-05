@@ -45,6 +45,7 @@
     "perMonth": "/month",
     "bestValue": "BEST VALUE",
     "currentPlan": "Current Plan",
+    "freePlan": "Free Plan",
     "cancelSubscription": "Cancel Subscription",
     "downgradeToPlus": "Downgrade to Plus",
     "plans": {
