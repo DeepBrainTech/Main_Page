@@ -1,19 +1,60 @@
 "use client";
 
 import Image from "next/image";
+import { useCallback, useEffect, useRef } from "react";
+import { useTypewriterText } from "@/hooks/useTypewriterText";
 import type { MonkeyChatMessage } from "@/services/monkeyChatApi";
 
 interface GoodCoolConversationPanelProps {
   messages: MonkeyChatMessage[];
   closeLabel: string;
+  animateLatestAssistant?: boolean;
+  onLatestAssistantAnimationComplete?: () => void;
   onClose: () => void;
 }
 
 export default function GoodCoolConversationPanel({
   messages,
   closeLabel,
+  animateLatestAssistant = false,
+  onLatestAssistantAnimationComplete,
   onClose,
 }: GoodCoolConversationPanelProps) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const bottomRef = useRef<HTMLDivElement>(null);
+  const scrollFrameRef = useRef<number | null>(null);
+  const scrollToBottom = useCallback((behavior: ScrollBehavior = "smooth") => {
+    if (scrollFrameRef.current !== null) {
+      window.cancelAnimationFrame(scrollFrameRef.current);
+    }
+    scrollFrameRef.current = window.requestAnimationFrame(() => {
+      scrollFrameRef.current = window.requestAnimationFrame(() => {
+        bottomRef.current?.scrollIntoView({ block: "end", behavior });
+        scrollFrameRef.current = null;
+      });
+    });
+  }, []);
+
+  const lastAssistantIndex = (() => {
+    for (let index = messages.length - 1; index >= 0; index -= 1) {
+      if (messages[index].role === "assistant") return index;
+    }
+    return -1;
+  })();
+  const lastMessage = messages[messages.length - 1]?.content ?? "";
+
+  useEffect(() => {
+    scrollToBottom("smooth");
+  }, [messages.length, lastMessage, scrollToBottom]);
+
+  useEffect(() => {
+    return () => {
+      if (scrollFrameRef.current !== null) {
+        window.cancelAnimationFrame(scrollFrameRef.current);
+      }
+    };
+  }, []);
+
   return (
     <div
       className="pointer-events-auto flex h-[min(24rem,calc(100cqh-4.75rem))] min-h-[12rem] w-full flex-col rounded-3xl border border-white/60 bg-white/80 shadow-xl backdrop-blur-md"
@@ -35,10 +76,14 @@ export default function GoodCoolConversationPanel({
         </span>
       </button>
 
-      <div className="min-h-0 flex-1 overflow-y-auto px-[clamp(0.75rem,2.4vw,1rem)] pb-[clamp(0.75rem,2.4vw,1rem)] pr-[clamp(1rem,3vw,1.4rem)] pt-[clamp(2.75rem,8vw,3.5rem)] scrollbar-thin">
+      <div
+        ref={scrollRef}
+        className="min-h-0 flex-1 overflow-y-auto px-[clamp(0.75rem,2.4vw,1rem)] pb-[clamp(1.75rem,5vw,2.5rem)] pr-[clamp(1rem,3vw,1.4rem)] pt-[clamp(2.75rem,8vw,3.5rem)] scrollbar-thin"
+      >
         <div className="flex flex-col gap-[clamp(0.75rem,2vw,1rem)]">
           {messages.map((message, index) => {
             const isAssistant = message.role === "assistant";
+            const shouldAnimate = animateLatestAssistant && isAssistant && index === lastAssistantIndex;
             return (
               <div
                 key={`${message.role}-${index}-${message.content.slice(0, 12)}`}
@@ -55,17 +100,38 @@ export default function GoodCoolConversationPanel({
                   />
                 ) : null}
                 <div
-                  className={`max-w-[82%] rounded-tl-3xl rounded-tr-3xl px-[clamp(0.85rem,2.5vw,1rem)] py-[clamp(0.7rem,2vw,0.85rem)] font-app-body text-[clamp(0.86rem,2.6vw,1rem)] font-normal leading-6 text-zinc-800 shadow-sm ${
+                  className={`w-[82%] scroll-mb-[clamp(1.75rem,5vw,2.5rem)] rounded-tl-3xl rounded-tr-3xl px-[clamp(0.85rem,2.5vw,1rem)] py-[clamp(0.7rem,2vw,0.85rem)] font-app-body text-[clamp(0.86rem,2.6vw,1rem)] font-normal leading-6 text-zinc-800 shadow-sm ${
                     isAssistant ? "rounded-br-3xl bg-sky-100" : "rounded-bl-3xl bg-white"
                   }`}
                 >
-                  {message.content}
+                  <ConversationMessageText
+                    text={message.content}
+                    animate={shouldAnimate}
+                    onVisibleTextChange={() => scrollToBottom("auto")}
+                    onComplete={shouldAnimate ? onLatestAssistantAnimationComplete : undefined}
+                  />
                 </div>
               </div>
             );
           })}
+          <div ref={bottomRef} className="h-px shrink-0" aria-hidden />
         </div>
       </div>
     </div>
   );
+}
+
+function ConversationMessageText({
+  text,
+  animate,
+  onVisibleTextChange,
+  onComplete,
+}: {
+  text: string;
+  animate: boolean;
+  onVisibleTextChange: () => void;
+  onComplete?: () => void;
+}) {
+  const visibleText = useTypewriterText(text, animate, 18, onVisibleTextChange, onComplete);
+  return <>{visibleText}</>;
 }

@@ -52,6 +52,7 @@ export default function HomesteadBlock({
   const [chatHistory, setChatHistory] = useState<MonkeyChatMessage[]>([]);
   const [isChatLoading, setIsChatLoading] = useState(false);
   const [isChatPanelOpen, setIsChatPanelOpen] = useState(false);
+  const [shouldAnimateLatestAssistant, setShouldAnimateLatestAssistant] = useState(false);
 
   const targetRef = useRef(HOME_POSITION);
   const positionRef = useRef(HOME_POSITION);
@@ -75,6 +76,7 @@ export default function HomesteadBlock({
     setChatMessage(tHome("goodCoolThinking"));
     setChatHistory(nextHistory);
     setIsChatLoading(true);
+    setShouldAnimateLatestAssistant(false);
 
     try {
       const result = await sendMonkeyChatMessage({
@@ -84,10 +86,12 @@ export default function HomesteadBlock({
       });
       setChatMessage(result.answer);
       setChatHistory([...nextHistory, { role: "assistant" as const, content: result.answer }].slice(-8));
+      setShouldAnimateLatestAssistant(true);
     } catch {
       const fallback = tHome("goodCoolError");
       setChatMessage(fallback);
       setChatHistory([...nextHistory, { role: "assistant" as const, content: fallback }].slice(-8));
+      setShouldAnimateLatestAssistant(true);
     } finally {
       setIsChatLoading(false);
     }
@@ -96,6 +100,7 @@ export default function HomesteadBlock({
   const handleCloseChatPanel = () => {
     setIsChatPanelOpen(false);
     setChatMessage(tHome("goodCoolMessage"));
+    setShouldAnimateLatestAssistant(false);
   };
 
   // 点击场景移动角色
@@ -191,7 +196,7 @@ export default function HomesteadBlock({
           <div className={`relative min-w-0 ${isWalking ? "avatar-walk" : ""}`}>
             {!isChatPanelOpen ? (
               <div
-                className="pointer-events-auto absolute right-full -top-1 z-30 hidden min-w-0 w-max max-w-[min(18rem,34cqi)] pr-0 -mr-1.5 sm:block"
+                className="pointer-events-auto absolute right-full -top-1 z-30 hidden w-[min(18rem,34cqi)] min-w-[14rem] pr-0 -mr-1.5 sm:block"
                 onClick={(event) => event.stopPropagation()}
               >
                 <GoodCoolMessageBubble
@@ -214,6 +219,8 @@ export default function HomesteadBlock({
           <GoodCoolConversationPanel
             messages={displayedChatMessages}
             closeLabel={tHome("goodCoolCloseChat")}
+            animateLatestAssistant={shouldAnimateLatestAssistant && !isChatLoading}
+            onLatestAssistantAnimationComplete={() => setShouldAnimateLatestAssistant(false)}
             onClose={handleCloseChatPanel}
           />
           ) : null}
