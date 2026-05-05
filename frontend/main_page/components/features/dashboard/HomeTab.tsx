@@ -172,7 +172,7 @@ export default function HomeTab({ username = "" }: HomeTabProps) {
                         setActiveHomesteadTab(tab.key);
                         setIsHomesteadMenuOpen(true);
                       }}
-                      className="inline-flex items-center gap-2 rounded-full px-4 py-2 text-base font-medium leading-5 font-['Outfit'] transition-colors"
+                      className="inline-flex items-center gap-2 rounded-full px-4 py-2 text-base font-medium leading-5 font-app-body transition-colors"
                       style={{
                         backgroundColor: isActive ? "#E45C44" : "#EDF4FC",
                         color: isActive ? "#FFFFFF" : "#045E96",
@@ -240,22 +240,22 @@ export default function HomeTab({ username = "" }: HomeTabProps) {
 
             <div className="mb-8 flex flex-col items-center text-center">
               <Image src="/dashboard/Fire.svg" alt="streak" width={80} height={80} className="mb-4 h-20 w-20" />
-              <h3 className="text-[#106FAA] text-3xl font-semibold font-['Outfit'] leading-10">
+              <h3 className="text-[#106FAA] text-3xl font-semibold font-app-body leading-10">
                 {streakReward.streak} Day Streak!
               </h3>
-              <p className="mt-2 text-[#106FAA] text-lg font-normal font-['Outfit'] leading-7">
+              <p className="mt-2 text-[#106FAA] text-lg font-normal font-app-body leading-7">
                 Keep it up! You&apos;re doing amazing!
               </p>
             </div>
 
             <div className="mb-6 rounded-2xl bg-sky-50 px-6 py-6">
-              <div className="mb-4 text-center text-[#106FAA] text-base font-medium font-['Outfit'] leading-6">
+              <div className="mb-4 text-center text-[#106FAA] text-base font-medium font-app-body leading-6">
                 {streakDateRange || "Weekly Progress"}
               </div>
               <div className="grid grid-cols-7 gap-2">
                 {weekLabels.map((label) => (
                   <div key={label} className="rounded-xl bg-blue-100 p-2">
-                    <div className="mb-2 text-center text-xs font-medium font-['Outfit'] leading-4 text-[#106FAA]">
+                    <div className="mb-2 text-center text-xs font-medium font-app-body leading-4 text-[#106FAA]">
                       {label}
                     </div>
                     <div className="mx-auto flex h-6 w-6 items-center justify-center rounded-full bg-green-500 text-sm font-normal text-white">
@@ -267,17 +267,17 @@ export default function HomeTab({ username = "" }: HomeTabProps) {
             </div>
 
             <div className="mb-6 rounded-2xl border-2 border-amber-400/30 bg-orange-50 p-5">
-              <div className="mb-3 text-[#106FAA] text-sm font-medium font-['Outfit'] leading-5">Today&apos;s Reward</div>
+              <div className="mb-3 text-[#106FAA] text-sm font-medium font-app-body leading-5">{tHome("todaysReward")}</div>
               <div className="flex flex-col gap-3">
                 <div className="flex items-center gap-3">
                   <Image src="/dashboard/coin.svg" alt="coins" width={40} height={40} className="h-10 w-10" />
-                  <div className="text-amber-400 text-1xl font-semibold font-['Outfit'] leading-8">
+                  <div className="text-amber-400 text-1xl font-semibold font-app-body leading-8">
                     +{streakReward.coins} Coins
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
                   <Image src="/dashboard/dimond.svg" alt="diamonds" width={40} height={40} className="h-10 w-10" />
-                  <div className="text-amber-400 text-1xl font-semibold font-['Outfit'] leading-8">
+                  <div className="text-amber-400 text-1xl font-semibold font-app-body leading-8">
                     +{streakReward.diamonds} Diamonds
                   </div>
                 </div>
@@ -287,7 +287,7 @@ export default function HomeTab({ username = "" }: HomeTabProps) {
             <button
               type="button"
               onClick={() => setShowStreakRewardDialog(false)}
-              className="w-full rounded-[100px] bg-[#E45C44] py-4 text-lg font-semibold font-['Outfit'] leading-7 text-white shadow-[0px_10px_15px_0px_rgba(228,92,68,0.20)] hover:opacity-95"
+              className="w-full rounded-[100px] bg-[#E45C44] py-4 text-lg font-semibold font-app-body leading-7 text-white shadow-[0px_10px_15px_0px_rgba(228,92,68,0.20)] hover:opacity-95"
             >
               Claim Reward
             </button>

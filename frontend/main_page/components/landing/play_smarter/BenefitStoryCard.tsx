@@ -49,7 +49,7 @@ export default function BenefitStoryCard({ item }: BenefitStoryCardProps) {
         <h3 className="shrink-0 text-center text-base font-normal font-['Titan_One'] text-[#0B4F84] sm:text-lg">
           {t(`${item.key}.title`)}
         </h3>
-        <p className="mt-3 flex-1 pr-1 text-center text-xs font-normal font-['Outfit'] leading-6 text-[#1571AA] sm:text-sm">
+        <p className="mt-3 flex-1 pr-1 text-center text-xs font-normal font-app-body leading-6 text-[#1571AA] sm:text-sm">
           {t(`${item.key}.description`)}
         </p>
       </div>

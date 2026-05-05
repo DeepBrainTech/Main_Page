@@ -1,6 +1,11 @@
 @import "tailwindcss";
 
 :root {
+  /* 与侧栏一致的简体 UI 黑体系（PingFang / 微软雅黑 等），供 `.locale-zh` 与各覆盖规则复用 */
+  --font-zh-ui:
+    "PingFang SC", "PingFang TC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC",
+    system-ui, sans-serif;
+
   /* 全局背景：从上到下渐变 */
   --background: linear-gradient(180deg, #f2f7fc 0%, #e3eef5 100%);
   --foreground: #1f2937;
@@ -25,6 +30,12 @@ body {
   background-attachment: fixed;
 }
 
+/** App shell under `/zh`: 整页与中栏导航共用 `--font-zh-ui`（含 Outfit 替代的 `font-app-body`）。 */
+.locale-zh,
+.locale-zh .font-app-body {
+  font-family: var(--font-zh-ui);
+}
+
 @layer utilities {
   .font-\[\'Baloo\'\] {
     font-family: var(--font-baloo), cursive;
@@ -38,8 +49,9 @@ body {
     font-family: var(--font-titan-one), cursive;
   }
 
-  .font-\[\'Outfit\'\] {
-    font-family: var(--font-outfit), sans-serif;
+  /** Replaces literal Outfit utility — switches under `.locale-zh` via rules above */
+  .font-app-body {
+    font-family: var(--font-outfit), ui-sans-serif, system-ui, sans-serif;
   }
 
   .glass-panel {
@@ -118,4 +130,20 @@ body {
   .animate-reward-rise {
     animation: reward-rise 0.9s ease-out forwards;
   }
+}
+
+/*
+ * 中文区内若仍使用 Titan_One / Baloo 的工具类（标题、数字卡片等），视觉上会与侧栏字体割裂；
+ * 这里强制改回与中栏同款黑体栈。英文路由（无 `.locale-zh`）仍走上方 @layer utilities 的装饰字体。
+ */
+.locale-zh .font-\[\'Titan_One\'\] {
+  font-family: var(--font-zh-ui);
+}
+
+.locale-zh .font-\[\'Baloo\'\] {
+  font-family: var(--font-zh-ui);
+}
+
+.locale-zh .font-\[\'Baloo_2\'\] {
+  font-family: var(--font-zh-ui);
 }
