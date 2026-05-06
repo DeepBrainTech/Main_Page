@@ -1,6 +1,8 @@
 """
 用户奖励、签到、任务、六维分数、排行榜
 """
+import math
+import os
 from datetime import datetime, date, timedelta
 from zoneinfo import ZoneInfo
 
@@ -22,6 +24,7 @@ from models import (
     UserAssessmentSession,
     UserAssessmentTopicStat,
     UserAssessmentAnswer,
+    UserCourseEntitlement,
 )
 from schemas import (
     APIResponse,
@@ -30,9 +33,12 @@ from schemas import (
     CognitiveScoresResponse,
     LeaderboardEntry,
     AssessmentSessionCreate,
+    MentalMathUnlockDiamondsBody,
+    MembershipPlanUpdateBody,
 )
 from auth import get_current_active_user
 from config.shop_items import SHOP_ITEMS, get_shop_items_by_game, is_item_available_for_game
+from config.learning_commerce import MENTAL_MATH_COURSE_KEY, get_learning_bundle_commerce
 from config.learning_media import MAKING_WHOLE_SECRET_MEDIA_KEYS, get_making_whole_question_video_key
 from utils.r2_storage import generate_object_read_url
 
@@ -51,6 +57,8 @@ MONTHLY_TARGET = 20
 
 # 未传或无效时区时回退到 UTC
 DEFAULT_TZ = "UTC"
+
+MEMBERSHIP_PREMIUM_PERIOD_DAYS = int(os.getenv("MEMBERSHIP_PREMIUM_PERIOD_DAYS", "30"))
 
 
 def _today_in_tz(tz: str) -> str:
@@ -113,6 +121,162 @@ async def get_making_whole_question_video(
         success=True,
         message="ok",
         data={"secret_key": secret_key, "question_number": question_number, "url": url},
+    )
+
+
+def _get_course_entitlement(
+    db: Session, user_id: int, course_key: str
+) -> UserCourseEntitlement | None:
+    return (
+        db.query(UserCourseEntitlement)
+        .filter(
+            UserCourseEntitlement.user_id == user_id,
+            UserCourseEntitlement.course_key == course_key,
+        )
+        .first()
+    )
+
+
+def _compute_mental_math_bundle_access(
+    user: User, entitlement: UserCourseEntitlement | None
+) -> dict:
+    """Effective bundle access for lesson list UI (premium > lifetime diamond > timed diamond)."""
+    now = datetime.utcnow()
+
+    plan = getattr(user, "membership_plan", None) or "free"
+    if plan == "premium":
+        exp = getattr(user, "membership_expires_at", None)
+        if exp is None or exp > now:
+            return {
+                "bundle_unlocked": True,
+                "access_badge": "premium",
+                "days_left": None,
+                "expires_at": exp.isoformat() if exp else None,
+            }
+
+    if entitlement is not None and entitlement.diamond_tier == "lifetime":
+        return {
+            "bundle_unlocked": True,
+            "access_badge": "full",
+            "days_left": None,
+            "expires_at": None,
+        }
+
+    if (
+        entitlement is not None
+        and entitlement.diamond_tier == "three_month"
+        and entitlement.expires_at is not None
+        and entitlement.expires_at > now
+    ):
+        sec_left = (entitlement.expires_at - now).total_seconds()
+        days_left = max(0, math.ceil(sec_left / 86400.0))
+        return {
+            "bundle_unlocked": True,
+            "access_badge": "timed",
+            "days_left": days_left,
+            "expires_at": entitlement.expires_at.isoformat(),
+        }
+
+    return {
+        "bundle_unlocked": False,
+        "access_badge": "none",
+        "days_left": None,
+        "expires_at": None,
+    }
+
+
+@router.get("/learning/mental-math/bundle-access", response_model=APIResponse)
+async def get_mental_math_bundle_access(
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+):
+    """Server-side Mental Math paid bundle + membership; drives learning UI."""
+    ent = _get_course_entitlement(db, current_user.id, MENTAL_MATH_COURSE_KEY)
+    data = _compute_mental_math_bundle_access(current_user, ent)
+    rewards = _get_or_create_rewards(db, current_user.id)
+    data["diamonds"] = rewards.diamonds
+    return APIResponse(success=True, message="ok", data=data)
+
+
+@router.post("/learning/mental-math/unlock-with-diamonds", response_model=APIResponse)
+async def unlock_mental_math_with_diamonds(
+    body: MentalMathUnlockDiamondsBody,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+):
+    """Spend diamonds to unlock the Mental Math bundle (90-day or lifetime)."""
+    commerce = get_learning_bundle_commerce(MENTAL_MATH_COURSE_KEY)
+    cost = (
+        commerce.diamonds_three_month if body.tier == "three_month" else commerce.diamonds_lifetime
+    )
+
+    rewards = _get_or_create_rewards(db, current_user.id)
+    if rewards.diamonds < cost:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="insufficient_diamonds")
+
+    ent = _get_course_entitlement(db, current_user.id, MENTAL_MATH_COURSE_KEY)
+    if ent is None:
+        ent = UserCourseEntitlement(
+            user_id=current_user.id,
+            course_key=MENTAL_MATH_COURSE_KEY,
+        )
+        db.add(ent)
+
+    if ent.diamond_tier == "lifetime":
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="already_lifetime_unlocked")
+
+    if body.tier == "lifetime":
+        ent.diamond_tier = "lifetime"
+        ent.expires_at = None
+    else:
+        now = datetime.utcnow()
+        base = now
+        if ent.expires_at and ent.expires_at > now:
+            base = ent.expires_at
+        ent.diamond_tier = "three_month"
+        ent.expires_at = base + timedelta(days=commerce.timed_tier_days)
+
+    rewards.diamonds -= cost
+    db.add(ent)
+    db.add(rewards)
+    db.commit()
+    db.refresh(rewards)
+    db.refresh(ent)
+
+    access = _compute_mental_math_bundle_access(current_user, ent)
+    access["diamonds"] = rewards.diamonds
+    return APIResponse(success=True, message="ok", data=access)
+
+
+@router.put("/membership", response_model=APIResponse)
+async def update_user_membership_plan(
+    body: MembershipPlanUpdateBody,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+):
+    """Persist membership tier (Premium unlocks learning while active)."""
+    current_user.membership_plan = body.plan
+    if body.plan == "premium":
+        current_user.membership_expires_at = datetime.utcnow() + timedelta(days=MEMBERSHIP_PREMIUM_PERIOD_DAYS)
+    else:
+        current_user.membership_expires_at = None
+
+    db.add(current_user)
+    db.commit()
+    db.refresh(current_user)
+
+    ent = _get_course_entitlement(db, current_user.id, MENTAL_MATH_COURSE_KEY)
+    access = _compute_mental_math_bundle_access(current_user, ent)
+    return APIResponse(
+        success=True,
+        message="ok",
+        data={
+            "membership_plan": current_user.membership_plan,
+            "membership_expires_at": current_user.membership_expires_at.isoformat()
+            if current_user.membership_expires_at
+            else None,
+            "mental_math_access": access,
+        },
     )
 
 

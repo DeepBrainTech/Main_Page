@@ -104,3 +104,5 @@ def ensure_users_table_compatibility():
         conn.execute(text("CREATE INDEX IF NOT EXISTS ix_user_game_played_user_id ON user_game_played (user_id)"))
         # 兼容旧库：新增全局排行快照字段
         conn.execute(text("ALTER TABLE user_cognitive_scores ADD COLUMN IF NOT EXISTS previous_total_rank INTEGER"))
+        conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS membership_plan VARCHAR(20) DEFAULT 'free'"))
+        conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS membership_expires_at TIMESTAMP WITHOUT TIME ZONE"))

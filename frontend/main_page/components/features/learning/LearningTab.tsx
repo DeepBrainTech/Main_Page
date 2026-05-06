@@ -5,26 +5,50 @@ import { useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import MentalMathAssessmentPanel from "@/components/features/learning/MentalMathAssessmentPanel";
 import MakingWholeLessonPanel from "@/components/features/learning/MakingWholeLessonPanel";
+import LessonAccessTopBadge from "@/components/features/learning/LessonAccessTopBadge";
 import UnlockBanner from "@/components/features/learning/UnlockBanner";
+import UnlockCourseDialog from "@/components/features/learning/UnlockCourseDialog";
+import { useLearningAccess } from "@/hooks/useLearningAccess";
+import CircularProgressRing from "@/components/ui/CircularProgressRing";
 import type { MentalMathSecretKey } from "@/types/learning";
 
 const MONTH_IDS = ["jan", "feb", "mar", "apr", "may", "jun", "jul"] as const;
 
 const LESSON_ROWS = [
-  { key: "assessment", kind: "quiz" as const, status: "free" as const },
-  { key: "makingWhole", kind: "course" as const, status: "free" as const },
-  { key: "breakIntoParts", kind: "course" as const, status: "free" as const },
-  { key: "rearrange", kind: "course" as const, status: "free" as const },
-  { key: "roundAdjust", kind: "course" as const, status: "free" as const },
-  { key: "leftToRightFlow", kind: "course" as const, status: "free" as const },
-  { key: "friendlyNumbers", kind: "course" as const, status: "free" as const },
-  { key: "compensation", kind: "course" as const, status: "free" as const },
-  { key: "multiplicationPatterns", kind: "course" as const, status: "free" as const },
-  { key: "divisionShortcuts", kind: "course" as const, status: "free" as const },
+  { key: "assessment", kind: "quiz" as const },
+  { key: "makingWhole", kind: "course" as const },
+  { key: "breakIntoParts", kind: "course" as const },
+  { key: "rearrange", kind: "course" as const },
+  { key: "roundAdjust", kind: "course" as const },
+  { key: "leftToRightFlow", kind: "course" as const },
+  { key: "friendlyNumbers", kind: "course" as const },
+  { key: "compensation", kind: "course" as const },
+  { key: "multiplicationPatterns", kind: "course" as const },
+  { key: "divisionShortcuts", kind: "course" as const },
 ] as const;
 
 const UNLOCK_BANNER_INDEX = 2;
 const BADGE_IDS = ["badgeNumberIgniter", "badgeFocusPilot", "badgeLogicExplorer"] as const;
+
+/**
+ * Lesson progress shown on cards (demo map until API exists).
+ * When access expires, progress is still shown; only entry is blocked — server-side
+ * assessment/practice history is never cleared by expiry.
+ */
+function lessonProgressPercent(lessonKey: string): number {
+  const demo: Record<string, number> = {
+    makingWhole: 78,
+    breakIntoParts: 32,
+    rearrange: 15,
+    roundAdjust: 44,
+    leftToRightFlow: 58,
+    friendlyNumbers: 22,
+    compensation: 67,
+    multiplicationPatterns: 41,
+    divisionShortcuts: 89,
+  };
+  return demo[lessonKey] ?? 0;
+}
 
 const completedMonthCount = 4;
 const chartMinPercent = 25;
@@ -61,6 +85,9 @@ export default function LearningTab() {
   const [showLessonBoard, setShowLessonBoard] = useState(false);
   const [activeLessonKey, setActiveLessonKey] = useState<string | null>(null);
   const [activeSecretKey, setActiveSecretKey] = useState<MentalMathSecretKey | null>(null);
+  const [showUnlockCourseDialog, setShowUnlockCourseDialog] = useState(false);
+  const learningAccess = useLearningAccess();
+  const showUnlockBanner = !learningAccess.bundleUnlocked;
 
   const lessonCards = useMemo(
     () =>
@@ -88,10 +115,10 @@ export default function LearningTab() {
   };
 
   const statCards = [
-    { titleKey: "statCompleted" as const, value: "14%", icon: "◎" },
-    { titleKey: "statLessons" as const, value: "1/10", icon: "📘" },
-    { titleKey: "statHours" as const, value: "11", icon: "🕒" },
-  ];
+    { titleKey: "statCompleted" as const, value: "14%", iconSrc: "/learning/completed.svg" },
+    { titleKey: "statLessons" as const, value: "1/10", iconSrc: "/learning/lessons.svg" },
+    { titleKey: "statHours" as const, value: "11", iconSrc: "/learning/hours.svg" },
+  ] as const;
 
   return (
     <div className="grid grid-cols-1 items-stretch gap-5 pb-10 font-app-body xl:grid-cols-12 xl:grid-rows-[auto_1fr]">
@@ -103,7 +130,14 @@ export default function LearningTab() {
           >
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-semibold text-[#106FAA]">{tLearn(item.titleKey)}</h3>
-              <span className="text-lg text-[#106FAA]">{item.icon}</span>
+              <Image
+                src={item.iconSrc}
+                alt=""
+                width={36}
+                height={36}
+                className="h-9 w-9 shrink-0 object-contain"
+                aria-hidden
+              />
             </div>
             <p className="mt-6 text-left font-['Titan_One'] text-3xl text-[#045E96]">{item.value}</p>
           </article>
@@ -271,20 +305,44 @@ export default function LearningTab() {
                   onSelectedSecretChange={setActiveSecretKey}
                 />
               </section>
+            ) : activeLessonKey ? (
+              <section className="rounded-[24px] border border-white/70 bg-white/80 p-4 shadow-[0px_10px_15px_0px_rgba(0,0,0,0.1)]">
+                <div className="mb-3 flex items-center justify-between">
+                  <h3 className="text-xl font-semibold text-[#045E96]">
+                    {tLearn(`lessons.${activeLessonKey}` as "lessons.assessment")}
+                  </h3>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveLessonKey(null);
+                      setActiveSecretKey(null);
+                    }}
+                    className="rounded-full bg-[#EDF4FC] px-4 py-1.5 text-sm font-semibold text-[#045E96]"
+                  >
+                    {tLearn("backToLessons")}
+                  </button>
+                </div>
+                <p className="text-sm leading-6 text-[#045E96]">{tLearn("lessonComingSoon")}</p>
+              </section>
             ) : (
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-                {lessonCards.map((card, index) => (
+                {lessonCards.map((card, index) => {
+                  const isAlwaysFreeLesson = card.key === "assessment" || card.key === "makingWhole";
+                  const isLocked = !learningAccess.bundleUnlocked && !isAlwaysFreeLesson;
+                  const progressPercent = lessonProgressPercent(card.key);
+                  return (
                   <div key={card.key} className={index === UNLOCK_BANNER_INDEX ? "contents" : ""}>
-                    {index === UNLOCK_BANNER_INDEX ? (
+                    {showUnlockBanner && index === UNLOCK_BANNER_INDEX ? (
                       <UnlockBanner
-                        title="Unlock All Lessons"
-                        description="Get unlimited access to all lessons and your amazing learning adventure!"
-                        buttonLabel="Unlock Now"
+                        title={tLearn("unlockBannerTitle")}
+                        description={tLearn("unlockBannerDescription")}
+                        buttonLabel={tLearn("unlockBannerButton")}
                         className="md:col-span-2 xl:col-span-3"
+                        onUnlockClick={() => setShowUnlockCourseDialog(true)}
                       />
                     ) : null}
 
-                    <article className="relative flex h-full flex-col rounded-[24px] border border-white/70 bg-white/80 p-4 shadow-[0px_10px_15px_0px_rgba(0,0,0,0.1)]">
+                    <article className="relative flex h-full flex-col overflow-hidden rounded-[24px] border border-white/70 bg-white/80 p-4 shadow-[0px_10px_15px_0px_rgba(0,0,0,0.1)]">
                       <div className="relative overflow-hidden rounded-2xl">
                         <Image
                           src="/learning/mental_math/mental_math.png"
@@ -293,15 +351,10 @@ export default function LearningTab() {
                           height={100}
                           className="h-[90px] w-full object-cover"
                         />
-                        {card.status === "free" ? (
-                          <span className="absolute right-2 top-2 rounded-md bg-[#4ADE80] px-2 py-0.5 text-sm font-semibold text-white">
-                            {tLearn("statusFree")}
-                          </span>
-                        ) : (
-                          <span className="absolute right-2 top-2 rounded-md bg-[#E6F2FF] px-2 py-0.5 text-sm font-semibold text-[#045E96]">
-                            {tLearn("statusFull")}
-                          </span>
-                        )}
+                        <LessonAccessTopBadge
+                          access={learningAccess}
+                          isAlwaysFreeLesson={isAlwaysFreeLesson}
+                        />
                       </div>
 
                       <div className="mt-4 min-h-[78px]">
@@ -312,35 +365,72 @@ export default function LearningTab() {
                       </div>
                       <div className="mb-5 mt-4 h-px bg-slate-200" />
 
-                      <div className="mt-auto flex items-center justify-between">
-                        <p className="text-base font-semibold text-[#333]">
-                          {tLearn("progressPercent", { value: 80 })}
-                        </p>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (card.key === "assessment") {
-                              setActiveLessonKey("assessment");
-                              setActiveSecretKey(null);
-                            }
-                            if (card.key === "makingWhole") {
-                              setActiveLessonKey("makingWhole");
-                              setActiveSecretKey(null);
-                            }
-                          }}
-                          className="rounded-full bg-[#045E96] px-6 py-1.5 text-base font-semibold text-[#EDF4FC]"
-                        >
-                          {tLearn("startLesson")}
-                        </button>
+                      <div
+                        className={`mt-auto flex items-center ${isLocked ? "justify-start" : "justify-between"}`}
+                      >
+                        {card.key === "assessment" ? (
+                          <span />
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <CircularProgressRing value={progressPercent} size={28} />
+                            <p className="text-base font-semibold text-[#333]">
+                              {tLearn("progressPercent", { value: progressPercent })}
+                            </p>
+                          </div>
+                        )}
+                        {!isLocked ? (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (card.key === "assessment") {
+                                setActiveLessonKey("assessment");
+                                setActiveSecretKey(null);
+                              } else if (card.key === "makingWhole") {
+                                setActiveLessonKey("makingWhole");
+                                setActiveSecretKey(null);
+                              } else {
+                                setActiveLessonKey(card.key);
+                                setActiveSecretKey(null);
+                              }
+                            }}
+                            className="rounded-full bg-[#045E96] px-6 py-1.5 text-base font-semibold text-[#EDF4FC]"
+                          >
+                            {tLearn("startLesson")}
+                          </button>
+                        ) : null}
                       </div>
+
+                      {isLocked ? (
+                        <>
+                          <div
+                            className="pointer-events-none absolute inset-0 z-10 rounded-[24px] bg-black/40 shadow-[0px_4px_4px_0px_rgba(0,0,0,0.25)]"
+                            aria-hidden
+                          />
+                          <div className="pointer-events-none absolute right-3 top-3 z-20">
+                            <Image
+                              src="/learning/lock.svg"
+                              alt=""
+                              width={32}
+                              height={32}
+                              className="h-8 w-8 object-contain drop-shadow-sm"
+                            />
+                          </div>
+                        </>
+                      ) : null}
                     </article>
                   </div>
-                ))}
+                );
+                })}
               </div>
             )}
           </div>
         )}
       </section>
+
+      <UnlockCourseDialog
+        open={showUnlockCourseDialog}
+        onClose={() => setShowUnlockCourseDialog(false)}
+      />
     </div>
   );
 }

@@ -297,6 +297,8 @@ def _user_to_response(
         access_token=access_token,
         token_type=token_type,
         expires_in=expires_in,
+        membership_plan=getattr(user, "membership_plan", None) or "free",
+        membership_expires_at=getattr(user, "membership_expires_at", None),
     )
 
 

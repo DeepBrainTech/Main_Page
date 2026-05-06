@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { MENTAL_MATH_SECRET_QUESTIONS, MENTAL_MATH_SECRET_ORDER } from "@/config/mental-math-questions";
 import { useMentalMathPractice } from "@/hooks/useMentalMathPractice";
+import CircularProgressRing from "@/components/ui/CircularProgressRing";
 import { fetchMakingWholeQuestionVideo, fetchMakingWholeSecretMedia } from "@/services/userApi";
 import type { MentalMathSecretKey } from "@/types/learning";
 
@@ -27,6 +28,8 @@ export default function MakingWholeLessonPanel({
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [isVideoLoading, setIsVideoLoading] = useState(false);
   const [videoError, setVideoError] = useState(false);
+  const [isVideoPlaying, setIsVideoPlaying] = useState(false);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
 
   const currentQuestions = useMemo(
     () => (selectedSecret ? MENTAL_MATH_SECRET_QUESTIONS[selectedSecret] ?? [] : []),
@@ -48,6 +51,7 @@ export default function MakingWholeLessonPanel({
       setVideoUrl(null);
       setIsVideoLoading(false);
       setVideoError(false);
+      setIsVideoPlaying(false);
       return;
     }
     practice.reset();
@@ -59,6 +63,7 @@ export default function MakingWholeLessonPanel({
     setVideoUrl(null);
     setIsVideoLoading(false);
     setVideoError(false);
+    setIsVideoPlaying(false);
     // Reset only when the selected secret changes. Depending on the whole
     // practice object causes an effect loop because hook methods are recreated.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -71,8 +76,16 @@ export default function MakingWholeLessonPanel({
     setIsVideoDialogOpen(true);
     setIsVideoLoading(true);
     setVideoError(false);
+    setIsVideoPlaying(false);
+    setVideoUrl(null);
+    const minGeneratingMs = 3000 + Math.random() * 4000;
     try {
-      const result = await fetchMakingWholeQuestionVideo(selectedSecret, practice.currentIndex);
+      const [result] = await Promise.all([
+        fetchMakingWholeQuestionVideo(selectedSecret, practice.currentIndex),
+        new Promise<true>((resolve) => {
+          setTimeout(() => resolve(true), minGeneratingMs);
+        }),
+      ]);
       setVideoUrl(result.url);
     } catch {
       setVideoUrl(null);
@@ -118,7 +131,13 @@ export default function MakingWholeLessonPanel({
   if (!selectedSecret) {
     return (
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {MENTAL_MATH_SECRET_ORDER.map((secretKey) => (
+        {MENTAL_MATH_SECRET_ORDER.map((secretKey, secretIndex) => {
+          const totalSecrets = MENTAL_MATH_SECRET_ORDER.length;
+          const progressPercent = Math.min(
+            100,
+            Math.round(((secretIndex + 1) / totalSecrets) * 100)
+          );
+          return (
           <article
             key={secretKey}
             className="relative flex h-full flex-col rounded-[24px] border border-white/70 bg-white/80 p-4 shadow-[0px_10px_15px_0px_rgba(0,0,0,0.1)]"
@@ -143,7 +162,12 @@ export default function MakingWholeLessonPanel({
             <div className="mb-5 mt-4 h-px bg-slate-200" />
 
             <div className="mt-auto flex items-center justify-between">
-              <p className="text-base font-semibold text-[#333]">{tLearn("home.progressPercent", { value: 80 })}</p>
+              <div className="flex min-w-0 items-center gap-2">
+                <CircularProgressRing value={progressPercent} size={28} />
+                <p className="text-base font-semibold text-[#333]">
+                  {tLearn("home.progressPercent", { value: progressPercent })}
+                </p>
+              </div>
               <button
                 type="button"
                 onClick={() => onSelectedSecretChange?.(secretKey)}
@@ -153,7 +177,8 @@ export default function MakingWholeLessonPanel({
               </button>
             </div>
           </article>
-        ))}
+        );
+        })}
       </div>
     );
   }
@@ -417,7 +442,10 @@ export default function MakingWholeLessonPanel({
           role="dialog"
           aria-modal="true"
           aria-label={tPractice("aiVideoTitle")}
-          onClick={() => setIsVideoDialogOpen(false)}
+          onClick={() => {
+            setIsVideoDialogOpen(false);
+            setIsVideoPlaying(false);
+          }}
         >
           <div
             className="w-full max-w-4xl rounded-[24px] bg-white p-5 shadow-2xl"
@@ -427,24 +455,57 @@ export default function MakingWholeLessonPanel({
               <h4 className="text-xl font-semibold text-[#045E96]">{tPractice("aiVideoTitle")}</h4>
               <button
                 type="button"
-                onClick={() => setIsVideoDialogOpen(false)}
+                onClick={() => {
+                  setIsVideoDialogOpen(false);
+                  setIsVideoPlaying(false);
+                }}
                 className="rounded-full bg-[#EDF4FC] px-4 py-2 text-sm font-semibold text-[#045E96]"
               >
                 {tPractice("closeAiVideo")}
               </button>
             </div>
 
-            {isVideoLoading ? <p className="text-sm text-[#106FAA]">{tPractice("aiVideoLoading")}</p> : null}
+            {isVideoLoading ? (
+              <div className="flex min-h-[200px] flex-col items-center justify-center gap-4 py-8">
+                <span
+                  className="h-10 w-10 shrink-0 animate-spin rounded-full border-2 border-[#CFE1EE] border-t-[#045E96]"
+                  aria-hidden
+                />
+                <p className="text-center text-sm font-medium text-[#106FAA]">
+                  {tPractice("aiExplanationGenerating")}
+                </p>
+              </div>
+            ) : null}
             {videoError ? <p className="text-sm text-[#C93C32]">{tPractice("aiVideoLoadFailed")}</p> : null}
             {!isVideoLoading && !videoError && videoUrl ? (
-              <video
-                key={videoUrl}
-                src={videoUrl}
-                controls
-                autoPlay
-                playsInline
-                className="max-h-[70vh] w-full rounded-[18px] bg-black"
-              />
+              <div className="relative">
+                <video
+                  key={videoUrl}
+                  ref={videoRef}
+                  src={videoUrl}
+                  controls
+                  playsInline
+                  onPlay={() => setIsVideoPlaying(true)}
+                  onPause={() => setIsVideoPlaying(false)}
+                  onEnded={() => setIsVideoPlaying(false)}
+                  className="max-h-[70vh] w-full rounded-[18px] bg-black"
+                />
+                {!isVideoPlaying ? (
+                  <button
+                    type="button"
+                    aria-label={tPractice("playAiVideo")}
+                    onClick={() => {
+                      videoRef.current?.play();
+                    }}
+                    className="absolute left-1/2 top-1/2 flex h-20 w-20 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-white/85 shadow-[0px_10px_24px_rgba(0,0,0,0.2)]"
+                  >
+                    <span
+                      className="ml-1 block h-0 w-0 border-b-[14px] border-l-[22px] border-t-[14px] border-b-transparent border-l-[#045E96] border-t-transparent"
+                      aria-hidden="true"
+                    />
+                  </button>
+                ) : null}
+              </div>
             ) : null}
           </div>
         </div>

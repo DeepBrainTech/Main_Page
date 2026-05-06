@@ -7,7 +7,7 @@ export type MembershipPlan = "free" | "plus" | "premium";
 
 interface MembershipPlansProps {
   currentPlan: MembershipPlan;
-  onPlanChange: (plan: MembershipPlan) => void;
+  onPlanChange: (plan: MembershipPlan) => void | Promise<void>;
 }
 
 type PlanFeature = {

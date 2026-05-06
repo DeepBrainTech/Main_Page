@@ -11,6 +11,7 @@ import BalanceBadge from "@/components/layout/BalanceBadge";
 import CoinHelpPopover from "@/components/layout/CoinHelpPopover";
 import DiamondHelpPopover from "@/components/layout/DiamondHelpPopover";
 import { useRewards } from "@/hooks/useRewards";
+import { fetchAuthMeMembership } from "@/services/userApi";
 
 export type AppTab = "dashboard" | "learning" | "test" | "brainGames" | "leaderboard";
 
@@ -59,10 +60,14 @@ export default function AppShell({
 
   useEffect(() => {
     const syncMembershipPlan = () => {
-      const savedPlan = window.localStorage.getItem("membership_plan");
-      if (savedPlan === "free" || savedPlan === "plus" || savedPlan === "premium") {
-        setMembershipPlan(savedPlan);
-      }
+      fetchAuthMeMembership()
+        .then((m) => {
+          const p = m.membership_plan;
+          if (p === "free" || p === "plus" || p === "premium") {
+            setMembershipPlan(p);
+          }
+        })
+        .catch(() => {});
     };
 
     syncMembershipPlan();

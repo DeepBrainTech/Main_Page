@@ -1,3 +1,4 @@
+/** Shop item ids (backend shop_items). Full-course diamond unlock: learningCommerce.ts */
 import type { MentalMathCategoryKey } from "@/types/learning";
 
 export const MENTAL_MATH_SHOP_GAME_MODE = "learning-mental-math";

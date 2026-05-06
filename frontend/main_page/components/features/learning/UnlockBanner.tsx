@@ -5,6 +5,7 @@ type UnlockBannerProps = {
   description: string;
   buttonLabel: string;
   className?: string;
+  onUnlockClick?: () => void;
 };
 
 export default function UnlockBanner({
@@ -12,6 +13,7 @@ export default function UnlockBanner({
   description,
   buttonLabel,
   className = "",
+  onUnlockClick,
 }: UnlockBannerProps) {
   return (
     <article
@@ -36,6 +38,7 @@ export default function UnlockBanner({
 
       <button
         type="button"
+        onClick={onUnlockClick}
         className="flex h-12 min-w-44 items-center justify-center gap-2 rounded-full bg-[#704000] px-8 text-base font-semibold text-white shadow-[0px_8px_16px_0px_rgba(0,0,0,0.20)] transition hover:bg-[#5D3500]"
       >
         <span>{buttonLabel}</span>

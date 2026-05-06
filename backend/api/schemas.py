@@ -2,7 +2,7 @@
 Pydantic 数据验证模型
 """
 from pydantic import BaseModel, EmailStr, Field
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any, List, Literal
 from datetime import datetime, date
 
 
@@ -51,9 +51,19 @@ class UserResponse(UserBase):
     access_token: Optional[str] = None  # 可选：用户名变更后返回新的访问令牌
     token_type: Optional[str] = None
     expires_in: Optional[int] = None  # 秒数，可选
+    membership_plan: str = "free"
+    membership_expires_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True
+
+
+class MentalMathUnlockDiamondsBody(BaseModel):
+    tier: Literal["three_month", "lifetime"]
+
+
+class MembershipPlanUpdateBody(BaseModel):
+    plan: Literal["free", "plus", "premium"]
 
 
 class CompleteProfileBody(BaseModel):

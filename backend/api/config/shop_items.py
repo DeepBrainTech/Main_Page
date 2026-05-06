@@ -1,6 +1,8 @@
 """
 商店道具配置。
 
+Mental Math bundle diamond unlock is in learning_commerce.py (not this catalog).
+
 约定：
 - `games` 为可使用该道具的游戏模式列表；
 - 包含 `"all"` 表示全游戏可用；

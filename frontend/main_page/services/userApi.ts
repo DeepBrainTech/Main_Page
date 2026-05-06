@@ -340,6 +340,79 @@ export async function fetchMakingWholeSecretMedia(secretKey: string): Promise<Ma
   return json.data as MakingWholeSecretMediaResponse;
 }
 
+export interface MentalMathBundleAccessData {
+  bundle_unlocked: boolean;
+  access_badge: "premium" | "timed" | "full" | "none";
+  days_left: number | null;
+  expires_at: string | null;
+  diamonds: number;
+}
+
+export async function fetchMentalMathBundleAccess(): Promise<MentalMathBundleAccessData> {
+  const res = await fetch(getApiUrl("/api/user/learning/mental-math/bundle-access"), {
+    headers: getAuthHeaders(),
+  });
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const d = json?.detail;
+    const msg = typeof d === "string" ? d : "fetch_mental_math_bundle_access_failed";
+    throw new Error(msg);
+  }
+  if (!json?.data) {
+    throw new Error("fetch_mental_math_bundle_access_failed");
+  }
+  return json.data as MentalMathBundleAccessData;
+}
+
+export async function unlockMentalMathWithDiamonds(
+  tier: "three_month" | "lifetime"
+): Promise<MentalMathBundleAccessData> {
+  const res = await fetch(getApiUrl("/api/user/learning/mental-math/unlock-with-diamonds"), {
+    method: "POST",
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ tier }),
+  });
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const d = json?.detail;
+    const msg = typeof d === "string" ? d : Array.isArray(d) ? "validation_error" : "unlock_mental_math_failed";
+    throw new Error(msg);
+  }
+  if (!json?.data) {
+    throw new Error("unlock_mental_math_failed");
+  }
+  return json.data as MentalMathBundleAccessData;
+}
+
+export async function updateMembershipPlan(plan: "free" | "plus" | "premium"): Promise<void> {
+  const res = await fetch(getApiUrl("/api/user/membership"), {
+    method: "PUT",
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ plan }),
+  });
+  if (!res.ok) {
+    const j = await res.json().catch(() => ({}));
+    throw new Error(j?.detail ?? "update_membership_failed");
+  }
+}
+
+export interface AuthMeMembership {
+  membership_plan: string;
+  membership_expires_at: string | null;
+}
+
+export async function fetchAuthMeMembership(): Promise<AuthMeMembership> {
+  const res = await fetch(getApiUrl("/api/auth/me"), { headers: getAuthHeaders() });
+  if (!res.ok) {
+    throw new Error("fetch_auth_me_failed");
+  }
+  const json = await res.json();
+  return {
+    membership_plan: (json?.membership_plan as string) ?? "free",
+    membership_expires_at: (json?.membership_expires_at as string | null) ?? null,
+  };
+}
+
 export async function fetchMakingWholeQuestionVideo(
   secretKey: string,
   questionNumber: number

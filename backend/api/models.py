@@ -28,6 +28,9 @@ class User(Base):
     is_superuser = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    # Membership for portal (learning premium gate, etc.); persisted server-side.
+    membership_plan = Column(String(20), default="free", nullable=False)
+    membership_expires_at = Column(DateTime, nullable=True)
 
     # 关联游戏访问记录
     game_accesses = relationship("GameAccess", back_populates="user")
@@ -247,6 +250,26 @@ class UserAssessmentTopicStat(Base):
     correct = Column(Integer, default=0, nullable=False)
     accuracy = Column(Integer, default=0, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class UserCourseEntitlement(Base):
+    """
+    Per-user per-course paid access (diamond unlock tiers). Keys align with config/learning_commerce.py.
+    Site-wide Premium for learning uses User.membership_plan instead.
+    """
+
+    __tablename__ = "user_course_entitlements"
+    __table_args__ = (
+        UniqueConstraint("user_id", "course_key", name="uq_user_course_entitlement"),
+    )
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    course_key = Column(String(64), nullable=False, index=True)
+    diamond_tier = Column(String(20), nullable=True)  # three_month | lifetime
+    expires_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
 class UserAssessmentAnswer(Base):
