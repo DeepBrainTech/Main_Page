@@ -33,7 +33,7 @@ from schemas import (
 )
 from auth import get_current_active_user
 from config.shop_items import SHOP_ITEMS, get_shop_items_by_game, is_item_available_for_game
-from config.learning_media import MAKING_WHOLE_SECRET_MEDIA_KEYS
+from config.learning_media import MAKING_WHOLE_SECRET_MEDIA_KEYS, get_making_whole_question_video_key
 from utils.r2_storage import generate_object_read_url
 
 router = APIRouter(prefix="/api/user", tags=["用户"])
@@ -88,6 +88,32 @@ async def get_making_whole_secret_media(
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="media_url_generate_failed") from exc
 
     return APIResponse(success=True, message="ok", data={"secret_key": secret_key, "urls": urls})
+
+
+@router.get("/learning/mental-math/making-whole/question-video", response_model=APIResponse)
+async def get_making_whole_question_video(
+    secret_key: str = Query(..., description="secret1 ... secret10"),
+    question_number: int = Query(..., ge=1, description="1 ... 20"),
+    current_user: User = Depends(get_current_active_user),
+):
+    """Get a signed video URL for a Making Whole practice question."""
+    _ = current_user
+    object_key = get_making_whole_question_video_key(secret_key, question_number)
+    if not object_key:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="invalid_question_video_request")
+
+    try:
+        url = generate_object_read_url(object_key=object_key, expires_seconds=600)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="video_url_generate_failed") from exc
+
+    return APIResponse(
+        success=True,
+        message="ok",
+        data={"secret_key": secret_key, "question_number": question_number, "url": url},
+    )
 
 
 def _get_or_create_rewards(db: Session, user_id: int) -> UserRewards:

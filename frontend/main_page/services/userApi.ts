@@ -74,6 +74,12 @@ export interface MakingWholeSecretMediaResponse {
   urls: string[];
 }
 
+export interface MakingWholeQuestionVideoResponse {
+  secret_key: string;
+  question_number: number;
+  url: string;
+}
+
 export interface CurrentUserProfile {
   username: string;
 }
@@ -332,6 +338,27 @@ export async function fetchMakingWholeSecretMedia(secretKey: string): Promise<Ma
   const json = await res.json();
   if (!json?.data) throw new Error("fetch_secret_media_failed");
   return json.data as MakingWholeSecretMediaResponse;
+}
+
+export async function fetchMakingWholeQuestionVideo(
+  secretKey: string,
+  questionNumber: number
+): Promise<MakingWholeQuestionVideoResponse> {
+  const params = new URLSearchParams({
+    secret_key: secretKey,
+    question_number: String(questionNumber),
+  });
+  const res = await fetch(
+    getApiUrl(`/api/user/learning/mental-math/making-whole/question-video?${params.toString()}`),
+    { headers: getAuthHeaders() }
+  );
+  if (!res.ok) {
+    const j = await res.json().catch(() => ({}));
+    throw new Error(j?.detail ?? "fetch_question_video_failed");
+  }
+  const json = await res.json();
+  if (!json?.data) throw new Error("fetch_question_video_failed");
+  return json.data as MakingWholeQuestionVideoResponse;
 }
 
 /** 获取当前登录用户基础信息 */

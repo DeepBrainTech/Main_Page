@@ -1,16 +1,21 @@
 from __future__ import annotations
 
 
+MAKING_WHOLE_MEDIA_BASE_PATH = "mental-math/making-whole"
+
+
 MAKING_WHOLE_SECRET_MEDIA_KEYS: dict[str, list[str]] = {
-    "secret1": ["mental-math/making-whole/secret_1.jpg"],
-    "secret2": ["mental-math/making-whole/secret_2.png"],
-    "secret3": ["mental-math/making-whole/secret_3.png"],
-    "secret4": ["mental-math/making-whole/secret_4.png"],
-    "secret5": ["mental-math/making-whole/secret_5.png"],
-    "secret6": ["mental-math/making-whole/secret_6.png"],
-    "secret7": ["mental-math/making-whole/secret_7.png"],
-    "secret8": ["mental-math/making-whole/secret_8.png"],
-    "secret9": ["mental-math/making-whole/secret_9.png"],
-    "secret10": ["mental-math/making-whole/secret_10.png"],
+    f"secret{i}": [
+        f"{MAKING_WHOLE_MEDIA_BASE_PATH}/secret{i}/secret_{i}.{'jpg' if i == 1 else 'png'}"
+    ]
+    for i in range(1, 11)
 }
+
+
+def get_making_whole_question_video_key(secret_key: str, question_number: int) -> str | None:
+    if secret_key not in MAKING_WHOLE_SECRET_MEDIA_KEYS:
+        return None
+    if question_number < 1:
+        return None
+    return f"{MAKING_WHOLE_MEDIA_BASE_PATH}/{secret_key}/{question_number:02d}.mp4"
 

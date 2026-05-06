@@ -19,7 +19,13 @@ export type MentalMathSecretKey =
   | "secret10";
 
 export interface MentalMathQuestion {
+  id: string;
+  secretKey: MentalMathSecretKey;
   expression: string;
+  prompt: string;
+  answer: number;
+  techniqueTitle: string;
+  techniqueSummary: string;
 }
 
 export type MentalMathQuestionMap = Record<MentalMathSecretKey, MentalMathQuestion[]>;

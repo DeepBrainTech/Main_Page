@@ -655,7 +655,12 @@
         "makingWhole": "Lesson 1: Making Whole",
         "breakIntoParts": "Lesson 2: Break into Parts",
         "rearrange": "Lesson 3: Rearrange",
-        "roundAdjust": "Lesson 4: Round & Adjust"
+        "roundAdjust": "Lesson 4: Round & Adjust",
+        "leftToRightFlow": "Lesson 5: Left-to-Right Flow",
+        "friendlyNumbers": "Lesson 6: Friendly Numbers",
+        "compensation": "Lesson 7: Compensation",
+        "multiplicationPatterns": "Lesson 8: Multiplication Patterns",
+        "divisionShortcuts": "Lesson 9: Division Shortcuts"
       }
     },
     "math": "Math",
@@ -712,6 +717,11 @@
       "yourAnswer": "Your answer: {answer}",
       "correctAnswer": "Correct answer: {answer}",
       "nextQuestion": "Next",
+      "explainWithAi": "AI Explain This Question",
+      "aiVideoTitle": "AI Video Explanation",
+      "closeAiVideo": "Close",
+      "aiVideoLoading": "Loading video...",
+      "aiVideoLoadFailed": "Failed to load the AI explanation video.",
       "summaryTitle": "Practice Summary",
       "sessionSummaryTitle": "Session Summary",
       "score": "Score: {score}/{total}",

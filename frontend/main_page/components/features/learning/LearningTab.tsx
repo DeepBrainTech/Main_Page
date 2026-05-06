@@ -4,17 +4,26 @@ import Image from "next/image";
 import { useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import MentalMathAssessmentPanel from "@/components/features/learning/MentalMathAssessmentPanel";
+import MakingWholeLessonPanel from "@/components/features/learning/MakingWholeLessonPanel";
+import UnlockBanner from "@/components/features/learning/UnlockBanner";
+import type { MentalMathSecretKey } from "@/types/learning";
 
 const MONTH_IDS = ["jan", "feb", "mar", "apr", "may", "jun", "jul"] as const;
 
 const LESSON_ROWS = [
-  { key: "assessment", kind: "quiz" as const, status: "free" as const, locked: false },
-  { key: "makingWhole", kind: "course" as const, status: "free" as const, locked: false },
-  { key: "breakIntoParts", kind: "course" as const, status: "locked" as const, locked: true },
-  { key: "rearrange", kind: "quiz" as const, status: "limited" as const, locked: false },
-  { key: "roundAdjust", kind: "course" as const, status: "full" as const, locked: false },
+  { key: "assessment", kind: "quiz" as const, status: "free" as const },
+  { key: "makingWhole", kind: "course" as const, status: "free" as const },
+  { key: "breakIntoParts", kind: "course" as const, status: "free" as const },
+  { key: "rearrange", kind: "course" as const, status: "free" as const },
+  { key: "roundAdjust", kind: "course" as const, status: "free" as const },
+  { key: "leftToRightFlow", kind: "course" as const, status: "free" as const },
+  { key: "friendlyNumbers", kind: "course" as const, status: "free" as const },
+  { key: "compensation", kind: "course" as const, status: "free" as const },
+  { key: "multiplicationPatterns", kind: "course" as const, status: "free" as const },
+  { key: "divisionShortcuts", kind: "course" as const, status: "free" as const },
 ] as const;
 
+const UNLOCK_BANNER_INDEX = 2;
 const BADGE_IDS = ["badgeNumberIgniter", "badgeFocusPilot", "badgeLogicExplorer"] as const;
 
 const completedMonthCount = 4;
@@ -43,6 +52,7 @@ function createWeeklyProgressData(monthLabels: string[]) {
 
 export default function LearningTab() {
   const tLearn = useTranslations("learning.home");
+  const tLearning = useTranslations("learning");
   const monthLabels = useMemo(
     () => MONTH_IDS.map((id) => tLearn(`month.${id}` as "month.jan")),
     [tLearn]
@@ -50,6 +60,7 @@ export default function LearningTab() {
   const weeklyProgressByMonth = useMemo(() => createWeeklyProgressData(monthLabels), [monthLabels]);
   const [showLessonBoard, setShowLessonBoard] = useState(false);
   const [activeLessonKey, setActiveLessonKey] = useState<string | null>(null);
+  const [activeSecretKey, setActiveSecretKey] = useState<MentalMathSecretKey | null>(null);
 
   const lessonCards = useMemo(
     () =>
@@ -60,6 +71,15 @@ export default function LearningTab() {
       })),
     [tLearn]
   );
+  const activeLessonTitle =
+    activeLessonKey && activeLessonKey !== "assessment"
+      ? tLearn(`lessons.${activeLessonKey}` as "lessons.assessment")
+      : activeLessonKey === "assessment"
+        ? tLearn("lessons.assessment")
+        : null;
+  const activeSecretTitle = activeSecretKey
+    ? tLearning(`makingWholeSecrets.${activeSecretKey}` as "makingWholeSecrets.secret1")
+    : null;
 
   const toBarHeight = (percent: number) => {
     const clamped = Math.min(chartMaxPercent, Math.max(chartMinPercent, percent));
@@ -179,13 +199,45 @@ export default function LearningTab() {
                 onClick={() => {
                   setShowLessonBoard(false);
                   setActiveLessonKey(null);
+                  setActiveSecretKey(null);
                 }}
                 className="text-[#8CBBD8] transition hover:text-[#106FAA]"
               >
                 {tLearn("breadcrumbLessons")}
               </button>
               <span className="mx-2 text-[#8CBBD8]">{">"}</span>
-              <span>{tLearn("breadcrumbMentalMath")}</span>
+              {activeLessonKey ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveLessonKey(null);
+                      setActiveSecretKey(null);
+                    }}
+                    className="text-[#8CBBD8] transition hover:text-[#106FAA]"
+                  >
+                    {tLearn("breadcrumbMentalMath")}
+                  </button>
+                  <span className="mx-2 text-[#8CBBD8]">{">"}</span>
+                  {activeSecretKey ? (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => setActiveSecretKey(null)}
+                        className="text-[#8CBBD8] transition hover:text-[#106FAA]"
+                      >
+                        {activeLessonTitle}
+                      </button>
+                      <span className="mx-2 text-[#8CBBD8]">{">"}</span>
+                      <span>{activeSecretTitle}</span>
+                    </>
+                  ) : (
+                    <span>{activeLessonTitle}</span>
+                  )}
+                </>
+              ) : (
+                <span>{tLearn("breadcrumbMentalMath")}</span>
+              )}
             </div>
 
             {activeLessonKey === "assessment" ? (
@@ -202,78 +254,64 @@ export default function LearningTab() {
                 </div>
                 <MentalMathAssessmentPanel />
               </section>
+            ) : activeLessonKey === "makingWhole" ? (
+              <section className="rounded-[24px] border border-white/70 bg-white/80 p-4 shadow-[0px_10px_15px_0px_rgba(0,0,0,0.1)]">
+                <div className="mb-3 flex items-center justify-between">
+                  <h3 className="text-xl font-semibold text-[#045E96]">{tLearn("lessons.makingWhole")}</h3>
+                  <button
+                    type="button"
+                    onClick={() => setActiveLessonKey(null)}
+                    className="rounded-full bg-[#EDF4FC] px-4 py-1.5 text-sm font-semibold text-[#045E96]"
+                  >
+                    {tLearn("backToLessons")}
+                  </button>
+                </div>
+                <MakingWholeLessonPanel
+                  selectedSecret={activeSecretKey}
+                  onSelectedSecretChange={setActiveSecretKey}
+                />
+              </section>
             ) : (
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-                {lessonCards.map((card) => (
-                  <article
-                    key={card.key}
-                    className={`relative flex h-full flex-col rounded-[24px] border border-white/70 p-4 shadow-[0px_10px_15px_0px_rgba(0,0,0,0.1)] ${
-                      card.locked ? "overflow-hidden bg-[#7A7A7A]/90" : "bg-white/80"
-                    }`}
-                  >
-                    <div className="relative overflow-hidden rounded-2xl">
-                      <Image
-                        src="/learning/mental_math/mental_math.png"
-                        alt={card.title}
-                        width={276}
-                        height={100}
-                        className={`h-[90px] w-full object-cover ${card.locked ? "brightness-75" : ""}`}
+                {lessonCards.map((card, index) => (
+                  <div key={card.key} className={index === UNLOCK_BANNER_INDEX ? "contents" : ""}>
+                    {index === UNLOCK_BANNER_INDEX ? (
+                      <UnlockBanner
+                        title="Unlock All Lessons"
+                        description="Get unlimited access to all lessons and your amazing learning adventure!"
+                        buttonLabel="Unlock Now"
+                        className="md:col-span-2 xl:col-span-3"
                       />
-                      {card.status === "free" && (
-                        <span className="absolute right-2 top-2 rounded-md bg-[#4ADE80] px-2 py-0.5 text-sm font-semibold text-white">
-                          {tLearn("statusFree")}
-                        </span>
-                      )}
-                      {card.status === "limited" && (
-                        <span className="absolute right-2 top-2 rounded-md bg-[#FFD773] px-2 py-0.5 text-sm font-semibold text-[#9A6500]">
-                          {tLearn("statusLimited", { days: 60 })}
-                        </span>
-                      )}
-                      {card.status === "full" && (
-                        <span className="absolute right-2 top-2 rounded-md bg-[#E6F2FF] px-2 py-0.5 text-sm font-semibold text-[#045E96]">
-                          {tLearn("statusFull")}
-                        </span>
-                      )}
-                      {card.locked && (
-                        <span className="absolute right-2 top-2 rounded-md bg-black/50 px-2 py-0.5 text-xs font-medium text-white">
-                          {tLearn("lockedPill")}
-                        </span>
-                      )}
-                    </div>
+                    ) : null}
 
-                    <div className="mt-4 min-h-[78px]">
-                      <p className={`text-[14px] leading-5 ${card.locked ? "text-[#CFE7F7]" : "text-[#106FAA]"}`}>
-                        {card.pill}
-                      </p>
-                      <h3
-                        className={`mt-1 overflow-hidden text-ellipsis whitespace-nowrap text-[20px] font-semibold leading-7 ${
-                          card.locked ? "text-white" : "text-[#045E96]"
-                        }`}
-                      >
-                        {card.title}
-                      </h3>
-                    </div>
-                    <div className={`mb-5 mt-4 h-px ${card.locked ? "bg-white/20" : "bg-slate-200"}`} />
-
-                    {card.locked ? (
-                      <div className="mt-auto space-y-1 text-sm text-white">
-                        <p>
-                          💎 {tLearn("unlockLineShort", { price: "100", label: tLearn("unlockThreeMonth") })}
-                        </p>
-                        <p>
-                          💎 {tLearn("unlockLineShort", { price: "200", label: tLearn("unlockLifetime") })}
-                        </p>
-                        <p className="font-semibold text-[#FFD55C]">⭐ {tLearn("upgradePremium")}</p>
-                        <div className="mt-2 flex justify-end">
-                          <button
-                            type="button"
-                            className="rounded-full bg-[#D6E9F8] px-5 py-1.5 text-base font-semibold text-[#045E96]"
-                          >
-                            {tLearn("unlockButton")}
-                          </button>
-                        </div>
+                    <article className="relative flex h-full flex-col rounded-[24px] border border-white/70 bg-white/80 p-4 shadow-[0px_10px_15px_0px_rgba(0,0,0,0.1)]">
+                      <div className="relative overflow-hidden rounded-2xl">
+                        <Image
+                          src="/learning/mental_math/mental_math.png"
+                          alt={card.title}
+                          width={276}
+                          height={100}
+                          className="h-[90px] w-full object-cover"
+                        />
+                        {card.status === "free" ? (
+                          <span className="absolute right-2 top-2 rounded-md bg-[#4ADE80] px-2 py-0.5 text-sm font-semibold text-white">
+                            {tLearn("statusFree")}
+                          </span>
+                        ) : (
+                          <span className="absolute right-2 top-2 rounded-md bg-[#E6F2FF] px-2 py-0.5 text-sm font-semibold text-[#045E96]">
+                            {tLearn("statusFull")}
+                          </span>
+                        )}
                       </div>
-                    ) : (
+
+                      <div className="mt-4 min-h-[78px]">
+                        <p className="text-[14px] leading-5 text-[#106FAA]">{card.pill}</p>
+                        <h3 className="mt-1 overflow-hidden text-ellipsis whitespace-nowrap text-[20px] font-semibold leading-7 text-[#045E96]">
+                          {card.title}
+                        </h3>
+                      </div>
+                      <div className="mb-5 mt-4 h-px bg-slate-200" />
+
                       <div className="mt-auto flex items-center justify-between">
                         <p className="text-base font-semibold text-[#333]">
                           {tLearn("progressPercent", { value: 80 })}
@@ -283,6 +321,11 @@ export default function LearningTab() {
                           onClick={() => {
                             if (card.key === "assessment") {
                               setActiveLessonKey("assessment");
+                              setActiveSecretKey(null);
+                            }
+                            if (card.key === "makingWhole") {
+                              setActiveLessonKey("makingWhole");
+                              setActiveSecretKey(null);
                             }
                           }}
                           className="rounded-full bg-[#045E96] px-6 py-1.5 text-base font-semibold text-[#EDF4FC]"
@@ -290,8 +333,8 @@ export default function LearningTab() {
                           {tLearn("startLesson")}
                         </button>
                       </div>
-                    )}
-                  </article>
+                    </article>
+                  </div>
                 ))}
               </div>
             )}

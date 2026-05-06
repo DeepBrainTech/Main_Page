@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { MentalMathPracticePhase, MentalMathQuestion } from "@/types/learning";
 
 function calculateExpression(expression: string): number {
@@ -22,12 +22,13 @@ function calculateExpression(expression: string): number {
 }
 
 interface UseMentalMathPracticeOptions {
-  generateQuestion: () => MentalMathQuestion | null;
+  generateQuestion?: () => MentalMathQuestion | null;
+  questions?: MentalMathQuestion[];
   milestoneSize?: number;
 }
 
 export function useMentalMathPractice(options: UseMentalMathPracticeOptions) {
-  const { generateQuestion, milestoneSize = 10 } = options;
+  const { generateQuestion, questions, milestoneSize = 10 } = options;
   const [phase, setPhase] = useState<MentalMathPracticePhase>("ready");
   const [currentQuestion, setCurrentQuestion] = useState<MentalMathQuestion | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -45,8 +46,9 @@ export function useMentalMathPractice(options: UseMentalMathPracticeOptions) {
   const [totalAnsweredSeconds, setTotalAnsweredSeconds] = useState(0);
   const [questionStartAt, setQuestionStartAt] = useState<number | null>(null);
   const [sessionStartAt, setSessionStartAt] = useState<number | null>(null);
+  const questionCursorRef = useRef(0);
 
-  const totalQuestions = answeredCount;
+  const totalQuestions = questions?.length ?? answeredCount;
   const accuracy = answeredCount > 0 ? Math.round((correctCount / answeredCount) * 100) : 0;
   const averageSecondsPerQuestion = answeredCount > 0 ? Math.max(1, Math.round(totalAnsweredSeconds / answeredCount)) : 0;
 
@@ -65,8 +67,17 @@ export function useMentalMathPractice(options: UseMentalMathPracticeOptions) {
     return () => window.clearInterval(timer);
   }, [phase, sessionStartAt]);
 
+  const getNextQuestion = () => {
+    if (questions) {
+      const nextQuestion = questions[questionCursorRef.current] ?? null;
+      questionCursorRef.current += 1;
+      return nextQuestion;
+    }
+    return generateQuestion?.() ?? null;
+  };
+
   const openNextQuestion = () => {
-    const nextQuestion = generateQuestion();
+    const nextQuestion = getNextQuestion();
     if (!nextQuestion) {
       setPhase("summary");
       return;
@@ -83,6 +94,7 @@ export function useMentalMathPractice(options: UseMentalMathPracticeOptions) {
   };
 
   const reset = () => {
+    questionCursorRef.current = 0;
     setPhase("ready");
     setCurrentQuestion(null);
     setCurrentIndex(0);
@@ -107,7 +119,7 @@ export function useMentalMathPractice(options: UseMentalMathPracticeOptions) {
     const now = Date.now();
     setSessionStartAt(now);
     setQuestionStartAt(now);
-    const firstQuestion = generateQuestion();
+    const firstQuestion = getNextQuestion();
     if (!firstQuestion) {
       setPhase("summary");
       return;
@@ -151,6 +163,10 @@ export function useMentalMathPractice(options: UseMentalMathPracticeOptions) {
 
   const next = () => {
     const answered = answeredCount;
+    if (questions && answered >= questions.length) {
+      finishSession();
+      return;
+    }
     if (answered > 0 && answered % milestoneSize === 0) {
       setPhase("milestone");
       return;
