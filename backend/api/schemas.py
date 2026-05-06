@@ -29,6 +29,7 @@ class UserCreate(UserBase):
     password: str = Field(..., min_length=6, max_length=100)
     verification_code: str = Field(..., min_length=6, max_length=6)
     date_of_birth: Optional[date] = None  # 出生日期，可选（测试阶段用于年龄分析）
+    country: Optional[str] = Field(None, min_length=2, max_length=2)  # ISO 3166-1 alpha-2
 
 
 class UserLogin(BaseModel):
@@ -44,6 +45,7 @@ class UserResponse(UserBase):
     is_superuser: bool
     created_at: datetime
     date_of_birth: Optional[date] = None
+    country: Optional[str] = None
     avatar_url: Optional[str] = None
     age: Optional[int] = None  # 由 date_of_birth 计算，序列化时由路由填充
     access_token: Optional[str] = None  # 可选：用户名变更后返回新的访问令牌
@@ -58,6 +60,7 @@ class CompleteProfileBody(BaseModel):
     """Google 用户补全资料：用户名、出生日期"""
     username: Optional[str] = Field(None, min_length=3, max_length=50)
     date_of_birth: Optional[date] = None
+    country: Optional[str] = Field(None, min_length=2, max_length=2)  # ISO 3166-1 alpha-2
 
 
 # ========== 认证相关 ==========

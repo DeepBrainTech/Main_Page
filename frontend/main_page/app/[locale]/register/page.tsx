@@ -4,11 +4,13 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { getApiUrl } from "@/lib/api-config";
+import CountrySelect from "@/components/ui/CountrySelect";
 import GoogleLoginButton from "@/components/auth/GoogleLoginButton";
 import CompleteProfileDialog from "@/components/features/profile/CompleteProfileDialog";
 
 type FormField =
   | "username"
+  | "country"
   | "email"
   | "verificationCode"
   | "password"
@@ -24,6 +26,7 @@ export default function RegisterPage() {
 
   const [formData, setFormData] = useState({
     username: "",
+    country: "",
     email: "",
     verificationCode: "",
     password: "",
@@ -43,6 +46,7 @@ export default function RegisterPage() {
   const isGoogleLoginEnabled = Boolean(process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID);
 
   const usernameRef = useRef<HTMLInputElement>(null);
+  const countryRef = useRef<HTMLButtonElement>(null);
   const dateOfBirthRef = useRef<HTMLInputElement>(null);
   const emailRef = useRef<HTMLInputElement>(null);
   const verificationCodeRef = useRef<HTMLInputElement>(null);
@@ -51,8 +55,9 @@ export default function RegisterPage() {
   const agreeTermsRef = useRef<HTMLInputElement>(null);
 
   const focusField = (field: FormField) => {
-    let target: HTMLInputElement | null = null;
+    let target: HTMLInputElement | HTMLButtonElement | null = null;
     if (field === "username") target = usernameRef.current;
+    if (field === "country") target = countryRef.current;
     if (field === "dateOfBirth") target = dateOfBirthRef.current;
     if (field === "email") target = emailRef.current;
     if (field === "verificationCode") target = verificationCodeRef.current;
@@ -86,6 +91,7 @@ export default function RegisterPage() {
     if (value === "verification_code") return "verificationCode";
     if (value === "password") return "password";
     if (value === "date_of_birth") return "dateOfBirth";
+    if (value === "country") return "country";
     return undefined;
   };
 
@@ -167,6 +173,7 @@ export default function RegisterPage() {
         : "border-slate-200 focus:border-blue-500"
     }`;
 
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const field = e.target.name as FormField;
     setFormData({
@@ -246,9 +253,10 @@ export default function RegisterPage() {
     setFieldErrors({});
 
     const username = formData.username.trim();
+    const country = formData.country.trim();
     const email = formData.email.trim();
     const verificationCode = formData.verificationCode.trim();
-    setFormData((prev) => ({ ...prev, username, email, verificationCode }));
+    setFormData((prev) => ({ ...prev, username, country, email, verificationCode }));
 
     if (formData.password !== formData.confirmPassword) {
       raiseFieldError("confirmPassword", t("register.passwordMismatch"));
@@ -279,6 +287,7 @@ export default function RegisterPage() {
           password: formData.password,
           verification_code: verificationCode,
           date_of_birth: formData.dateOfBirth || null,
+          country: country || null,
         }),
       });
 
@@ -363,6 +372,25 @@ export default function RegisterPage() {
               className={inputClassName("dateOfBirth")}
             />
             {fieldErrors.dateOfBirth && <p className="text-xs text-rose-600">{fieldErrors.dateOfBirth}</p>}
+          </div>
+
+          <div className="space-y-2">
+            <label htmlFor="country" className="block text-sm font-medium text-slate-700">
+              {t("register.country")}
+            </label>
+            <CountrySelect
+              value={formData.country}
+              onChange={(code) => {
+                setFormData({ ...formData, country: code });
+                clearFieldError("country");
+                setGeneralError("");
+              }}
+              locale={locale}
+              placeholder={t("register.countryPlaceholder")}
+              className={inputClassName("country")}
+              buttonRef={countryRef}
+            />
+            {fieldErrors.country && <p className="text-xs text-rose-600">{fieldErrors.country}</p>}
           </div>
 
           <div className="space-y-2">

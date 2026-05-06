@@ -24,7 +24,7 @@ export default function AuthedAppLayout({ children }: { children: React.ReactNod
   const pathname = usePathname();
   const params = useParams();
   const locale = params.locale as string;
-  const { username, email, dateOfBirth, avatarUrl, loading, needsProfileCompletion, refetch, logout } = useAuth();
+  const { username, email, dateOfBirth, country, avatarUrl, loading, needsProfileCompletion, refetch, logout } = useAuth();
 
   const currentSegment = pathname.split("/").filter(Boolean).pop()?.toLowerCase() ?? "dashboard";
   const activeTab = SEGMENT_TO_TAB[currentSegment] ?? null;
@@ -67,6 +67,7 @@ export default function AuthedAppLayout({ children }: { children: React.ReactNod
         username={username}
         email={email}
         dateOfBirth={dateOfBirth}
+        country={country}
         avatarUrl={avatarUrl}
         onLogout={() => {
           logout();

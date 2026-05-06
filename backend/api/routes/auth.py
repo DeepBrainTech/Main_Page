@@ -127,6 +127,7 @@ async def register(user_data: UserCreate, db: Session = Depends(get_db)):
         email=user_data.email,
         hashed_password=hashed_password,
         date_of_birth=user_data.date_of_birth,
+        country=(user_data.country or "").upper() if user_data.country else None,
         is_active=True,
     )
     
@@ -290,6 +291,7 @@ def _user_to_response(
         is_superuser=user.is_superuser,
         created_at=user.created_at,
         date_of_birth=user.date_of_birth,
+        country=user.country,
         avatar_url=_build_avatar_url(user),
         age=compute_age(user.date_of_birth),
         access_token=access_token,
@@ -330,6 +332,8 @@ async def update_current_user_profile(
         current_user.username = body.username
     if body.date_of_birth is not None:
         current_user.date_of_birth = body.date_of_birth
+    if "country" in body.model_fields_set:
+        current_user.country = (body.country or "").upper() if body.country else None
     db.commit()
     db.refresh(current_user)
 

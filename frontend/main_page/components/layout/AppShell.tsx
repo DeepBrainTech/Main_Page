@@ -21,6 +21,8 @@ interface AppShellProps {
   email?: string;
   /** Date of birth in YYYY-MM-DD format */
   dateOfBirth?: string | null;
+  /** Country is optional */
+  country?: string | null;
   /** Current user avatar URL. Falls back to local default when empty. */
   avatarUrl?: string | null;
   onLogout: () => void;
@@ -38,6 +40,7 @@ export default function AppShell({
   username,
   email,
   dateOfBirth,
+  country,
   avatarUrl,
   onLogout,
   onProfileUpdate,
@@ -258,6 +261,7 @@ export default function AppShell({
         username={username}
         email={email}
         dateOfBirth={dateOfBirth}
+        country={country}
         avatarUrl={avatarUrl}
         onLogout={onLogout}
         onProfileUpdate={onProfileUpdate}

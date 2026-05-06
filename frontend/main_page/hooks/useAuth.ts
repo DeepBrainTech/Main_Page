@@ -10,6 +10,7 @@ export interface AuthUserInfo {
   username: string;
   email?: string;
   date_of_birth?: string | null;
+  country?: string | null;
   avatar_url?: string | null;
 }
 
@@ -26,6 +27,7 @@ export function useAuth() {
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState<string | undefined>(undefined);
   const [dateOfBirth, setDateOfBirth] = useState<string | null>(null);
+  const [country, setCountry] = useState<string | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -49,8 +51,10 @@ export function useAuth() {
         setUsername(data.username || "");
         setEmail(data.email);
         const dob = data.date_of_birth ?? null;
+        const userCountry = data.country ?? null;
         const avatar = data.avatar_url ?? null;
         setDateOfBirth(dob);
+        setCountry(userCountry);
         setAvatarUrl(avatar);
         setNeedsProfileCompletion(dob == null || dob === undefined);
         setIsAuthenticated(true);
@@ -77,6 +81,7 @@ export function useAuth() {
     username,
     email,
     dateOfBirth,
+    country,
     avatarUrl,
     loading,
     isAuthenticated,

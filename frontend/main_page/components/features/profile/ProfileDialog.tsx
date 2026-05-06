@@ -4,6 +4,8 @@ import { useState, useEffect, useRef, type ChangeEvent } from "react";
 import { useRouter, usePathname, useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { getApiUrl } from "@/lib/api-config";
+import { getCountryLabel } from "@/constants/countries";
+import CountrySelect from "@/components/ui/CountrySelect";
 
 interface ProfileDialogProps {
   open: boolean;
@@ -13,6 +15,8 @@ interface ProfileDialogProps {
   email?: string;
   /** 出生日期 YYYY-MM-DD，可选 */
   dateOfBirth?: string | null;
+  /** Country is optional */
+  country?: string | null;
   /** Current user avatar URL */
   avatarUrl?: string | null;
   onLogout: () => void;
@@ -29,6 +33,7 @@ export default function ProfileDialog({
   username,
   email,
   dateOfBirth,
+  country,
   avatarUrl,
   onLogout,
   onProfileUpdate,
@@ -39,11 +44,14 @@ export default function ProfileDialog({
   const tCommon = useTranslations("common");
   const tProfile = useTranslations("profile");
   const tAuth = useTranslations("auth");
+  const currentLocale = (params?.locale as string) ?? "en";
 
   const [editingUsername, setEditingUsername] = useState(false);
   const [editValue, setEditValue] = useState(username);
   const [editingDateOfBirth, setEditingDateOfBirth] = useState(false);
   const [editDateValue, setEditDateValue] = useState(dateOfBirth ?? "");
+  const [editingCountry, setEditingCountry] = useState(false);
+  const [editCountryValue, setEditCountryValue] = useState((country ?? "").toUpperCase());
   const [saving, setSaving] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [avatarFailed, setAvatarFailed] = useState(false);
@@ -58,13 +66,14 @@ export default function ProfileDialog({
       setEditingUsername(false);
       setEditDateValue(dateOfBirth ?? "");
       setEditingDateOfBirth(false);
+      setEditCountryValue((country ?? "").toUpperCase());
+      setEditingCountry(false);
       setAvatarFailed(false);
       setError("");
       setSuccessMessage("");
     }
-  }, [open, username, dateOfBirth, avatarUrl]);
+  }, [open, username, dateOfBirth, country, avatarUrl, currentLocale]);
 
-  const currentLocale = (params?.locale as string) ?? "en";
   /** 将 YYYY-MM-DD 格式化为仅月日（不显示年份），用于展示 */
   const formatBirthdayNoYear = (yyyyMmDd: string): string => {
     const parts = yyyyMmDd.trim().split("-");
@@ -230,6 +239,45 @@ export default function ProfileDialog({
     }
   };
 
+  const handleSaveCountry = async () => {
+    const val = editCountryValue.trim().toUpperCase();
+    if (val === (country ?? "")) {
+      setEditingCountry(false);
+      return;
+    }
+    setError("");
+    setSaving(true);
+    try {
+      const token = localStorage.getItem("access_token");
+      if (!token) {
+        setError(tProfile("countryUpdateFailed"));
+        return;
+      }
+      const res = await fetch(getApiUrl("/api/auth/me"), {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ country: val || null }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        setError(data.detail || tProfile("countryUpdateFailed"));
+        return;
+      }
+      const data = await res.json();
+      if (data.access_token) {
+        localStorage.setItem("access_token", data.access_token);
+        localStorage.setItem("token_expires_in", String(data.expires_in ?? 0));
+      }
+      setSuccessMessage(tProfile("countryUpdated"));
+      setEditingCountry(false);
+      onProfileUpdate?.();
+    } catch {
+      setError(tProfile("countryUpdateFailed"));
+    } finally {
+      setSaving(false);
+    }
+  };
+
   if (!open) return null;
 
   return (
@@ -290,32 +338,34 @@ export default function ProfileDialog({
           <div>
             <dt className="text-gray-500">{tProfile("username")}</dt>
             {editingUsername ? (
-              <dd className="mt-1 flex items-center gap-2">
+              <dd className="mt-1 space-y-2">
                 <input
                   type="text"
                   value={editValue}
                   onChange={(e) => setEditValue(e.target.value)}
                   minLength={3}
                   maxLength={50}
-                  className="flex-1 rounded border border-gray-300 px-2 py-1.5 text-gray-900 focus:border-transparent focus:ring-2 focus:ring-[#5E81AC] dark:border-gray-600 dark:bg-zinc-800 dark:text-white"
+                  className="w-full rounded border border-gray-300 px-2 py-1.5 text-gray-900 focus:border-transparent focus:ring-2 focus:ring-[#5E81AC] dark:border-gray-600 dark:bg-zinc-800 dark:text-white"
                   placeholder={tProfile("usernamePlaceholder")}
                   autoFocus
                 />
-                <button
-                  type="button"
-                  onClick={handleSaveUsername}
-                  disabled={saving}
-                  className="rounded bg-[#5E81AC] px-2 py-1.5 text-xs font-medium text-white hover:bg-[#4a6a8a] disabled:opacity-50"
-                >
-                  {saving ? "..." : tProfile("saveUsername")}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setEditingUsername(false); setEditValue(username); setError(""); }}
-                  className="rounded border border-gray-300 px-2 py-1.5 text-xs text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-zinc-700"
-                >
-                  {tCommon("cancel")}
-                </button>
+                <div className="flex justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={handleSaveUsername}
+                    disabled={saving}
+                    className="rounded bg-[#5E81AC] px-2 py-1.5 text-xs font-medium text-white hover:bg-[#4a6a8a] disabled:opacity-50"
+                  >
+                    {saving ? "..." : tProfile("saveUsername")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setEditingUsername(false); setEditValue(username); setError(""); }}
+                    className="rounded border border-gray-300 px-2 py-1.5 text-xs text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-zinc-700"
+                  >
+                    {tCommon("cancel")}
+                  </button>
+                </div>
               </dd>
             ) : (
               <dd className="flex items-center justify-between font-medium text-gray-900">
@@ -372,6 +422,46 @@ export default function ProfileDialog({
                   className="text-xs text-[#5E81AC] hover:underline"
                 >
                   {tProfile("editDateOfBirth")}
+                </button>
+              </dd>
+            )}
+          </div>
+          <div>
+            <dt className="text-gray-500">{tProfile("country")}</dt>
+            {editingCountry ? (
+              <dd className="mt-1 flex items-center gap-2">
+                <CountrySelect
+                  value={editCountryValue}
+                  onChange={setEditCountryValue}
+                  locale={currentLocale}
+                  placeholder={tProfile("countryPlaceholder")}
+                  className="h-8 flex-1 rounded border border-gray-300 px-2 py-1.5 text-left text-gray-900 focus:border-transparent focus:ring-2 focus:ring-[#5E81AC] dark:border-gray-600 dark:bg-zinc-800 dark:text-white"
+                />
+                <button
+                  type="button"
+                  onClick={handleSaveCountry}
+                  disabled={saving}
+                  className="rounded bg-[#5E81AC] px-2 py-1.5 text-xs font-medium text-white hover:bg-[#4a6a8a] disabled:opacity-50"
+                >
+                  {saving ? "..." : tProfile("saveUsername")}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setEditingCountry(false); setEditCountryValue((country ?? "").toUpperCase()); setError(""); }}
+                  className="rounded border border-gray-300 px-2 py-1.5 text-xs text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-zinc-700"
+                >
+                  {tCommon("cancel")}
+                </button>
+              </dd>
+            ) : (
+              <dd className="flex items-center justify-between font-medium text-gray-900">
+                <span>{(country && country.trim()) ? getCountryLabel(country, currentLocale) : "—"}</span>
+                <button
+                  type="button"
+                  onClick={() => setEditingCountry(true)}
+                  className="text-xs text-[#5E81AC] hover:underline"
+                >
+                  {tProfile("editCountry")}
                 </button>
               </dd>
             )}

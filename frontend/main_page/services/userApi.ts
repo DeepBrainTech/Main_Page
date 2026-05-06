@@ -51,6 +51,7 @@ export interface LeaderboardEntry {
   rank: number;
   user_id: number;
   username: string;
+  country?: string | null;
   score: number;
   trend?: "up" | "down" | "stable";
   avatar_url?: string | null;

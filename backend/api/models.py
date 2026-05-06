@@ -23,6 +23,7 @@ class User(Base):
     google_avatar_url = Column(String(1024), nullable=True)  # Google profile image URL
     avatar_object_key = Column(String(512), nullable=True)  # User-uploaded avatar object key
     date_of_birth = Column(Date, nullable=True)  # 出生日期，用于计算年龄
+    country = Column(String(2), nullable=True)  # ISO 3166-1 alpha-2 country code
     is_active = Column(Boolean, default=True)
     is_superuser = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)

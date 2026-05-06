@@ -1,13 +1,30 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { COGNITIVE_DIMENSION_KEYS } from "@/types/cognitive";
 import { fetchLeaderboard, type LeaderboardEntry } from "@/services/userApi";
+import { getCountryLabel, getFlagImageSrcSet, getFlagImageUrl } from "@/constants/countries";
 
 type LeaderboardTabType = "global" | "dimension";
 
 export default function LeaderboardTab() {
+  const renderCountryFlag = (code?: string | null, size: "small" | "large" = "small") => {
+    const url = getFlagImageUrl(code);
+    if (!url) return <span className={size === "large" ? "text-2xl" : "text-xl"}>🌍</span>;
+    return (
+      <img
+        src={url}
+        srcSet={getFlagImageSrcSet(code)}
+        alt={code ?? "country"}
+        className={size === "large" ? "h-6 w-8 rounded-sm object-cover" : "h-5 w-7 rounded-sm object-cover"}
+      />
+    );
+  };
+
+  const params = useParams();
+  const locale = (params?.locale as string) ?? "en";
   const t = useTranslations("leaderboard");
   const tDim = useTranslations("dimensions");
   const [totalList, setTotalList] = useState<LeaderboardEntry[]>([]);
@@ -155,7 +172,9 @@ export default function LeaderboardTab() {
                   </div>
                   <div className="flex-1">
                     <p className="text-base font-medium text-[#106FAA]">{t("countryShort")}</p>
-                    <p className="mt-2 text-[32px] leading-9">🇺🇸</p>
+                    <div className="mt-2 flex justify-center" title={getCountryLabel(user.country, locale)}>
+                      {renderCountryFlag(user.country, "large")}
+                    </div>
                   </div>
                 </div>
 
@@ -206,7 +225,9 @@ export default function LeaderboardTab() {
                     </div>
                     </div>
                     <div className="text-base font-medium text-gray-800">{user.username}</div>
-                    <div className="text-2xl">🇺🇸</div>
+                    <div className="flex items-center" title={getCountryLabel(user.country, locale)}>
+                      {renderCountryFlag(user.country)}
+                    </div>
                     <div className="text-[20px] font-bold text-[#0075FF]">{user.score}</div>
                   </div>
                 ))

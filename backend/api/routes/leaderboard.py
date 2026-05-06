@@ -41,6 +41,7 @@ async def get_leaderboard(
             db.query(
                 User.id,
                 User.username,
+                User.country,
                 subq.c.score,
                 subq.c.previous_total_rank,
                 User.avatar_object_key,
@@ -60,7 +61,15 @@ async def get_leaderboard(
     elif type in DIMENSION_COLUMNS:
         col = getattr(UserCognitiveScores, type)
         rows = (
-            db.query(User.id, User.username, col, UserCognitiveScores.previous_total_rank, User.avatar_object_key, User.google_avatar_url)
+            db.query(
+                User.id,
+                User.username,
+                User.country,
+                col,
+                UserCognitiveScores.previous_total_rank,
+                User.avatar_object_key,
+                User.google_avatar_url,
+            )
             .join(UserCognitiveScores, User.id == UserCognitiveScores.user_id)
             .order_by(desc(col))
             .limit(limit)
@@ -72,10 +81,11 @@ async def get_leaderboard(
     result = []
     for i, r in enumerate(rows):
         current_rank = i + 1
-        score = round(r[2]) if r[2] is not None else 0
-        previous_rank = r[3]
-        avatar_object_key = r[4]
-        google_avatar_url = r[5]
+        country = r[2]
+        score = round(r[3]) if r[3] is not None else 0
+        previous_rank = r[4]
+        avatar_object_key = r[5]
+        google_avatar_url = r[6]
         
         avatar_url = None
         if avatar_object_key:
@@ -99,15 +109,16 @@ async def get_leaderboard(
             "rank": current_rank,
             "user_id": r[0],
             "username": r[1],
+            "country": country,
             "score": score,
             "trend": trend,
             "avatar_url": avatar_url,
-            "memory": round(r[6]) if len(r) > 6 and r[6] is not None else None,
-            "logic": round(r[7]) if len(r) > 7 and r[7] is not None else None,
-            "focus": round(r[8]) if len(r) > 8 and r[8] is not None else None,
-            "reaction": round(r[9]) if len(r) > 9 and r[9] is not None else None,
-            "strategy": round(r[10]) if len(r) > 10 and r[10] is not None else None,
-            "spatial": round(r[11]) if len(r) > 11 and r[11] is not None else None,
+            "memory": round(r[7]) if len(r) > 7 and r[7] is not None else None,
+            "logic": round(r[8]) if len(r) > 8 and r[8] is not None else None,
+            "focus": round(r[9]) if len(r) > 9 and r[9] is not None else None,
+            "reaction": round(r[10]) if len(r) > 10 and r[10] is not None else None,
+            "strategy": round(r[11]) if len(r) > 11 and r[11] is not None else None,
+            "spatial": round(r[12]) if len(r) > 12 and r[12] is not None else None,
         })
         
     return APIResponse(success=True, message="ok", data={"list": result})
