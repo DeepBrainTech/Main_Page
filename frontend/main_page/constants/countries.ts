@@ -62,13 +62,13 @@ export function getCountryOptionLabel(code?: string | null, locale: string = "en
 
 export function getFlagImageUrl(code?: string | null): string {
   if (!code || code.length !== 2) return "";
-  return `https://flagcdn.com/w40/${code.toLowerCase()}.png`;
+  return `/flag160x120/${code.toLowerCase()}.png`;
 }
 
 export function getFlagImageSrcSet(code?: string | null): string {
   if (!code || code.length !== 2) return "";
-  const lower = code.toLowerCase();
-  return `https://flagcdn.com/w40/${lower}.png 1x, https://flagcdn.com/w80/${lower}.png 2x`;
+  const path = `/flag160x120/${code.toLowerCase()}.png`;
+  return `${path} 1x, ${path} 2x`;
 }
 
 export function resolveCountryCode(input: string): string | null {
