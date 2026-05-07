@@ -25,6 +25,8 @@ from models import (
     UserAssessmentTopicStat,
     UserAssessmentAnswer,
     UserCourseEntitlement,
+    UserLearningTopicProgress,
+    UserLearningQuestionProgress,
 )
 from schemas import (
     APIResponse,
@@ -33,6 +35,7 @@ from schemas import (
     CognitiveScoresResponse,
     LeaderboardEntry,
     AssessmentSessionCreate,
+    LearningQuestionAttemptCreate,
     MentalMathUnlockDiamondsBody,
     MembershipPlanUpdateBody,
 )
@@ -59,6 +62,36 @@ MONTHLY_TARGET = 20
 DEFAULT_TZ = "UTC"
 
 MEMBERSHIP_PREMIUM_PERIOD_DAYS = int(os.getenv("MEMBERSHIP_PREMIUM_PERIOD_DAYS", "30"))
+
+
+def _to_progress_percent(numerator: int, denominator: int) -> int:
+    if denominator <= 0:
+        return 0
+    return max(0, min(100, round((numerator / denominator) * 100)))
+
+
+def _build_topic_progress_payload(
+    topic_row: UserLearningTopicProgress,
+    question_rows: list[UserLearningQuestionProgress],
+) -> dict:
+    total_questions = int(topic_row.total_questions or 0)
+    attempted_unique_questions = int(topic_row.attempted_unique_questions or 0)
+    correct_unique_questions = int(topic_row.correct_unique_questions or 0)
+    progress_percent_attempted = int(topic_row.progress_percent_attempted or 0)
+    progress_percent_correct = int(topic_row.progress_percent_correct or 0)
+    return {
+        "subject_key": topic_row.subject_key,
+        "module_key": topic_row.module_key,
+        "topic_key": topic_row.topic_key,
+        "total_questions": total_questions,
+        "attempted_unique_questions": attempted_unique_questions,
+        "correct_unique_questions": correct_unique_questions,
+        "progress_percent_attempted": progress_percent_attempted,
+        "progress_percent_correct": progress_percent_correct,
+        "last_attempted_question_key": topic_row.last_attempted_question_key,
+        "last_attempted_at": topic_row.last_attempted_at.isoformat() if topic_row.last_attempted_at else None,
+        "attempted_question_keys": [row.question_key for row in question_rows],
+    }
 
 
 def _today_in_tz(tz: str) -> str:
@@ -96,6 +129,214 @@ async def get_making_whole_secret_media(
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="media_url_generate_failed") from exc
 
     return APIResponse(success=True, message="ok", data={"secret_key": secret_key, "urls": urls})
+
+
+@router.post("/learning/progress/question-attempt", response_model=APIResponse)
+async def record_learning_question_attempt(
+    body: LearningQuestionAttemptCreate,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+):
+    now = datetime.utcnow()
+    question_row = (
+        db.query(UserLearningQuestionProgress)
+        .filter(
+            UserLearningQuestionProgress.user_id == current_user.id,
+            UserLearningQuestionProgress.subject_key == body.subject_key,
+            UserLearningQuestionProgress.module_key == body.module_key,
+            UserLearningQuestionProgress.topic_key == body.topic_key,
+            UserLearningQuestionProgress.question_key == body.question_key,
+        )
+        .first()
+    )
+    is_new_question = question_row is None
+    was_correct_ever = bool(question_row.is_correct_ever) if question_row is not None else False
+    if question_row is None:
+        question_row = UserLearningQuestionProgress(
+            user_id=current_user.id,
+            subject_key=body.subject_key,
+            module_key=body.module_key,
+            topic_key=body.topic_key,
+            question_key=body.question_key,
+            attempt_count=1,
+            is_correct_latest=body.is_correct,
+            is_correct_ever=body.is_correct,
+            first_attempted_at=now,
+            last_attempted_at=now,
+        )
+        db.add(question_row)
+    else:
+        question_row.attempt_count = int(question_row.attempt_count or 0) + 1
+        question_row.is_correct_latest = body.is_correct
+        question_row.is_correct_ever = was_correct_ever or body.is_correct
+        question_row.last_attempted_at = now
+        db.add(question_row)
+
+    topic_row = (
+        db.query(UserLearningTopicProgress)
+        .filter(
+            UserLearningTopicProgress.user_id == current_user.id,
+            UserLearningTopicProgress.subject_key == body.subject_key,
+            UserLearningTopicProgress.module_key == body.module_key,
+            UserLearningTopicProgress.topic_key == body.topic_key,
+        )
+        .first()
+    )
+    if topic_row is None:
+        topic_row = UserLearningTopicProgress(
+            user_id=current_user.id,
+            subject_key=body.subject_key,
+            module_key=body.module_key,
+            topic_key=body.topic_key,
+        )
+        db.add(topic_row)
+    topic_row.total_questions = int(topic_row.total_questions or 0)
+    topic_row.attempted_unique_questions = int(topic_row.attempted_unique_questions or 0)
+    topic_row.correct_unique_questions = int(topic_row.correct_unique_questions or 0)
+    topic_row.progress_percent_attempted = int(topic_row.progress_percent_attempted or 0)
+    topic_row.progress_percent_correct = int(topic_row.progress_percent_correct or 0)
+
+    if body.total_questions > 0:
+        topic_row.total_questions = body.total_questions
+    elif topic_row.total_questions <= 0:
+        topic_row.total_questions = 0
+
+    if is_new_question:
+        topic_row.attempted_unique_questions += 1
+    if body.is_correct and (is_new_question or not was_correct_ever):
+        topic_row.correct_unique_questions += 1
+
+    topic_row.progress_percent_attempted = _to_progress_percent(
+        topic_row.attempted_unique_questions, topic_row.total_questions
+    )
+    topic_row.progress_percent_correct = _to_progress_percent(
+        topic_row.correct_unique_questions, topic_row.total_questions
+    )
+    topic_row.last_attempted_question_key = body.question_key
+    topic_row.last_attempted_at = now
+    db.add(topic_row)
+    db.commit()
+    db.refresh(topic_row)
+    topic_question_rows = (
+        db.query(UserLearningQuestionProgress)
+        .filter(
+            UserLearningQuestionProgress.user_id == current_user.id,
+            UserLearningQuestionProgress.subject_key == body.subject_key,
+            UserLearningQuestionProgress.module_key == body.module_key,
+            UserLearningQuestionProgress.topic_key == body.topic_key,
+        )
+        .order_by(UserLearningQuestionProgress.question_key.asc())
+        .all()
+    )
+
+    return APIResponse(
+        success=True,
+        message="ok",
+        data=_build_topic_progress_payload(topic_row, topic_question_rows),
+    )
+
+
+@router.get("/learning/progress/module", response_model=APIResponse)
+async def get_learning_module_progress(
+    subject_key: str = Query(..., min_length=1, max_length=64),
+    module_key: str = Query(..., min_length=1, max_length=64),
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+):
+    topic_rows = (
+        db.query(UserLearningTopicProgress)
+        .filter(
+            UserLearningTopicProgress.user_id == current_user.id,
+            UserLearningTopicProgress.subject_key == subject_key,
+            UserLearningTopicProgress.module_key == module_key,
+        )
+        .order_by(UserLearningTopicProgress.topic_key.asc())
+        .all()
+    )
+
+    question_rows = (
+        db.query(UserLearningQuestionProgress)
+        .filter(
+            UserLearningQuestionProgress.user_id == current_user.id,
+            UserLearningQuestionProgress.subject_key == subject_key,
+            UserLearningQuestionProgress.module_key == module_key,
+        )
+        .order_by(
+            UserLearningQuestionProgress.topic_key.asc(),
+            UserLearningQuestionProgress.question_key.asc(),
+        )
+        .all()
+    )
+    questions_by_topic: dict[str, list[UserLearningQuestionProgress]] = {}
+    for row in question_rows:
+        questions_by_topic.setdefault(row.topic_key, []).append(row)
+
+    return APIResponse(
+        success=True,
+        message="ok",
+        data={
+            "subject_key": subject_key,
+            "module_key": module_key,
+            "topics": [
+                _build_topic_progress_payload(row, questions_by_topic.get(row.topic_key, []))
+                for row in topic_rows
+            ],
+        },
+    )
+
+
+@router.get("/learning/progress/subject", response_model=APIResponse)
+async def get_learning_subject_progress(
+    subject_key: str = Query(..., min_length=1, max_length=64),
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+):
+    rows = (
+        db.query(
+            UserLearningTopicProgress.module_key.label("module_key"),
+            func.coalesce(func.sum(UserLearningTopicProgress.total_questions), 0).label("total_questions"),
+            func.coalesce(
+                func.sum(UserLearningTopicProgress.attempted_unique_questions), 0
+            ).label("attempted_unique_questions"),
+            func.coalesce(
+                func.sum(UserLearningTopicProgress.correct_unique_questions), 0
+            ).label("correct_unique_questions"),
+        )
+        .filter(
+            UserLearningTopicProgress.user_id == current_user.id,
+            UserLearningTopicProgress.subject_key == subject_key,
+        )
+        .group_by(UserLearningTopicProgress.module_key)
+        .order_by(UserLearningTopicProgress.module_key.asc())
+        .all()
+    )
+    modules = []
+    for row in rows:
+        total_questions = int(row.total_questions or 0)
+        attempted_unique_questions = int(row.attempted_unique_questions or 0)
+        correct_unique_questions = int(row.correct_unique_questions or 0)
+        modules.append(
+            {
+                "module_key": row.module_key,
+                "total_questions": total_questions,
+                "attempted_unique_questions": attempted_unique_questions,
+                "correct_unique_questions": correct_unique_questions,
+                "progress_percent_attempted": _to_progress_percent(
+                    attempted_unique_questions, total_questions
+                ),
+                "progress_percent_correct": _to_progress_percent(
+                    correct_unique_questions, total_questions
+                ),
+            }
+        )
+    return APIResponse(
+        success=True,
+        message="ok",
+        data={
+            "subject_key": subject_key,
+            "modules": modules,
+        },
+    )
 
 
 @router.get("/learning/mental-math/making-whole/question-video", response_model=APIResponse)

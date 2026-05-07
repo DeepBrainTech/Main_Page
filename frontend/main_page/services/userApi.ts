@@ -156,6 +156,40 @@ export interface AssessmentTrendPoint {
   duration_seconds: number;
 }
 
+export interface LearningTopicProgressData {
+  subject_key: string;
+  module_key: string;
+  topic_key: string;
+  total_questions: number;
+  attempted_unique_questions: number;
+  correct_unique_questions: number;
+  progress_percent_attempted: number;
+  progress_percent_correct: number;
+  last_attempted_question_key: string | null;
+  last_attempted_at: string | null;
+  attempted_question_keys: string[];
+}
+
+export interface LearningModuleProgressData {
+  subject_key: string;
+  module_key: string;
+  topics: LearningTopicProgressData[];
+}
+
+export interface LearningSubjectProgressModuleData {
+  module_key: string;
+  total_questions: number;
+  attempted_unique_questions: number;
+  correct_unique_questions: number;
+  progress_percent_attempted: number;
+  progress_percent_correct: number;
+}
+
+export interface LearningSubjectProgressData {
+  subject_key: string;
+  modules: LearningSubjectProgressModuleData[];
+}
+
 /** 获取奖励与签到、任务状态 */
 export async function fetchRewards(): Promise<RewardsData> {
   const res = await fetch(getApiUrl("/api/user/rewards"), { headers: getAuthHeaders() });
@@ -525,4 +559,68 @@ export async function fetchAssessmentTrend(subject = "mental-math", limit = 20):
   if (!fallback.ok) throw new Error("fetch_assessment_trend_failed");
   const json = await fallback.json();
   return (json?.data?.points ?? []) as AssessmentTrendPoint[];
+}
+
+export async function fetchLearningModuleProgress(
+  subjectKey: string,
+  moduleKey: string
+): Promise<LearningModuleProgressData> {
+  const params = new URLSearchParams({
+    subject_key: subjectKey,
+    module_key: moduleKey,
+  });
+  const res = await fetch(getApiUrl(`/api/user/learning/progress/module?${params.toString()}`), {
+    headers: getAuthHeaders(),
+  });
+  if (!res.ok) {
+    const j = await res.json().catch(() => ({}));
+    throw new Error(j?.detail ?? "fetch_learning_module_progress_failed");
+  }
+  const json = await res.json();
+  if (!json?.data) {
+    throw new Error("fetch_learning_module_progress_failed");
+  }
+  return json.data as LearningModuleProgressData;
+}
+
+export async function recordLearningQuestionAttempt(payload: {
+  subject_key: string;
+  module_key: string;
+  topic_key: string;
+  question_key: string;
+  total_questions: number;
+  is_correct: boolean;
+}): Promise<LearningTopicProgressData> {
+  const res = await fetch(getApiUrl("/api/user/learning/progress/question-attempt"), {
+    method: "POST",
+    headers: getAuthHeaders(),
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const j = await res.json().catch(() => ({}));
+    throw new Error(j?.detail ?? "record_learning_question_attempt_failed");
+  }
+  const json = await res.json();
+  if (!json?.data) {
+    throw new Error("record_learning_question_attempt_failed");
+  }
+  return json.data as LearningTopicProgressData;
+}
+
+export async function fetchLearningSubjectProgress(subjectKey: string): Promise<LearningSubjectProgressData> {
+  const params = new URLSearchParams({
+    subject_key: subjectKey,
+  });
+  const res = await fetch(getApiUrl(`/api/user/learning/progress/subject?${params.toString()}`), {
+    headers: getAuthHeaders(),
+  });
+  if (!res.ok) {
+    const j = await res.json().catch(() => ({}));
+    throw new Error(j?.detail ?? "fetch_learning_subject_progress_failed");
+  }
+  const json = await res.json();
+  if (!json?.data) {
+    throw new Error("fetch_learning_subject_progress_failed");
+  }
+  return json.data as LearningSubjectProgressData;
 }

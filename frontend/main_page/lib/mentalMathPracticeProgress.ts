@@ -1,62 +1,55 @@
 /**
- * Client-side persisted progress for mental math practice (making-whole lesson).
- * Tracks unique question IDs answered correctly at least once.
+ * Server-side persisted progress for mental math practice (making-whole lesson).
+ * No browser storage is used.
  */
 import { MENTAL_MATH_SECRET_ORDER, MENTAL_MATH_SECRET_QUESTIONS } from "../config/mental-math-questions";
+import {
+  fetchLearningModuleProgress,
+  fetchLearningSubjectProgress,
+  recordLearningQuestionAttempt,
+} from "@/services/userApi";
 
-const STORAGE_KEY = "dbt.learning.mental_math.practice.v1";
-
-export type MentalMathStoredProgress = {
-  v: 1;
-  makingWholeSolvedIds: string[];
-  practiceTimeSeconds: number;
+type SecretKey = (typeof MENTAL_MATH_SECRET_ORDER)[number];
+type SecretCache = {
+  totalQuestions: number;
+  attemptedQuestionIds: Set<string>;
+  attemptedUniqueQuestions: number;
+  progressPercentAttempted: number;
 };
 
-const emptyState = (): MentalMathStoredProgress => ({
-  v: 1,
-  makingWholeSolvedIds: [],
-  practiceTimeSeconds: 0,
-});
+const SUBJECT_KEY = "mental_math";
+const MODULE_KEY = "making_whole";
+const LESSON_TO_MODULE_KEY: Record<string, string> = {
+  makingWhole: "making_whole",
+  breakIntoParts: "break_into_parts",
+  rearrange: "rearrange",
+  roundAdjust: "round_adjust",
+  leftToRightFlow: "left_to_right_flow",
+  friendlyNumbers: "friendly_numbers",
+  compensation: "compensation",
+  multiplicationPatterns: "multiplication_patterns",
+  divisionShortcuts: "division_shortcuts",
+};
 
-function readRaw(): MentalMathStoredProgress {
-  if (typeof window === "undefined") {
-    return emptyState();
-  }
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) {
-      return emptyState();
-    }
-    const parsed = JSON.parse(raw) as Partial<MentalMathStoredProgress>;
-    if (parsed.v !== 1 || !Array.isArray(parsed.makingWholeSolvedIds)) {
-      return emptyState();
-    }
-    return {
-      v: 1,
-      makingWholeSolvedIds: parsed.makingWholeSolvedIds.filter((id) => typeof id === "string"),
-      practiceTimeSeconds:
-        typeof parsed.practiceTimeSeconds === "number" && parsed.practiceTimeSeconds >= 0
-          ? Math.floor(parsed.practiceTimeSeconds)
-          : 0,
-    };
-  } catch {
-    return emptyState();
-  }
-}
-
-function writeRaw(state: MentalMathStoredProgress) {
-  if (typeof window === "undefined") {
-    return;
-  }
-  try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  } catch {
-    // ignore quota / private mode
-  }
-  bumpPracticeProgressVersion();
-}
-
+const secretCache = new Map<SecretKey, SecretCache>();
+const lessonProgressCache = new Map<string, number>();
 let clientVersion = 0;
+let loadingPromise: Promise<void> | null = null;
+
+function ensureBaseCache() {
+  MENTAL_MATH_SECRET_ORDER.forEach((secretKey) => {
+    if (!secretCache.has(secretKey)) {
+      secretCache.set(secretKey, {
+        totalQuestions: MENTAL_MATH_SECRET_QUESTIONS[secretKey]?.length ?? 0,
+        attemptedQuestionIds: new Set<string>(),
+        attemptedUniqueQuestions: 0,
+        progressPercentAttempted: 0,
+      });
+    }
+  });
+}
+
+ensureBaseCache();
 
 export function getPracticeProgressVersion(): number {
   return clientVersion;
@@ -78,11 +71,54 @@ export function subscribePracticeProgress(onChange: () => void) {
   return () => window.removeEventListener("learning-practice-progress", handler);
 }
 
+export async function refreshMakingWholeProgress(): Promise<void> {
+  if (!loadingPromise) {
+    loadingPromise = (async () => {
+      ensureBaseCache();
+      const result = await fetchLearningModuleProgress(SUBJECT_KEY, MODULE_KEY);
+      result.topics.forEach((topic) => {
+        const topicKey = topic.topic_key as SecretKey;
+        if (!secretCache.has(topicKey)) {
+          return;
+        }
+        secretCache.set(topicKey, {
+          totalQuestions: topic.total_questions || (MENTAL_MATH_SECRET_QUESTIONS[topicKey]?.length ?? 0),
+          attemptedQuestionIds: new Set(topic.attempted_question_keys ?? []),
+          attemptedUniqueQuestions: topic.attempted_unique_questions ?? 0,
+          progressPercentAttempted: topic.progress_percent_attempted ?? 0,
+        });
+      });
+      lessonProgressCache.set("makingWhole", getMakingWholeProgressPercent());
+      bumpPracticeProgressVersion();
+    })()
+      .catch(() => {})
+      .finally(() => {
+        loadingPromise = null;
+      });
+  }
+  await loadingPromise;
+}
+
+export async function refreshMentalMathLessonProgress(): Promise<void> {
+  try {
+    const result = await fetchLearningSubjectProgress(SUBJECT_KEY);
+    const moduleProgressMap = new Map<string, number>();
+    result.modules.forEach((moduleRow) => {
+      moduleProgressMap.set(moduleRow.module_key, moduleRow.progress_percent_attempted ?? 0);
+    });
+    Object.entries(LESSON_TO_MODULE_KEY).forEach(([lessonKey, moduleKey]) => {
+      lessonProgressCache.set(lessonKey, moduleProgressMap.get(moduleKey) ?? 0);
+    });
+    // Keep makingWhole card consistent with secret-level progress cache.
+    lessonProgressCache.set("makingWhole", getMakingWholeProgressPercent());
+    bumpPracticeProgressVersion();
+  } catch {
+    // ignore refresh failure; caller can retry later
+  }
+}
+
 export function getMakingWholeQuestionTotal(): number {
-  return MENTAL_MATH_SECRET_ORDER.reduce(
-    (acc, key) => acc + (MENTAL_MATH_SECRET_QUESTIONS[key]?.length ?? 0),
-    0
-  );
+  return MENTAL_MATH_SECRET_ORDER.reduce((acc, key) => acc + getSecretQuestionTotal(key), 0);
 }
 
 export function getLessonQuestionTotal(lessonKey: string): number {
@@ -92,43 +128,60 @@ export function getLessonQuestionTotal(lessonKey: string): number {
   return 0;
 }
 
-export function recordMakingWholeCorrectAnswer(questionId: string) {
+export async function recordMakingWholeAttempt(
+  questionId: string,
+  secretKey: SecretKey,
+  isCorrect: boolean = false
+): Promise<void> {
   if (!questionId) {
     return;
   }
-  const state = readRaw();
-  if (state.makingWholeSolvedIds.includes(questionId)) {
-    return;
+  ensureBaseCache();
+  const topicResult = await recordLearningQuestionAttempt({
+    subject_key: SUBJECT_KEY,
+    module_key: MODULE_KEY,
+    topic_key: secretKey,
+    question_key: questionId,
+    total_questions: MENTAL_MATH_SECRET_QUESTIONS[secretKey]?.length ?? 0,
+    is_correct: isCorrect,
+  });
+  secretCache.set(secretKey, {
+    totalQuestions: topicResult.total_questions || (MENTAL_MATH_SECRET_QUESTIONS[secretKey]?.length ?? 0),
+    attemptedQuestionIds: new Set(topicResult.attempted_question_keys ?? []),
+    attemptedUniqueQuestions: topicResult.attempted_unique_questions ?? 0,
+    progressPercentAttempted: topicResult.progress_percent_attempted ?? 0,
+  });
+  bumpPracticeProgressVersion();
+}
+
+export function getSecretSolvedCount(secretKey: SecretKey): number {
+  ensureBaseCache();
+  return secretCache.get(secretKey)?.attemptedUniqueQuestions ?? 0;
+}
+
+export function getSecretQuestionTotal(secretKey: SecretKey): number {
+  ensureBaseCache();
+  return secretCache.get(secretKey)?.totalQuestions ?? MENTAL_MATH_SECRET_QUESTIONS[secretKey]?.length ?? 0;
+}
+
+export function getAttemptedQuestionIdSet(secretKey?: SecretKey): Set<string> {
+  ensureBaseCache();
+  if (secretKey) {
+    return new Set(secretCache.get(secretKey)?.attemptedQuestionIds ?? []);
   }
-  state.makingWholeSolvedIds.push(questionId);
-  writeRaw(state);
+  const all = new Set<string>();
+  MENTAL_MATH_SECRET_ORDER.forEach((key) => {
+    const ids = secretCache.get(key)?.attemptedQuestionIds ?? new Set<string>();
+    ids.forEach((id) => all.add(id));
+  });
+  return all;
 }
 
-export function addAccumulatedPracticeSeconds(seconds: number) {
-  if (seconds <= 0) {
-    return;
-  }
-  const state = readRaw();
-  state.practiceTimeSeconds += Math.floor(seconds);
-  writeRaw(state);
-}
-
-export function getMakingWholeSolvedCount(): number {
-  return readRaw().makingWholeSolvedIds.length;
-}
-
-export function getPracticeTimeSeconds(): number {
-  return readRaw().practiceTimeSeconds;
-}
-
-export function getSecretSolvedCount(secretKey: (typeof MENTAL_MATH_SECRET_ORDER)[number]): number {
-  const solved = new Set(readRaw().makingWholeSolvedIds);
-  const ids = (MENTAL_MATH_SECRET_QUESTIONS[secretKey] ?? []).map((q) => q.id);
-  return ids.filter((id) => solved.has(id)).length;
-}
-
-export function getSecretQuestionTotal(secretKey: (typeof MENTAL_MATH_SECRET_ORDER)[number]): number {
-  return MENTAL_MATH_SECRET_QUESTIONS[secretKey]?.length ?? 0;
+export function getFirstUnattemptedQuestionIndex(secretKey: SecretKey): number {
+  const attempted = getAttemptedQuestionIdSet(secretKey);
+  const list = MENTAL_MATH_SECRET_QUESTIONS[secretKey] ?? [];
+  const index = list.findIndex((question) => !attempted.has(question.id));
+  return index >= 0 ? index : 0;
 }
 
 export function getMakingWholeProgressPercent(): number {
@@ -136,24 +189,20 @@ export function getMakingWholeProgressPercent(): number {
   if (total <= 0) {
     return 0;
   }
-  return Math.min(100, Math.round((getMakingWholeSolvedCount() / total) * 100));
+  const attempted = MENTAL_MATH_SECRET_ORDER.reduce((acc, key) => acc + getSecretSolvedCount(key), 0);
+  return Math.min(100, Math.round((attempted / total) * 100));
 }
 
-export function getSecretProgressPercent(
-  secretKey: (typeof MENTAL_MATH_SECRET_ORDER)[number]
-): number {
-  const total = getSecretQuestionTotal(secretKey);
-  if (total <= 0) {
-    return 0;
-  }
-  const solved = getSecretSolvedCount(secretKey);
-  return Math.min(100, Math.round((solved / total) * 100));
+export function getSecretProgressPercent(secretKey: SecretKey): number {
+  ensureBaseCache();
+  return secretCache.get(secretKey)?.progressPercentAttempted ?? 0;
 }
 
 export function isLessonFullyCompleteByPractice(lessonKey: string): boolean {
   if (lessonKey === "makingWhole") {
-    const t = getMakingWholeQuestionTotal();
-    return t > 0 && getMakingWholeSolvedCount() >= t;
+    const total = getMakingWholeQuestionTotal();
+    const attempted = MENTAL_MATH_SECRET_ORDER.reduce((acc, key) => acc + getSecretSolvedCount(key), 0);
+    return total > 0 && attempted >= total;
   }
   return false;
 }
@@ -162,5 +211,5 @@ export function getLessonProgressPercentByPractice(lessonKey: string): number {
   if (lessonKey === "makingWhole") {
     return getMakingWholeProgressPercent();
   }
-  return 0;
+  return lessonProgressCache.get(lessonKey) ?? 0;
 }

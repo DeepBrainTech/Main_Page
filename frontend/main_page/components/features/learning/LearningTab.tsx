@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import MentalMathAssessmentPanel from "@/components/features/learning/MentalMathAssessmentPanel";
 import MakingWholeLessonPanel from "@/components/features/learning/MakingWholeLessonPanel";
@@ -11,6 +11,12 @@ import UnlockCourseDialog from "@/components/features/learning/UnlockCourseDialo
 import { useLearningAccess } from "@/hooks/useLearningAccess";
 import CircularProgressRing from "@/components/ui/CircularProgressRing";
 import type { MentalMathSecretKey } from "@/types/learning";
+import {
+  getLessonProgressPercentByPractice,
+  refreshMentalMathLessonProgress,
+  refreshMakingWholeProgress,
+  subscribePracticeProgress,
+} from "@/lib/mentalMathPracticeProgress";
 
 const MONTH_IDS = ["jan", "feb", "mar", "apr", "may", "jun", "jul"] as const;
 
@@ -31,23 +37,15 @@ const UNLOCK_BANNER_INDEX = 2;
 const BADGE_IDS = ["badgeNumberIgniter", "badgeFocusPilot", "badgeLogicExplorer"] as const;
 
 /**
- * Lesson progress shown on cards (demo map until API exists).
- * When access expires, progress is still shown; only entry is blocked — server-side
- * assessment/practice history is never cleared by expiry.
+ * Lesson progress shown on cards.
+ * For now, only makingWhole reads persisted practice progress;
+ * other lessons default to 0 until their backend progress is available.
  */
 function lessonProgressPercent(lessonKey: string): number {
-  const demo: Record<string, number> = {
-    makingWhole: 78,
-    breakIntoParts: 32,
-    rearrange: 15,
-    roundAdjust: 44,
-    leftToRightFlow: 58,
-    friendlyNumbers: 22,
-    compensation: 67,
-    multiplicationPatterns: 41,
-    divisionShortcuts: 89,
-  };
-  return demo[lessonKey] ?? 0;
+  if (lessonKey === "makingWhole") {
+    return getLessonProgressPercentByPractice("makingWhole");
+  }
+  return 0;
 }
 
 const completedMonthCount = 4;
@@ -86,8 +84,15 @@ export default function LearningTab() {
   const [activeLessonKey, setActiveLessonKey] = useState<string | null>(null);
   const [activeSecretKey, setActiveSecretKey] = useState<MentalMathSecretKey | null>(null);
   const [showUnlockCourseDialog, setShowUnlockCourseDialog] = useState(false);
+  const [practiceProgressVersion, setPracticeProgressVersion] = useState(0);
   const learningAccess = useLearningAccess();
   const showUnlockBanner = !learningAccess.bundleUnlocked;
+
+  useEffect(() => subscribePracticeProgress(() => setPracticeProgressVersion((v) => v + 1)), []);
+  useEffect(() => {
+    void refreshMakingWholeProgress();
+    void refreshMentalMathLessonProgress();
+  }, []);
 
   const lessonCards = useMemo(
     () =>
@@ -329,6 +334,7 @@ export default function LearningTab() {
                 {lessonCards.map((card, index) => {
                   const isAlwaysFreeLesson = card.key === "assessment" || card.key === "makingWhole";
                   const isLocked = !learningAccess.bundleUnlocked && !isAlwaysFreeLesson;
+                  void practiceProgressVersion;
                   const progressPercent = lessonProgressPercent(card.key);
                   return (
                   <div key={card.key} className={index === UNLOCK_BANNER_INDEX ? "contents" : ""}>

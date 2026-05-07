@@ -114,18 +114,22 @@ export function useMentalMathPractice(options: UseMentalMathPracticeOptions) {
     setSessionStartAt(null);
   };
 
-  const start = () => {
+  const start = (startIndex = 0) => {
     reset();
     const now = Date.now();
     setSessionStartAt(now);
     setQuestionStartAt(now);
+    if (questions) {
+      const maxIndex = Math.max(0, questions.length - 1);
+      questionCursorRef.current = Math.max(0, Math.min(startIndex, maxIndex));
+    }
     const firstQuestion = getNextQuestion();
     if (!firstQuestion) {
       setPhase("summary");
       return;
     }
     setCurrentQuestion(firstQuestion);
-    setCurrentIndex(1);
+    setCurrentIndex(questions ? Math.max(0, Math.min(startIndex, questions.length - 1)) + 1 : 1);
     setPhase("inProgress");
   };
 
@@ -184,6 +188,27 @@ export function useMentalMathPractice(options: UseMentalMathPracticeOptions) {
     setPhase("summary");
   };
 
+  const jumpToQuestion = (index: number) => {
+    if (!questions || questions.length === 0) {
+      return;
+    }
+    const safeIndex = Math.max(0, Math.min(index, questions.length - 1));
+    questionCursorRef.current = safeIndex + 1;
+    const now = Date.now();
+    setCurrentQuestion(questions[safeIndex] ?? null);
+    setCurrentIndex(safeIndex + 1);
+    setInputAnswer("");
+    setLastSubmittedAnswer(null);
+    setLastCorrectAnswer(null);
+    setLastIsCorrect(false);
+    setLastQuestionDurationSeconds(0);
+    if (!sessionStartAt) {
+      setSessionStartAt(now);
+    }
+    setQuestionStartAt(now);
+    setPhase("inProgress");
+  };
+
   return {
     phase,
     currentIndex,
@@ -209,6 +234,7 @@ export function useMentalMathPractice(options: UseMentalMathPracticeOptions) {
     next,
     continuePractice,
     finishSession,
+    jumpToQuestion,
     reset,
   };
 }

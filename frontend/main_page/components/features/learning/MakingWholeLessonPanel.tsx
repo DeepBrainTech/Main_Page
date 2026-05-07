@@ -7,6 +7,16 @@ import { useMentalMathPractice } from "@/hooks/useMentalMathPractice";
 import CircularProgressRing from "@/components/ui/CircularProgressRing";
 import { fetchMakingWholeQuestionVideo, fetchMakingWholeSecretMedia } from "@/services/userApi";
 import type { MentalMathSecretKey } from "@/types/learning";
+import {
+  getAttemptedQuestionIdSet,
+  getFirstUnattemptedQuestionIndex,
+  refreshMakingWholeProgress,
+  getSecretProgressPercent,
+  getSecretQuestionTotal,
+  getSecretSolvedCount,
+  recordMakingWholeAttempt,
+  subscribePracticeProgress,
+} from "@/lib/mentalMathPracticeProgress";
 
 type MakingWholeLessonPanelProps = {
   selectedSecret: MentalMathSecretKey | null;
@@ -29,7 +39,13 @@ export default function MakingWholeLessonPanel({
   const [isVideoLoading, setIsVideoLoading] = useState(false);
   const [videoError, setVideoError] = useState(false);
   const [isVideoPlaying, setIsVideoPlaying] = useState(false);
+  const [isSecretDialogOpen, setIsSecretDialogOpen] = useState(false);
+  const [practiceProgressVersion, setPracticeProgressVersion] = useState(0);
+  const [selectedStartIndex, setSelectedStartIndex] = useState(0);
+  const [isQuestionMapExpanded, setIsQuestionMapExpanded] = useState(false);
+  const lastRecordedQuestionIdRef = useRef<string | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const questionResultRef = useRef<HTMLDivElement | null>(null);
 
   const currentQuestions = useMemo(
     () => (selectedSecret ? MENTAL_MATH_SECRET_QUESTIONS[selectedSecret] ?? [] : []),
@@ -39,6 +55,50 @@ export default function MakingWholeLessonPanel({
   const practice = useMentalMathPractice({
     questions: currentQuestions,
   });
+  const selectedMapIndex =
+    practice.phase === "ready"
+      ? selectedStartIndex
+      : Math.max(0, Math.min(currentQuestions.length - 1, practice.currentIndex - 1));
+  const attemptedQuestionIds = useMemo(() => {
+    void practiceProgressVersion;
+    return selectedSecret ? getAttemptedQuestionIdSet(selectedSecret) : new Set<string>();
+  }, [practiceProgressVersion, selectedSecret]);
+
+  useEffect(() => subscribePracticeProgress(() => setPracticeProgressVersion((v) => v + 1)), []);
+  useEffect(() => {
+    void refreshMakingWholeProgress();
+  }, []);
+
+  useEffect(() => {
+    if (practice.phase !== "questionResult") {
+      return;
+    }
+    if (!selectedSecret) {
+      return;
+    }
+    const questionId = practice.currentQuestion?.id;
+    if (!questionId || lastRecordedQuestionIdRef.current === questionId) {
+      return;
+    }
+    void recordMakingWholeAttempt(
+      questionId,
+      selectedSecret,
+      practice.lastIsCorrect
+    );
+    lastRecordedQuestionIdRef.current = questionId;
+  }, [practice.currentQuestion, practice.lastIsCorrect, practice.phase, selectedSecret]);
+
+  useEffect(() => {
+    if (practice.phase !== "questionResult") {
+      return;
+    }
+    requestAnimationFrame(() => {
+      questionResultRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "nearest",
+      });
+    });
+  }, [practice.phase, practice.currentIndex]);
 
   useEffect(() => {
     if (!selectedSecret) {
@@ -52,6 +112,10 @@ export default function MakingWholeLessonPanel({
       setIsVideoLoading(false);
       setVideoError(false);
       setIsVideoPlaying(false);
+      setIsSecretDialogOpen(false);
+      setSelectedStartIndex(0);
+      setIsQuestionMapExpanded(false);
+      lastRecordedQuestionIdRef.current = null;
       return;
     }
     practice.reset();
@@ -64,6 +128,10 @@ export default function MakingWholeLessonPanel({
     setIsVideoLoading(false);
     setVideoError(false);
     setIsVideoPlaying(false);
+    setIsSecretDialogOpen(false);
+    setSelectedStartIndex(getFirstUnattemptedQuestionIndex(selectedSecret));
+    setIsQuestionMapExpanded(false);
+    lastRecordedQuestionIdRef.current = null;
     // Reset only when the selected secret changes. Depending on the whole
     // practice object causes an effect loop because hook methods are recreated.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -132,11 +200,10 @@ export default function MakingWholeLessonPanel({
     return (
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
         {MENTAL_MATH_SECRET_ORDER.map((secretKey, secretIndex) => {
-          const totalSecrets = MENTAL_MATH_SECRET_ORDER.length;
-          const progressPercent = Math.min(
-            100,
-            Math.round(((secretIndex + 1) / totalSecrets) * 100)
-          );
+          void practiceProgressVersion;
+          const progressPercent = getSecretProgressPercent(secretKey);
+          const solvedCount = getSecretSolvedCount(secretKey);
+          const totalCount = getSecretQuestionTotal(secretKey);
           return (
           <article
             key={secretKey}
@@ -165,7 +232,7 @@ export default function MakingWholeLessonPanel({
               <div className="flex min-w-0 items-center gap-2">
                 <CircularProgressRing value={progressPercent} size={28} />
                 <p className="text-base font-semibold text-[#333]">
-                  {tLearn("home.progressPercent", { value: progressPercent })}
+                 {tLearn("home.progressPercent", { value: progressPercent })}
                 </p>
               </div>
               <button
@@ -218,6 +285,83 @@ export default function MakingWholeLessonPanel({
 
       {viewMode === "practice" ? (
         <section className="rounded-[24px] border border-white/70 bg-white/85 p-5 shadow-[0px_10px_15px_0px_rgba(0,0,0,0.1)]">
+        <div className="mb-4 rounded-[16px] bg-[#EDF4FC] px-4 py-3">
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-sm font-semibold text-[#045E96]">
+              {tLearn(`makingWholeSecrets.${selectedSecret}` as "makingWholeSecrets.secret1")}
+            </p>
+            <p className="text-sm font-semibold text-[#045E96]">
+              {getSecretSolvedCount(selectedSecret)}/{getSecretQuestionTotal(selectedSecret)}
+            </p>
+          </div>
+          <div className="mt-2 h-2 overflow-hidden rounded-full bg-white">
+            <div
+              className="h-full rounded-full bg-[#045E96]"
+              style={{ width: `${getSecretProgressPercent(selectedSecret)}%` }}
+            />
+          </div>
+          <p className="mt-2 text-xs text-[#106FAA]">
+            {tLearn("home.progressPercent", { value: getSecretProgressPercent(selectedSecret) })}
+          </p>
+          {practice.phase === "ready" || practice.phase === "inProgress" || practice.phase === "questionResult" ? (
+            <div className="mt-3">
+              <button
+                type="button"
+                onClick={() => setIsQuestionMapExpanded((open) => !open)}
+                className="rounded-full bg-white px-4 py-1.5 text-sm font-semibold text-[#045E96]"
+              >
+                {isQuestionMapExpanded ? tPractice("collapseQuestionMap") : tPractice("expandQuestionMap")}
+              </button>
+              {isQuestionMapExpanded ? (
+                <div className="mt-3 rounded-[14px] bg-white p-3">
+                  <p className="mb-3 text-sm font-semibold text-[#106FAA]">{tPractice("questionMapTitle")}</p>
+                  <div className="grid grid-cols-5 gap-2 md:grid-cols-10">
+                    {currentQuestions.map((question, index) => {
+                      const isAttempted = attemptedQuestionIds.has(question.id);
+                      const isSelected = selectedMapIndex === index;
+                      return (
+                        <button
+                          key={question.id}
+                          type="button"
+                          onClick={() => {
+                            if (practice.phase === "ready") {
+                              setSelectedStartIndex(index);
+                              return;
+                            }
+                            practice.jumpToQuestion(index);
+                          }}
+                          className={`rounded-lg border px-2 py-1.5 text-sm font-semibold transition ${
+                            isSelected
+                              ? "border-[#045E96] bg-[#045E96] text-white"
+                              : isAttempted
+                                ? "border-[#BDE7CC] bg-[#E8F8EE] text-[#1A7F46]"
+                                : "border-[#CFE1EE] bg-white text-[#045E96]"
+                          }`}
+                          title={
+                            isAttempted
+                              ? tPractice("questionMapAttempted", { index: index + 1 })
+                              : tPractice("questionMapUnattempted", { index: index + 1 })
+                          }
+                        >
+                          {index + 1}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
+        <div className="mb-4 flex justify-end">
+          <button
+            type="button"
+            onClick={() => setIsSecretDialogOpen(true)}
+            className="rounded-full bg-[#EDF4FC] px-4 py-1.5 text-sm font-semibold text-[#045E96]"
+          >
+            {tPractice("showCurrentSecret")}
+          </button>
+        </div>
         {practice.phase === "ready" ? (
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
@@ -239,12 +383,9 @@ export default function MakingWholeLessonPanel({
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-3">
-              <span className="rounded-full bg-[#EDF4FC] px-4 py-1.5 text-sm text-[#106FAA]">
-                {tPractice("totalQuestions", { total: currentQuestions.length })}
-              </span>
               <button
                 type="button"
-                onClick={practice.start}
+                onClick={() => practice.start(selectedStartIndex)}
                 className="rounded-full bg-[#045E96] px-6 py-2 text-base font-semibold text-white"
               >
                 {tPractice("startPractice")}
@@ -318,7 +459,7 @@ export default function MakingWholeLessonPanel({
             ) : null}
 
             {practice.phase === "questionResult" ? (
-              <div className="space-y-4">
+              <div ref={questionResultRef} className="space-y-4">
                 <div
                   className={`rounded-[20px] p-5 ${
                     practice.lastIsCorrect ? "bg-[#E8F8EE] text-[#1A7F46]" : "bg-[#FFF1F0] text-[#C93C32]"
@@ -505,6 +646,45 @@ export default function MakingWholeLessonPanel({
                     />
                   </button>
                 ) : null}
+              </div>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
+      {isSecretDialogOpen ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-label={tPractice("currentSecretTitle")}
+          onClick={() => setIsSecretDialogOpen(false)}
+        >
+          <div
+            className="w-full max-w-4xl rounded-[24px] bg-white p-5 shadow-2xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="mb-4 flex items-center justify-between gap-4">
+              <h4 className="text-xl font-semibold text-[#045E96]">{tPractice("currentSecretTitle")}</h4>
+              <button
+                type="button"
+                onClick={() => setIsSecretDialogOpen(false)}
+                className="rounded-full bg-[#EDF4FC] px-4 py-2 text-sm font-semibold text-[#045E96]"
+              >
+                {tPractice("closeCurrentSecret")}
+              </button>
+            </div>
+            {isMediaLoading ? <p className="text-sm text-[#045E96]">{tMedia("loading")}</p> : null}
+            {mediaError ? <p className="text-sm text-[#D14343]">{tMedia("loadFailed")}</p> : null}
+            {!isMediaLoading && !mediaError && mediaUrls.length > 0 ? (
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                {mediaUrls.map((url) => (
+                  <img
+                    key={url}
+                    src={url}
+                    alt={tLearn(`makingWholeSecrets.${selectedSecret}` as "makingWholeSecrets.secret1")}
+                    className="h-auto w-full rounded-[18px] border border-[#D8E8F4] bg-[#F7FBFF] object-cover"
+                  />
+                ))}
               </div>
             ) : null}
           </div>

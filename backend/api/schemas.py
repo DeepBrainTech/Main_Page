@@ -230,6 +230,15 @@ class AssessmentSessionCreate(BaseModel):
     answers: List[AssessmentAnswerIn] = []
 
 
+class LearningQuestionAttemptCreate(BaseModel):
+    subject_key: str = Field(..., min_length=1, max_length=64)
+    module_key: str = Field(..., min_length=1, max_length=64)
+    topic_key: str = Field(..., min_length=1, max_length=64)
+    question_key: str = Field(..., min_length=1, max_length=128)
+    total_questions: int = Field(0, ge=0)
+    is_correct: bool = False
+
+
 # ========== API 响应 ==========
 class APIResponse(BaseModel):
     """通用 API 响应"""

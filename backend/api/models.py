@@ -285,3 +285,61 @@ class UserAssessmentAnswer(Base):
     is_timeout = Column(Boolean, default=False, nullable=False)
     time_spent_ms = Column(Integer, default=0, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class UserLearningTopicProgress(Base):
+    """Per-user learning progress aggregate in a topic scope."""
+    __tablename__ = "user_learning_topic_progresses"
+    __table_args__ = (
+        UniqueConstraint(
+            "user_id",
+            "subject_key",
+            "module_key",
+            "topic_key",
+            name="uq_user_learning_topic_progress_scope",
+        ),
+    )
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    subject_key = Column(String(64), nullable=False, index=True)
+    module_key = Column(String(64), nullable=False, index=True)
+    topic_key = Column(String(64), nullable=False, index=True)
+    total_questions = Column(Integer, default=0, nullable=False)
+    attempted_unique_questions = Column(Integer, default=0, nullable=False)
+    correct_unique_questions = Column(Integer, default=0, nullable=False)
+    progress_percent_attempted = Column(Integer, default=0, nullable=False)
+    progress_percent_correct = Column(Integer, default=0, nullable=False)
+    last_attempted_question_key = Column(String(128), nullable=True)
+    last_attempted_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class UserLearningQuestionProgress(Base):
+    """Per-user per-question progress in learning scopes."""
+    __tablename__ = "user_learning_question_progresses"
+    __table_args__ = (
+        UniqueConstraint(
+            "user_id",
+            "subject_key",
+            "module_key",
+            "topic_key",
+            "question_key",
+            name="uq_user_learning_question_progress_unique",
+        ),
+    )
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    subject_key = Column(String(64), nullable=False, index=True)
+    module_key = Column(String(64), nullable=False, index=True)
+    topic_key = Column(String(64), nullable=False, index=True)
+    question_key = Column(String(128), nullable=False, index=True)
+    attempt_count = Column(Integer, default=1, nullable=False)
+    is_correct_latest = Column(Boolean, default=False, nullable=False)
+    is_correct_ever = Column(Boolean, default=False, nullable=False)
+    first_attempted_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    last_attempted_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
