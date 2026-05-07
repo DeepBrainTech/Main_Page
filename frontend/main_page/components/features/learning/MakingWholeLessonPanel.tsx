@@ -549,7 +549,7 @@ export default function MakingWholeLessonPanel({
             <div className="flex flex-wrap gap-3">
               <button
                 type="button"
-                onClick={practice.start}
+                onClick={() => practice.start()}
                 className="rounded-full bg-[#045E96] px-6 py-2 text-base font-semibold text-white"
               >
                 {tPractice("retry")}
