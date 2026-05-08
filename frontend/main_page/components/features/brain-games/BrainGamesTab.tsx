@@ -482,7 +482,7 @@ export default function BrainGamesTab({ onLaunch }: BrainGamesTabProps) {
               <div className="relative w-full">
                 {/* 贴图层：absolute；负 top 只够叠在卡片圆角附近，不把实体插画伸到标题行 */}
                 <div
-                  className={`pointer-events-none absolute right-2 z-30 ml-auto flex w-[85%] items-end justify-end drop-shadow-[0_6px_14px_rgba(0,0,0,0.18)] sm:w-[129px] ${
+                  className={`pointer-events-none absolute right-2 z-20 ml-auto flex w-[85%] items-end justify-end drop-shadow-[0_6px_14px_rgba(0,0,0,0.18)] sm:w-[129px] ${
                     dimKey === "spatial"
                       ? "-top-[4.25rem] h-[138px] max-w-[140px]"
                       : "-top-[2.875rem] h-[124px] max-w-[129px]"

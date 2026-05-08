@@ -89,7 +89,7 @@ export default function AppShell({
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-100 via-slate-100 to-slate-200 pb-8 text-slate-800">
-      <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 shadow-sm backdrop-blur">
+      <header className="sticky top-0 z-50 border-b border-slate-200 bg-white/95 shadow-sm backdrop-blur">
         <div className="flex min-h-16 items-center justify-between gap-2 px-4 py-3 sm:min-h-[4.75rem] sm:gap-3 sm:px-6 sm:py-3.5 lg:min-h-24 lg:px-8 lg:py-4">
           <div className="flex min-w-0 items-center">
             <Image
