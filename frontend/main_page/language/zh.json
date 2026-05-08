@@ -676,7 +676,7 @@
       "unlockDialog": {
         "title": "选择解锁方式",
         "close": "关闭",
-        "diamondPrice": "{count} 钻石",
+        "diamondPrice": "{count}",
         "threeMonthBadge": "限时访问",
         "threeMonthTitle": "3 个月畅学",
         "threeMonthDescription": "使用钻石为本课程解锁 3 个月使用权",

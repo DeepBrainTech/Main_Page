@@ -676,7 +676,7 @@
       "unlockDialog": {
         "title": "Choose Unlock Option",
         "close": "Close",
-        "diamondPrice": "{count} diamonds",
+        "diamondPrice": "{count}",
         "threeMonthBadge": "Limited Access",
         "threeMonthTitle": "3-Month Access",
         "threeMonthDescription": "Unlock this course for 3 months using diamonds",

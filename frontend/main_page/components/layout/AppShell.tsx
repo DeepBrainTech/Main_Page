@@ -159,7 +159,7 @@ export default function AppShell({
             <button
               type="button"
               onClick={() => setProfileOpen(true)}
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-base text-sky-700 hover:bg-indigo-100 sm:h-10 sm:w-10 sm:text-lg md:h-11 md:w-11"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-xl text-sky-700 hover:bg-indigo-100 sm:h-10 sm:w-10 sm:text-2xl md:h-11 md:w-11"
               aria-label={tNav("profile")}
             >
               {"\u2699"}
@@ -173,9 +173,9 @@ export default function AppShell({
               <Image
                 src={`/membership/${membershipPlan}.png`}
                 alt=""
-                width={196}
-                height={60}
-                className="h-5 w-auto object-contain sm:h-3 md:h-5"
+                width={150}
+                height={50}
+                className="h-4 w-auto object-contain sm:h-2 md:h-4"
               />
             </Link>
 
