@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { notifyLearningAccessChanged } from "@/lib/learningUnlock";
 import { notifyRewardsUpdated } from "@/lib/reward-events";
@@ -13,6 +13,7 @@ import {
 import { unlockMentalMathWithDiamonds } from "@/services/userApi";
 
 type UnlockPlanId = "threeMonth" | "lifetime" | "premium";
+type SelectedUnlockPlan = UnlockPlanId | null;
 
 type UnlockCourseDialogProps = {
   open: boolean;
@@ -23,9 +24,16 @@ export default function UnlockCourseDialog({ open, onClose }: UnlockCourseDialog
   const t = useTranslations("learning.home.unlockDialog");
   const router = useRouter();
   const locale = useLocale();
-  const [selectedPlan, setSelectedPlan] = useState<UnlockPlanId>("lifetime");
+  const [selectedPlan, setSelectedPlan] = useState<SelectedUnlockPlan>(null);
   const [confirmLoading, setConfirmLoading] = useState(false);
   const [confirmError, setConfirmError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (open) return;
+    setSelectedPlan(null);
+    setConfirmError(null);
+    setConfirmLoading(false);
+  }, [open]);
 
   if (!open) {
     return null;
@@ -37,6 +45,7 @@ export default function UnlockCourseDialog({ open, onClose }: UnlockCourseDialog
   };
 
   const handleConfirmDiamonds = async () => {
+    if (selectedPlan !== "threeMonth" && selectedPlan !== "lifetime") return;
     setConfirmError(null);
     setConfirmLoading(true);
     try {
