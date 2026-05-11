@@ -7,7 +7,6 @@ from jose import JWTError, jwt
 from passlib.context import CryptContext
 from sqlalchemy.orm import Session
 from fastapi import Depends, HTTPException, Request, Response, status
-from fastapi.security import OAuth2PasswordBearer
 import os
 from dotenv import load_dotenv
 
@@ -100,9 +99,6 @@ TOURMASTER_TOKEN_EXPIRE_SECONDS = int(os.getenv("TOURMASTER_TOKEN_EXPIRE_SECONDS
 
 # 密码加密
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
-# OAuth2 令牌 URL（auto_error=False 让我们能优雅地回退到 Cookie）
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/auth/login", auto_error=False)
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
@@ -231,21 +227,21 @@ def authenticate_user(db: Session, username_or_email: str, password: str) -> Opt
 
 async def get_current_user(
     request: Request,
-    token: Optional[str] = Depends(oauth2_scheme),
     db: Session = Depends(get_db),
 ) -> User:
-    """Resolve the current user from either Authorization Bearer or the cross-subdomain cookie.
+    """Resolve the current user from the cross-subdomain HttpOnly cookie.
 
-    Cookie path is preferred so sub-games can authenticate against the portal API
-    without ever seeing the raw token.
+    Cookie-only: the main portal and every sub-game on *.deepbraintechnology.com
+    authenticate by sending the cookie with `credentials: "include"`. The legacy
+    Authorization: Bearer fallback was removed so we surface client bugs loudly
+    instead of silently masking them during the cookie migration.
     """
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="AUTH_INVALID_TOKEN",
-        headers={"WWW-Authenticate": "Bearer"},
     )
 
-    raw_token = token or request.cookies.get(ACCESS_TOKEN_COOKIE_NAME)
+    raw_token = request.cookies.get(ACCESS_TOKEN_COOKIE_NAME)
     if not raw_token:
         raise credentials_exception
 

@@ -302,10 +302,10 @@ export default function RegisterPage() {
         return;
       }
 
-      // Cookie was set by the response; we only branch on whether the API auto-logged us in.
-      const result = await response.json();
+      // Cookie was set by the response; branch on the auto_login signal.
+      const result = await response.json().catch(() => null);
 
-      if (result?.data?.access_token) {
+      if (result?.data?.auto_login) {
         router.push(`/${locale}/dashboard`);
       } else {
         router.push(`/${locale}/login?registered=true`);

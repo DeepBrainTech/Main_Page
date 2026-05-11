@@ -39,7 +39,11 @@ class UserLogin(BaseModel):
 
 
 class UserResponse(UserBase):
-    """用户响应模型"""
+    """用户响应模型
+
+    Auth is carried by the cross-subdomain HttpOnly cookie set on /api/auth/*;
+    no token fields are exposed in the body.
+    """
     id: int
     is_active: bool
     is_superuser: bool
@@ -48,9 +52,6 @@ class UserResponse(UserBase):
     country: Optional[str] = None
     avatar_url: Optional[str] = None
     age: Optional[int] = None  # 由 date_of_birth 计算，序列化时由路由填充
-    access_token: Optional[str] = None  # 可选：用户名变更后返回新的访问令牌
-    token_type: Optional[str] = None
-    expires_in: Optional[int] = None  # 秒数，可选
     membership_plan: str = "free"
     membership_expires_at: Optional[datetime] = None
 
@@ -74,16 +75,8 @@ class CompleteProfileBody(BaseModel):
 
 
 # ========== 认证相关 ==========
-class Token(BaseModel):
-    """Token 响应模型"""
-    access_token: str
-    token_type: str = "bearer"
-    expires_in: int  # 秒数
-
-
-class TokenData(BaseModel):
-    """Token 数据"""
-    username: Optional[str] = None
+# Token / TokenData schemas removed: auth is cookie-only now and the body
+# never carries the access token.
 
 
 class GoogleTokenRequest(BaseModel):

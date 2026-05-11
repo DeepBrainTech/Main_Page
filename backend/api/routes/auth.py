@@ -14,7 +14,6 @@ from models import User
 from schemas import (
     UserCreate,
     UserResponse,
-    Token,
     APIResponse,
     SendVerificationCode,
     ResetPassword,
@@ -137,11 +136,11 @@ async def register(user_data: UserCreate, response: Response, db: Session = Depe
     db.commit()
     db.refresh(new_user)
     
-    # 注册成功后签发 token，免去再次登录
+    # 注册成功后签发 token 并写入 HttpOnly Cookie，免去再次登录
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
         data={"sub": new_user.username},
-        expires_delta=access_token_expires
+        expires_delta=access_token_expires,
     )
     set_access_token_cookie(response, access_token)
 
@@ -151,46 +150,43 @@ async def register(user_data: UserCreate, response: Response, db: Session = Depe
         data={
             "user_id": new_user.id,
             "username": new_user.username,
-            "access_token": access_token,
-            "token_type": "bearer",
-            "expires_in": ACCESS_TOKEN_EXPIRE_MINUTES * 60
-        }
+            "auto_login": True,
+        },
     )
 
 
-@router.post("/login", response_model=Token)
+@router.post("/login", response_model=APIResponse)
 async def login(
     response: Response,
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: Session = Depends(get_db),
 ):
-    """用户登录。"""
+    """用户登录，凭据通过 HttpOnly Cookie 下发；响应体不再回传令牌。"""
     user = authenticate_user(db, form_data.username, form_data.password)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="AUTH_INVALID_CREDENTIALS",
-            headers={"WWW-Authenticate": "Bearer"},
         )
 
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
         data={"sub": user.username},
-        expires_delta=access_token_expires
+        expires_delta=access_token_expires,
     )
     set_access_token_cookie(response, access_token)
 
-    return Token(
-        access_token=access_token,
-        token_type="bearer",
-        expires_in=ACCESS_TOKEN_EXPIRE_MINUTES * 60
+    return APIResponse(
+        success=True,
+        message="AUTH_LOGIN_SUCCESS",
+        data={"username": user.username, "user_id": user.id},
     )
 
 
-@router.post("/google", response_model=Token)
+@router.post("/google", response_model=APIResponse)
 async def google_login(request: GoogleTokenRequest, response: Response, db: Session = Depends(get_db)):
     """
-    使用 Google ID Token 登录。
+    使用 Google ID Token 登录，凭据通过 HttpOnly Cookie 下发。
     如果 Google 账号邮箱已存在，则绑定该账号（仅首次 Google 登录）。
     若用户不存在（邮箱也不存在），则自动创建带 google_id 的新用户。
     """
@@ -199,7 +195,6 @@ async def google_login(request: GoogleTokenRequest, response: Response, db: Sess
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="AUTH_GOOGLE_TOKEN_INVALID",
-            headers={"WWW-Authenticate": "Bearer"},
         )
 
     google_id = payload.get("sub")
@@ -275,20 +270,19 @@ async def google_login(request: GoogleTokenRequest, response: Response, db: Sess
         expires_delta=access_token_expires,
     )
     set_access_token_cookie(response, access_token)
-    return Token(
-        access_token=access_token,
-        token_type="bearer",
-        expires_in=ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+    return APIResponse(
+        success=True,
+        message="AUTH_LOGIN_SUCCESS",
+        data={"username": user.username, "user_id": user.id},
     )
 
 
-def _user_to_response(
-    user: User,
-    access_token=None,
-    token_type=None,
-    expires_in=None,
-) -> UserResponse:
-    """将 User 转为 UserResponse，并计算 age，可选携带新的访问令牌"""
+def _user_to_response(user: User) -> UserResponse:
+    """将 User 转为 UserResponse，并计算 age。
+
+    Auth is delivered via HttpOnly cookie; this response no longer carries any
+    token-related fields.
+    """
     return UserResponse(
         id=user.id,
         username=user.username,
@@ -300,9 +294,6 @@ def _user_to_response(
         country=user.country,
         avatar_url=_build_avatar_url(user),
         age=compute_age(user.date_of_birth),
-        access_token=access_token,
-        token_type=token_type,
-        expires_in=expires_in,
         membership_plan=getattr(user, "membership_plan", None) or "free",
         membership_expires_at=getattr(user, "membership_expires_at", None),
     )
@@ -346,7 +337,8 @@ async def update_current_user_profile(
     db.commit()
     db.refresh(current_user)
 
-    # 如果用户名被修改，使用新用户名签发新的访问 token，避免旧 token 中的 sub 不一致导致 401
+    # 如果用户名被修改，使用新用户名签发新的访问 token 并刷新 Cookie，
+    # 避免旧 token 中的 sub 不一致导致后续请求 401
     if body.username is not None and body.username != original_username:
         access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
         access_token = create_access_token(
@@ -354,12 +346,6 @@ async def update_current_user_profile(
             expires_delta=access_token_expires,
         )
         set_access_token_cookie(response, access_token)
-        return _user_to_response(
-            current_user,
-            access_token=access_token,
-            token_type="bearer",
-            expires_in=ACCESS_TOKEN_EXPIRE_MINUTES * 60,
-        )
 
     return _user_to_response(current_user)
 
