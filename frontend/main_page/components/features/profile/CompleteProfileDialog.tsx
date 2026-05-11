@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useTranslations } from "next-intl";
-import { getApiUrl } from "@/lib/api-config";
+import { apiFetch } from "@/lib/api-config";
 
 interface CompleteProfileDialogProps {
   open: boolean;
@@ -54,16 +54,10 @@ export default function CompleteProfileDialog({
     }
     setLoading(true);
     try {
-      const token = localStorage.getItem("access_token");
-      if (!token) {
-        setError("Token 无效");
-        return;
-      }
-      const res = await fetch(getApiUrl("/api/auth/me"), {
+      const res = await apiFetch("/api/auth/me", {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           username: username.trim(),

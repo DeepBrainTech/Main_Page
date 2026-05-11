@@ -4,7 +4,7 @@
 from uuid import uuid4
 from typing import Optional
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from datetime import timedelta
@@ -27,7 +27,9 @@ from auth import (
     create_access_token,
     get_password_hash,
     ACCESS_TOKEN_EXPIRE_MINUTES,
-    get_current_active_user
+    get_current_active_user,
+    set_access_token_cookie,
+    clear_access_token_cookie,
 )
 from utils.email_service import email_service
 from utils.verification_service import verification_service
@@ -95,7 +97,7 @@ async def send_verification_code(request: SendVerificationCode):
 
 
 @router.post("/register", response_model=APIResponse, status_code=status.HTTP_201_CREATED)
-async def register(user_data: UserCreate, db: Session = Depends(get_db)):
+async def register(user_data: UserCreate, response: Response, db: Session = Depends(get_db)):
     """用户注册"""
     # 验证验证码
     if not verification_service.verify_code(user_data.email, user_data.verification_code):
@@ -141,7 +143,8 @@ async def register(user_data: UserCreate, db: Session = Depends(get_db)):
         data={"sub": new_user.username},
         expires_delta=access_token_expires
     )
-    
+    set_access_token_cookie(response, access_token)
+
     return APIResponse(
         success=True,
         message="AUTH_REGISTER_SUCCESS",
@@ -157,8 +160,9 @@ async def register(user_data: UserCreate, db: Session = Depends(get_db)):
 
 @router.post("/login", response_model=Token)
 async def login(
+    response: Response,
     form_data: OAuth2PasswordRequestForm = Depends(),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """用户登录。"""
     user = authenticate_user(db, form_data.username, form_data.password)
@@ -168,13 +172,14 @@ async def login(
             detail="AUTH_INVALID_CREDENTIALS",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    
+
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
         data={"sub": user.username},
         expires_delta=access_token_expires
     )
-    
+    set_access_token_cookie(response, access_token)
+
     return Token(
         access_token=access_token,
         token_type="bearer",
@@ -183,7 +188,7 @@ async def login(
 
 
 @router.post("/google", response_model=Token)
-async def google_login(request: GoogleTokenRequest, db: Session = Depends(get_db)):
+async def google_login(request: GoogleTokenRequest, response: Response, db: Session = Depends(get_db)):
     """
     使用 Google ID Token 登录。
     如果 Google 账号邮箱已存在，则绑定该账号（仅首次 Google 登录）。
@@ -269,6 +274,7 @@ async def google_login(request: GoogleTokenRequest, db: Session = Depends(get_db
         data={"sub": user.username},
         expires_delta=access_token_expires,
     )
+    set_access_token_cookie(response, access_token)
     return Token(
         access_token=access_token,
         token_type="bearer",
@@ -313,6 +319,7 @@ async def get_current_user_info(
 @router.patch("/me", response_model=UserResponse)
 async def update_current_user_profile(
     body: CompleteProfileBody,
+    response: Response,
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db),
 ):
@@ -346,6 +353,7 @@ async def update_current_user_profile(
             data={"sub": current_user.username},
             expires_delta=access_token_expires,
         )
+        set_access_token_cookie(response, access_token)
         return _user_to_response(
             current_user,
             access_token=access_token,
@@ -415,6 +423,17 @@ async def verify_token(current_user: User = Depends(get_current_active_user)):
         message="AUTH_TOKEN_VALID",
         data={"username": current_user.username, "user_id": current_user.id}
     )
+
+
+@router.post("/logout", response_model=APIResponse)
+async def logout(response: Response):
+    """Clear the cross-subdomain HttpOnly cookie.
+
+    Idempotent: callable even when the caller is already unauthenticated,
+    so it's safe to invoke from any UI without a prior auth check.
+    """
+    clear_access_token_cookie(response)
+    return APIResponse(success=True, message="AUTH_LOGOUT_SUCCESS", data=None)
 
 
 @router.post("/send-reset-password-code", response_model=APIResponse)

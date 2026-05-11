@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, type ChangeEvent } from "react";
 import { useRouter, usePathname, useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { getApiUrl } from "@/lib/api-config";
+import { apiFetch } from "@/lib/api-config";
 import { getCountryLabel } from "@/constants/countries";
 import CountrySelect from "@/components/ui/CountrySelect";
 
@@ -117,16 +117,10 @@ export default function ProfileDialog({
 
     setUploadingAvatar(true);
     try {
-      const token = localStorage.getItem("access_token");
-      if (!token) {
-        setError(tProfile("avatarUploadFailed"));
-        return;
-      }
       const formData = new FormData();
       formData.append("file", file);
-      const res = await fetch(getApiUrl("/api/auth/avatar"), {
+      const res = await apiFetch("/api/auth/avatar", {
         method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
         body: formData,
       });
       if (!res.ok) {
@@ -165,14 +159,9 @@ export default function ProfileDialog({
     setError("");
     setSaving(true);
     try {
-      const token = localStorage.getItem("access_token");
-      if (!token) {
-        setError(tProfile("usernameUpdateFailed"));
-        return;
-      }
-      const res = await fetch(getApiUrl("/api/auth/me"), {
+      const res = await apiFetch("/api/auth/me", {
         method: "PATCH",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username: val }),
       });
       if (!res.ok) {
@@ -181,11 +170,8 @@ export default function ProfileDialog({
         setError(code.match(/^[A-Z_]+$/) ? String(tAuth(code)) : (data.detail || tProfile("usernameUpdateFailed")));
         return;
       }
-      const data = await res.json();
-      if (data.access_token) {
-        localStorage.setItem("access_token", data.access_token);
-        localStorage.setItem("token_expires_in", String(data.expires_in ?? 0));
-      }
+      // Cookie auto-rotated on the server when username changes; nothing to persist locally.
+      await res.json().catch(() => null);
       setSuccessMessage(tProfile("usernameUpdated"));
       setEditingUsername(false);
       onProfileUpdate?.();
@@ -209,14 +195,9 @@ export default function ProfileDialog({
     setError("");
     setSaving(true);
     try {
-      const token = localStorage.getItem("access_token");
-      if (!token) {
-        setError(tProfile("dateOfBirthUpdateFailed"));
-        return;
-      }
-      const res = await fetch(getApiUrl("/api/auth/me"), {
+      const res = await apiFetch("/api/auth/me", {
         method: "PATCH",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ date_of_birth: val }),
       });
       if (!res.ok) {
@@ -224,11 +205,7 @@ export default function ProfileDialog({
         setError(data.detail || tProfile("dateOfBirthUpdateFailed"));
         return;
       }
-      const data = await res.json();
-      if (data.access_token) {
-        localStorage.setItem("access_token", data.access_token);
-        localStorage.setItem("token_expires_in", String(data.expires_in ?? 0));
-      }
+      await res.json().catch(() => null);
       setSuccessMessage(tProfile("dateOfBirthUpdated"));
       setEditingDateOfBirth(false);
       onProfileUpdate?.();
@@ -248,14 +225,9 @@ export default function ProfileDialog({
     setError("");
     setSaving(true);
     try {
-      const token = localStorage.getItem("access_token");
-      if (!token) {
-        setError(tProfile("countryUpdateFailed"));
-        return;
-      }
-      const res = await fetch(getApiUrl("/api/auth/me"), {
+      const res = await apiFetch("/api/auth/me", {
         method: "PATCH",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ country: val || null }),
       });
       if (!res.ok) {
@@ -263,11 +235,7 @@ export default function ProfileDialog({
         setError(data.detail || tProfile("countryUpdateFailed"));
         return;
       }
-      const data = await res.json();
-      if (data.access_token) {
-        localStorage.setItem("access_token", data.access_token);
-        localStorage.setItem("token_expires_in", String(data.expires_in ?? 0));
-      }
+      await res.json().catch(() => null);
       setSuccessMessage(tProfile("countryUpdated"));
       setEditingCountry(false);
       onProfileUpdate?.();

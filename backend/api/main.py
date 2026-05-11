@@ -23,11 +23,14 @@ cors_origins_str = os.getenv(
     "CORS_ORIGINS",
     "http://localhost:3000,http://127.0.0.1:3000"
 )
-cors_regex = os.getenv("CORS_ORIGIN_REGEX", "")
-# 清理并分割 origins
+# Regex covers every game subdomain so they can send the shared HttpOnly cookie
+# to the portal API. Override via CORS_ORIGIN_REGEX in production if needed.
+cors_regex = os.getenv(
+    "CORS_ORIGIN_REGEX",
+    r"^https://([a-z0-9-]+\.)*deepbraintechnology\.com$",
+)
 cors_origins = [origin.strip() for origin in cors_origins_str.split(",") if origin.strip()]
 
-# 添加更多开发环境常见的前端地址
 if "http://localhost:3000" not in cors_origins:
     cors_origins.append("http://localhost:3000")
 if "http://127.0.0.1:3000" not in cors_origins:

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { getApiUrl } from "@/lib/api-config";
+import { apiFetch } from "@/lib/api-config";
 import { defaultLocale } from "@/i18n-config";
 
 /** 当前用户信息（来自 GET /api/auth/me） */
@@ -16,7 +16,7 @@ export interface AuthUserInfo {
 
 /**
  * 认证相关的 Hook
- * 负责 token 验证和用户信息获取（含 email）
+ * 负责通过 HttpOnly cookie 校验登录态并拉取用户信息
  */
 export function useAuth() {
   const router = useRouter();
@@ -35,14 +35,7 @@ export function useAuth() {
   const [needsProfileCompletion, setNeedsProfileCompletion] = useState(false);
 
   const fetchUser = () => {
-    const token = localStorage.getItem("access_token");
-    if (!token) {
-      router.push(landingPath);
-      return;
-    }
-    return fetch(getApiUrl("/api/auth/me"), {
-      headers: { Authorization: `Bearer ${token}` },
-    })
+    return apiFetch("/api/auth/me")
       .then((res) => {
         if (res.ok) return res.json();
         throw new Error("Token 无效");
@@ -61,8 +54,6 @@ export function useAuth() {
         setLoading(false);
       })
       .catch(() => {
-        localStorage.removeItem("access_token");
-        localStorage.removeItem("token_expires_in");
         router.push(landingPath);
       });
   };
@@ -71,9 +62,12 @@ export function useAuth() {
     fetchUser();
   }, [locale, router]);
 
-  const logout = () => {
-    localStorage.removeItem("access_token");
-    localStorage.removeItem("token_expires_in");
+  const logout = async () => {
+    try {
+      await apiFetch("/api/auth/logout", { method: "POST" });
+    } catch {
+      // Server may be unreachable; the user still expects to be logged out locally.
+    }
     router.push(landingPath);
   };
 

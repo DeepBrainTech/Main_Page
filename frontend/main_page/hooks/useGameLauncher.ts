@@ -2,7 +2,7 @@
 
 import { useRouter, useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { getApiUrl } from "@/lib/api-config";
+import { apiFetch } from "@/lib/api-config";
 import { getUserTimezone, postGamePlayedRecord } from "@/services/userApi";
 
 /**
@@ -29,22 +29,20 @@ export function useGameLauncher() {
    * Generic launcher function
    */
   const launchGame = async (config: GameConfig) => {
-    const accessToken = localStorage.getItem("access_token");
-    if (!accessToken) {
-      router.push(`/${locale}/login`);
-      return;
-    }
-
     try {
-      // Request game token with user timezone for daily progress tracking
-      const response = await fetch(getApiUrl(config.apiEndpoint), {
+      // Auth is carried via the cross-subdomain HttpOnly cookie; no token in URL.
+      const response = await apiFetch(config.apiEndpoint, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${accessToken}`,
           "X-User-Timezone": getUserTimezone(),
         },
       });
+
+      if (response.status === 401) {
+        router.push(`/${locale}/login`);
+        return;
+      }
 
       if (!response.ok) {
         throw new Error("Failed to fetch game token");
@@ -57,27 +55,22 @@ export function useGameLauncher() {
         throw new Error("Invalid game token response");
       }
 
-      // Use configured game URL
       const gameUrl = config.gameUrl;
-      
       if (!gameUrl) {
         throw new Error(`Missing game URL config (${config.gameKey})`);
       }
-      
+
       console.log(`[${config.gameKey}] Using game URL:`, gameUrl);
 
-      // Build final launch URL
-      const portalApi = getApiUrl("");
+      // First-paint hints only. Sub-games refresh game_token via cookie-based
+      // /api/games/{game}/session, so we no longer pass portal_token/portal_api.
       const url =
         `${gameUrl}#token=${encodeURIComponent(gameToken)}` +
-        `&portal_token=${encodeURIComponent(accessToken)}` +
-        `&portal_api=${encodeURIComponent(portalApi)}` +
         `&locale=${encodeURIComponent(locale)}` +
         `&coins=${encodeURIComponent(String(assets.coins ?? 0))}` +
         `&diamonds=${encodeURIComponent(String(assets.diamonds ?? 0))}` +
         `&flowers=${encodeURIComponent(String(assets.flowers ?? 0))}`;
 
-      // Launch game
       if (config.openInNewTab) {
         window.open(url, "_blank");
       } else {
@@ -89,12 +82,10 @@ export function useGameLauncher() {
     }
   };
 
-  // Launch handlers per game
   const handleFogChess = () => {
     launchGame({
       gameKey: "fogchess",
       apiEndpoint: "/api/games/fogchess/token",
-      // Read from env var, fallback to default production URL
       gameUrl: process.env.NEXT_PUBLIC_FOGCHESS_URL || "https://fogchess.deepbraintechnology.com",
       openInNewTab: false,
     });
@@ -113,7 +104,6 @@ export function useGameLauncher() {
     launchGame({
       gameKey: "quantumGo",
       apiEndpoint: "/api/games/quantumgo/token",
-      // Read from env var, fallback to default production URL
       gameUrl: process.env.NEXT_PUBLIC_QUANTUMGO_URL || "https://quantumgo.deepbraintechnology.com/",
       openInNewTab: false,
     });
@@ -138,12 +128,7 @@ export function useGameLauncher() {
   };
 
   const handleSudoku = () => {
-    const accessToken = localStorage.getItem("access_token");
-    if (!accessToken) {
-      router.push(`/${locale}/login`);
-      return;
-    }
-
+    // Pure portal-side analytics ping; sub-game has no auth contract with us.
     void postGamePlayedRecord("sudoku").catch(() => {
       /* still open game; count may update on next rewards fetch */
     });

@@ -1,5 +1,8 @@
 import { getApiUrl } from "@/lib/api-config";
 
+const fetch: typeof globalThis.fetch = (input, init) =>
+  globalThis.fetch(input as RequestInfo, { ...init, credentials: "include" });
+
 export interface MonkeyChatMessage {
   role: "user" | "assistant";
   content: string;
@@ -11,10 +14,8 @@ export interface MonkeyChatResponse {
 }
 
 function getAuthHeaders(): HeadersInit {
-  const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
   return {
     "Content-Type": "application/json",
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
   };
 }
 

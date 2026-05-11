@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { getApiUrl } from "@/lib/api-config";
+import { apiFetch } from "@/lib/api-config";
 import CountrySelect from "@/components/ui/CountrySelect";
 import GoogleLoginButton from "@/components/auth/GoogleLoginButton";
 import CompleteProfileDialog from "@/components/features/profile/CompleteProfileDialog";
@@ -206,7 +206,7 @@ export default function RegisterPage() {
     setSendingCode(true);
 
     try {
-      const response = await fetch(getApiUrl("/api/auth/send-verification-code"), {
+      const response = await apiFetch("/api/auth/send-verification-code", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -276,7 +276,7 @@ export default function RegisterPage() {
     setLoading(true);
 
     try {
-      const response = await fetch(getApiUrl("/api/auth/register"), {
+      const response = await apiFetch("/api/auth/register", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -302,11 +302,10 @@ export default function RegisterPage() {
         return;
       }
 
+      // Cookie was set by the response; we only branch on whether the API auto-logged us in.
       const result = await response.json();
 
-      if (result.data && result.data.access_token) {
-        localStorage.setItem("access_token", result.data.access_token);
-        localStorage.setItem("token_expires_in", String(result.data.expires_in || 3600));
+      if (result?.data?.access_token) {
         router.push(`/${locale}/dashboard`);
       } else {
         router.push(`/${locale}/login?registered=true`);

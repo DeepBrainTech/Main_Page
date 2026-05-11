@@ -4,7 +4,7 @@ import { useState } from "react";
 import Image from "next/image";
 import { useRouter, useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { getApiUrl } from "@/lib/api-config";
+import { apiFetch } from "@/lib/api-config";
 import GoogleLoginButton from "@/components/auth/GoogleLoginButton";
 import CompleteProfileDialog from "@/components/features/profile/CompleteProfileDialog";
 
@@ -51,7 +51,7 @@ export default function LoginPage() {
       formData.append("username", username);
       formData.append("password", password);
 
-      const response = await fetch(getApiUrl("/api/auth/login"), {
+      const response = await apiFetch("/api/auth/login", {
         method: "POST",
         body: formData,
       });
@@ -62,9 +62,9 @@ export default function LoginPage() {
         throw new Error(errorMessage);
       }
 
-      const data = await response.json();
-      localStorage.setItem("access_token", data.access_token);
-      localStorage.setItem("token_expires_in", String(data.expires_in));
+      // Auth state now lives in the HttpOnly cookie set by the response.
+      // We still consume the body to keep error handling consistent.
+      await response.json().catch(() => null);
 
       if (rememberMe) {
         localStorage.setItem("remember_me", "true");

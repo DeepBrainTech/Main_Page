@@ -6,7 +6,7 @@ from typing import Optional, Dict, Any
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from sqlalchemy.orm import Session
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, Response, status
 from fastapi.security import OAuth2PasswordBearer
 import os
 from dotenv import load_dotenv
@@ -20,6 +20,46 @@ load_dotenv()
 SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-change-in-production")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 7天
+
+# ----- Cross-subdomain HttpOnly cookie config -----
+# Cookie name carrying the portal access token across *.deepbraintechnology.com
+ACCESS_TOKEN_COOKIE_NAME = os.getenv("ACCESS_TOKEN_COOKIE_NAME", "access_token")
+# In production set to ".deepbraintechnology.com" so subdomains share the cookie.
+# Leave empty in local dev so the browser uses host-only cookie on localhost.
+ACCESS_TOKEN_COOKIE_DOMAIN = os.getenv("ACCESS_TOKEN_COOKIE_DOMAIN", "") or None
+# "lax" is the right default for same-site cross-origin (e.g. fogchess.* -> api.*).
+# Use "none" only if you need cross-site (different eTLD+1) and always pair with Secure=True.
+ACCESS_TOKEN_COOKIE_SAMESITE = os.getenv("ACCESS_TOKEN_COOKIE_SAMESITE", "lax").lower()
+# Must be True in production (HTTPS). Allow disabling for local http dev.
+ACCESS_TOKEN_COOKIE_SECURE = os.getenv("ACCESS_TOKEN_COOKIE_SECURE", "false").lower() in {"1", "true", "yes"}
+ACCESS_TOKEN_COOKIE_PATH = os.getenv("ACCESS_TOKEN_COOKIE_PATH", "/")
+
+
+def set_access_token_cookie(response: Response, token: str, max_age_seconds: Optional[int] = None) -> None:
+    """Attach the portal access token as an HttpOnly cookie on the response.
+
+    Sub-games on sibling subdomains can reuse this cookie automatically when
+    they hit the portal API with credentials:"include".
+    """
+    response.set_cookie(
+        key=ACCESS_TOKEN_COOKIE_NAME,
+        value=token,
+        max_age=max_age_seconds if max_age_seconds is not None else ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+        httponly=True,
+        secure=ACCESS_TOKEN_COOKIE_SECURE,
+        samesite=ACCESS_TOKEN_COOKIE_SAMESITE,
+        domain=ACCESS_TOKEN_COOKIE_DOMAIN,
+        path=ACCESS_TOKEN_COOKIE_PATH,
+    )
+
+
+def clear_access_token_cookie(response: Response) -> None:
+    """Remove the portal access token cookie (used by /logout)."""
+    response.delete_cookie(
+        key=ACCESS_TOKEN_COOKIE_NAME,
+        domain=ACCESS_TOKEN_COOKIE_DOMAIN,
+        path=ACCESS_TOKEN_COOKIE_PATH,
+    )
 
 # FogChess 专用令牌配置（建议使用不同密钥，或改用 RS256 公私钥对）
 FOG_CHESS_SECRET = os.getenv("FOG_CHESS_JWT_SECRET", "change-this-fogchess-secret")
@@ -61,8 +101,8 @@ TOURMASTER_TOKEN_EXPIRE_SECONDS = int(os.getenv("TOURMASTER_TOKEN_EXPIRE_SECONDS
 # 密码加密
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-# OAuth2 令牌 URL
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/auth/login")
+# OAuth2 令牌 URL（auto_error=False 让我们能优雅地回退到 Cookie）
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/auth/login", auto_error=False)
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
@@ -190,28 +230,37 @@ def authenticate_user(db: Session, username_or_email: str, password: str) -> Opt
 
 
 async def get_current_user(
-    token: str = Depends(oauth2_scheme),
-    db: Session = Depends(get_db)
+    request: Request,
+    token: Optional[str] = Depends(oauth2_scheme),
+    db: Session = Depends(get_db),
 ) -> User:
-    """获取当前用户"""
+    """Resolve the current user from either Authorization Bearer or the cross-subdomain cookie.
+
+    Cookie path is preferred so sub-games can authenticate against the portal API
+    without ever seeing the raw token.
+    """
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="AUTH_INVALID_TOKEN",
         headers={"WWW-Authenticate": "Bearer"},
     )
-    
+
+    raw_token = token or request.cookies.get(ACCESS_TOKEN_COOKIE_NAME)
+    if not raw_token:
+        raise credentials_exception
+
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        payload = jwt.decode(raw_token, SECRET_KEY, algorithms=[ALGORITHM])
         username: str = payload.get("sub")
         if username is None:
             raise credentials_exception
     except JWTError:
         raise credentials_exception
-    
+
     user = db.query(User).filter(User.username == username).first()
     if user is None:
         raise credentials_exception
-    
+
     return user
 
 

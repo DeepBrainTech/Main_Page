@@ -1,7 +1,7 @@
 "use client";
 
 import { GoogleLogin } from "@react-oauth/google";
-import { getApiUrl } from "@/lib/api-config";
+import { apiFetch } from "@/lib/api-config";
 
 export type GoogleButtonVariant = "signin" | "signup";
 
@@ -34,7 +34,7 @@ export default function GoogleLoginButton({
 
   const handleCredential = async (credential: string) => {
     try {
-      const res = await fetch(getApiUrl("/api/auth/google"), {
+      const res = await apiFetch("/api/auth/google", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id_token: credential }),
@@ -45,14 +45,10 @@ export default function GoogleLoginButton({
         onError(code.match(/^[A-Z_]+$/) ? code : "AUTH_GOOGLE_TOKEN_INVALID");
         return;
       }
-      const data = await res.json();
-      localStorage.setItem("access_token", data.access_token);
-      localStorage.setItem("token_expires_in", String(data.expires_in ?? 0));
-      // 请求 /me 判断是否需要补全资料（出生日期）
+      // Cookie is now set; consume body to keep the response stream clean.
+      await res.json().catch(() => null);
       try {
-        const meRes = await fetch(getApiUrl("/api/auth/me"), {
-          headers: { Authorization: `Bearer ${data.access_token}` },
-        });
+        const meRes = await apiFetch("/api/auth/me");
         if (meRes.ok) {
           const me = await meRes.json();
           if (me.date_of_birth == null) {

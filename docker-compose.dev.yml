@@ -36,6 +36,14 @@ services:
       - CORS_ORIGINS=http://localhost:3000,http://frontend:3000
       - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/main_page_db
       - SECRET_KEY=dev-secret-key-change-in-production-please
+      # ===== Cross-subdomain auth cookie =====
+      # Local dev: host-only cookie on localhost, no HTTPS requirement.
+      # In production set ACCESS_TOKEN_COOKIE_DOMAIN=.deepbraintechnology.com
+      # and ACCESS_TOKEN_COOKIE_SECURE=true.
+      - ACCESS_TOKEN_COOKIE_NAME=access_token
+      - ACCESS_TOKEN_COOKIE_DOMAIN=
+      - ACCESS_TOKEN_COOKIE_SAMESITE=lax
+      - ACCESS_TOKEN_COOKIE_SECURE=false
       # FogChess 短期令牌配置
       - FOG_CHESS_JWT_SECRET=dev-fog
       - FOG_CHESS_JWT_AUD=fogchess

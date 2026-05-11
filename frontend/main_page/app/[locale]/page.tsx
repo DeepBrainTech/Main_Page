@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { getApiUrl } from "@/lib/api-config";
+import { apiFetch } from "@/lib/api-config";
 import {
   DecorativeBackground,
   LandingHeader,
@@ -28,29 +28,15 @@ export default function Home() {
   const locale = params.locale as string;
 
   useEffect(() => {
-    const token = localStorage.getItem("access_token");
-
-    if (!token) {
-      return;
-    }
-
-    fetch(getApiUrl("/api/auth/verify"), {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    })
+    // The cookie is HttpOnly; we cannot inspect it from JS. Probe the API instead.
+    apiFetch("/api/auth/verify")
       .then((res) => {
         if (res.ok) {
           router.push(`/${locale}/dashboard`);
-          return;
         }
-
-        localStorage.removeItem("access_token");
-        localStorage.removeItem("token_expires_in");
       })
       .catch(() => {
-        localStorage.removeItem("access_token");
-        localStorage.removeItem("token_expires_in");
+        // Unauthenticated visitors stay on the landing page; nothing to clean up.
       });
   }, [locale, router]);
 

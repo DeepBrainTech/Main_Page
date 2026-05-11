@@ -1,7 +1,14 @@
 /**
  * 用户相关 API：奖励、签到、任务、六维分数、排行榜
+ *
+ * Auth is carried by the cross-subdomain HttpOnly cookie set on /api/auth/login.
+ * The module-level `fetch` below shadows the global so every call here defaults
+ * to `credentials: "include"` without touching call sites.
  */
 import { getApiUrl } from "@/lib/api-config";
+
+const fetch: typeof globalThis.fetch = (input, init) =>
+  globalThis.fetch(input as RequestInfo, { ...init, credentials: "include" });
 
 /** 获取用户当地 IANA 时区（用于签到/任务“今日”判定），可供游戏启动等复用 */
 export function getUserTimezone(): string {
@@ -14,11 +21,9 @@ export function getUserTimezone(): string {
 }
 
 function getAuthHeaders(): HeadersInit {
-  const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
   return {
     "Content-Type": "application/json",
     "X-User-Timezone": getUserTimezone(),
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
   };
 }
 
