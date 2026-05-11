@@ -1,11 +1,14 @@
 ﻿"use client";
 
+import { useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 
 /**
  * Landing 页脚
  */
 export default function LandingFooter() {
+  const params = useParams();
+  const locale = params.locale as string;
   const t = useTranslations("beforeloginV2.footer");
 
   const footerLinks = [
@@ -13,7 +16,7 @@ export default function LandingFooter() {
     { key: "resources", href: "#" },
     { key: "help", href: "#" },
     { key: "contact", href: "#" },
-    { key: "privacy", href: "#" },
+    { key: "privacy", href: `/${locale}/privacy-policy` },
     { key: "terms", href: "#" },
   ];
 

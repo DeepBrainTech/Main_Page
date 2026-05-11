@@ -7,6 +7,14 @@ const withNextIntl = createNextIntlPlugin('./i18n.ts');
 const nextConfig = {
   /* config options here */
   output: 'standalone', // 启用 standalone 输出模式，优化 Docker 构建
+
+  webpack: (config) => {
+    config.module.rules.push({
+      test: /privacy\.html$/,
+      type: 'asset/source',
+    });
+    return config;
+  },
 };
 
 module.exports = withNextIntl(nextConfig);

@@ -1252,5 +1252,10 @@
       "terms": "条款",
       "copyright": "© 2026 DeepBrain Tech. 保留所有权利。"
     }
+  },
+  "privacyPolicy": {
+    "metaTitle": "隐私政策 | DeepBrain Tech",
+    "metaDescription": "DeepBrain Tech 隐私政策。",
+    "backToHome": "返回首页"
   }
 }

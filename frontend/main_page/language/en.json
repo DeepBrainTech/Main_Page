@@ -1252,5 +1252,10 @@
       "terms": "Terms",
       "copyright": "© 2026 DeepBrain Tech. All rights reserved."
     }
+  },
+  "privacyPolicy": {
+    "metaTitle": "Privacy Policy | DeepBrain Tech",
+    "metaDescription": "DeepBrain Tech privacy policy.",
+    "backToHome": "Back to home"
   }
 }
