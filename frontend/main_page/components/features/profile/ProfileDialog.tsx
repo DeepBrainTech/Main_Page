@@ -1,11 +1,58 @@
 "use client";
 
-import { useState, useEffect, useRef, type ChangeEvent } from "react";
-import { useRouter, usePathname, useParams } from "next/navigation";
+import { useState, useEffect, useRef, type ChangeEvent, type ReactNode } from "react";
+import { useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { apiFetch } from "@/lib/api-config";
 import { getCountryLabel } from "@/constants/countries";
 import CountrySelect from "@/components/ui/CountrySelect";
+
+function countryCodeToFlagEmoji(code: string | null | undefined): string {
+  if (!code || code.length !== 2) return "\u{1F30D}";
+  const upper = code.toUpperCase();
+  if (!/^[A-Z]{2}$/.test(upper)) return "\u{1F30D}";
+  const regionalA = 0x1f1e6;
+  return String.fromCodePoint(upper.charCodeAt(0) - 65 + regionalA, upper.charCodeAt(1) - 65 + regionalA);
+}
+
+function ProfileRowIcon({ flagEmoji, children }: { flagEmoji?: string | null; children?: ReactNode }) {
+  return (
+    <div
+      className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white shadow-[0px_1.16px_2.32px_-1.16px_rgba(0,0,0,0.10),0px_1.16px_3.48px_0px_rgba(0,0,0,0.10)]"
+      aria-hidden
+    >
+      {flagEmoji != null ? (
+        <span className="font-app-body text-2xl font-normal leading-none text-zinc-800">{flagEmoji}</span>
+      ) : (
+        children
+      )}
+    </div>
+  );
+}
+
+function IconUser() {
+  return (
+    <svg className="h-6 w-6 text-sky-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+    </svg>
+  );
+}
+
+function IconMail() {
+  return (
+    <svg className="h-6 w-6 text-sky-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
+    </svg>
+  );
+}
+
+function IconCalendar() {
+  return (
+    <svg className="h-6 w-6 text-sky-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5a2.25 2.25 0 002.25-2.25m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5a2.25 2.25 0 012.25 2.25v7.5" />
+    </svg>
+  );
+}
 
 interface ProfileDialogProps {
   open: boolean;
@@ -25,7 +72,7 @@ interface ProfileDialogProps {
 }
 
 /**
- * 个人资料弹窗：头像点击后展示，支持修改用户名、语言切换与登出
+ * Profile dialog: opened from avatar; edit profile fields and logout.
  */
 export default function ProfileDialog({
   open,
@@ -38,19 +85,15 @@ export default function ProfileDialog({
   onLogout,
   onProfileUpdate,
 }: ProfileDialogProps) {
-  const router = useRouter();
-  const pathname = usePathname();
   const params = useParams();
   const tCommon = useTranslations("common");
   const tProfile = useTranslations("profile");
   const tAuth = useTranslations("auth");
   const currentLocale = (params?.locale as string) ?? "en";
 
-  const [editingUsername, setEditingUsername] = useState(false);
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [editValue, setEditValue] = useState(username);
-  const [editingDateOfBirth, setEditingDateOfBirth] = useState(false);
   const [editDateValue, setEditDateValue] = useState(dateOfBirth ?? "");
-  const [editingCountry, setEditingCountry] = useState(false);
   const [editCountryValue, setEditCountryValue] = useState((country ?? "").toUpperCase());
   const [saving, setSaving] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
@@ -63,34 +106,27 @@ export default function ProfileDialog({
   useEffect(() => {
     if (open) {
       setEditValue(username);
-      setEditingUsername(false);
       setEditDateValue(dateOfBirth ?? "");
-      setEditingDateOfBirth(false);
       setEditCountryValue((country ?? "").toUpperCase());
-      setEditingCountry(false);
+      setIsEditingProfile(false);
       setAvatarFailed(false);
       setError("");
       setSuccessMessage("");
     }
   }, [open, username, dateOfBirth, country, avatarUrl, currentLocale]);
 
-  /** 将 YYYY-MM-DD 格式化为仅月日（不显示年份），用于展示 */
-  const formatBirthdayNoYear = (yyyyMmDd: string): string => {
+  /** Format YYYY-MM-DD for profile card display */
+  const formatBirthdayFull = (yyyyMmDd: string): string => {
     const parts = yyyyMmDd.trim().split("-");
     if (parts.length !== 3) return yyyyMmDd;
-    const [, m, d] = parts;
-    const month = parseInt(m, 10);
-    const day = parseInt(d, 10);
-    if (Number.isNaN(month) || Number.isNaN(day)) return yyyyMmDd;
-    const date = new Date(2000, month - 1, day);
+    const [y, m, d] = parts;
+    const date = new Date(Number(y), Number(m) - 1, Number(d));
+    if (Number.isNaN(date.getTime())) return yyyyMmDd;
     return date.toLocaleDateString(currentLocale === "zh" ? "zh-CN" : "en-US", {
-      month: "short",
-      day: "numeric",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
     });
-  };
-  const switchLanguage = (newLocale: string) => {
-    const newPath = pathname.replace(`/${currentLocale}`, `/${newLocale}`);
-    router.push(newPath);
   };
 
   const handleLogout = () => {
@@ -146,101 +182,71 @@ export default function ProfileDialog({
     }
   };
 
-  const handleSaveUsername = async () => {
-    const val = editValue.trim();
-    if (val.length < 3 || val.length > 50) {
-      setError(tProfile("usernamePlaceholder"));
-      return;
-    }
-    if (val === username) {
-      setEditingUsername(false);
-      return;
-    }
-    setError("");
-    setSaving(true);
-    try {
-      const res = await apiFetch("/api/auth/me", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username: val }),
-      });
-      if (!res.ok) {
-        const data = await res.json();
-        const code = data.detail || "AUTH_USERNAME_EXISTS";
-        setError(code.match(/^[A-Z_]+$/) ? String(tAuth(code)) : (data.detail || tProfile("usernameUpdateFailed")));
-        return;
-      }
-      // Cookie auto-rotated on the server when username changes; nothing to persist locally.
-      await res.json().catch(() => null);
-      setSuccessMessage(tProfile("usernameUpdated"));
-      setEditingUsername(false);
-      onProfileUpdate?.();
-    } catch {
-      setError(tProfile("usernameUpdateFailed"));
-    } finally {
-      setSaving(false);
-    }
-  };
+  const handleSaveProfile = async () => {
+    const usernameVal = editValue.trim();
+    const dobVal = editDateValue.trim();
+    const countryVal = editCountryValue.trim().toUpperCase();
+    const serverCountry = (country ?? "").trim().toUpperCase();
 
-  const handleSaveDateOfBirth = async () => {
-    const val = editDateValue.trim();
-    if (!val) {
-      setError(tProfile("dateOfBirthPlaceholder"));
-      return;
-    }
-    if (val === (dateOfBirth ?? "")) {
-      setEditingDateOfBirth(false);
-      return;
-    }
-    setError("");
-    setSaving(true);
-    try {
-      const res = await apiFetch("/api/auth/me", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ date_of_birth: val }),
-      });
-      if (!res.ok) {
-        const data = await res.json();
-        setError(data.detail || tProfile("dateOfBirthUpdateFailed"));
-        return;
-      }
-      await res.json().catch(() => null);
-      setSuccessMessage(tProfile("dateOfBirthUpdated"));
-      setEditingDateOfBirth(false);
-      onProfileUpdate?.();
-    } catch {
-      setError(tProfile("dateOfBirthUpdateFailed"));
-    } finally {
-      setSaving(false);
-    }
-  };
+    const body: Record<string, string | null> = {};
 
-  const handleSaveCountry = async () => {
-    const val = editCountryValue.trim().toUpperCase();
-    if (val === (country ?? "")) {
-      setEditingCountry(false);
+    if (usernameVal !== username) {
+      if (usernameVal.length < 3 || usernameVal.length > 50) {
+        setError(tProfile("usernamePlaceholder"));
+        return;
+      }
+      body.username = usernameVal;
+    }
+
+    if (dobVal !== (dateOfBirth ?? "").trim()) {
+      if (!dobVal) {
+        setError(tProfile("dateOfBirthPlaceholder"));
+        return;
+      }
+      body.date_of_birth = dobVal;
+    }
+
+    if (countryVal !== serverCountry) {
+      body.country = countryVal || null;
+    }
+
+    if (Object.keys(body).length === 0) {
+      setError("");
+      setIsEditingProfile(false);
       return;
     }
+
     setError("");
     setSaving(true);
     try {
       const res = await apiFetch("/api/auth/me", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ country: val || null }),
+        body: JSON.stringify(body),
       });
       if (!res.ok) {
-        const data = await res.json();
-        setError(data.detail || tProfile("countryUpdateFailed"));
+        const data = await res.json().catch(() => ({}));
+        const detail = data.detail;
+        const codeStr = typeof detail === "string" ? detail : "";
+        if (codeStr.match(/^[A-Z_]+$/)) {
+          setError(String(tAuth(codeStr)));
+        } else {
+          setError(codeStr || tProfile("usernameUpdateFailed"));
+        }
         return;
       }
       await res.json().catch(() => null);
-      setSuccessMessage(tProfile("countryUpdated"));
-      setEditingCountry(false);
+      setSuccessMessage(tProfile("profileUpdated"));
+      setIsEditingProfile(false);
       onProfileUpdate?.();
     } catch {
-      setError(tProfile("countryUpdateFailed"));
+      setError(
+        "username" in body
+          ? tProfile("usernameUpdateFailed")
+          : "date_of_birth" in body
+            ? tProfile("dateOfBirthUpdateFailed")
+            : tProfile("countryUpdateFailed"),
+      );
     } finally {
       setSaving(false);
     }
@@ -248,241 +254,209 @@ export default function ProfileDialog({
 
   if (!open) return null;
 
+  const openProfileFieldEditors = () => {
+    setEditValue(username);
+    setEditDateValue(dateOfBirth ?? "");
+    setEditCountryValue((country ?? "").toUpperCase());
+    setIsEditingProfile(true);
+  };
+
   return (
-    <>
+    <div
+      className="fixed inset-0 z-40 flex items-center justify-center bg-black/25 p-4 font-app-body"
+      onClick={onClose}
+      role="presentation"
+    >
       <div
-        className="fixed inset-0 z-40 flex items-center justify-center bg-black/20 p-4"
-        aria-hidden
-        onClick={onClose}
+        className="flex max-h-[90vh] w-full max-w-[454px] min-h-0 flex-col overflow-hidden rounded-3xl bg-white shadow-[0px_4.64px_27.84px_0px_rgba(4,94,150,0.08)]"
+        role="dialog"
+        aria-label={tProfile("title")}
+        onClick={(e) => e.stopPropagation()}
       >
-        <div
-          className="w-72 rounded-xl bg-white p-4 shadow-xl"
-          role="dialog"
-          aria-label={tProfile("title")}
-          onClick={(e) => e.stopPropagation()}
-        >
-        <h3 className="mb-3 text-lg font-semibold text-gray-800">{tProfile("title")}</h3>
-        {error && (
-          <div className="mb-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-600 dark:bg-red-900/20 dark:text-red-400">
-            {error}
-          </div>
-        )}
-        {successMessage && (
-          <div className="mb-2 rounded-lg bg-green-50 px-3 py-2 text-xs text-green-700 dark:bg-green-900/20 dark:text-green-400">
-            {successMessage}
-          </div>
-        )}
-        <dl className="space-y-2 text-sm">
-          <div>
-            <dt className="text-gray-500">{tProfile("avatar")}</dt>
-            <dd className="mt-1 flex items-center justify-between gap-3">
-              <div className="h-14 w-14 overflow-hidden rounded-full border border-gray-200">
+        <div className="relative h-28 shrink-0 bg-gradient-to-br from-blue-100 via-blue-100 to-indigo-50">
+          <button
+            type="button"
+            onClick={onClose}
+            className="absolute right-4 top-5 flex h-9 w-9 items-center justify-center rounded-full text-sky-700 transition-colors hover:bg-white/60"
+            aria-label={tProfile("closeProfile")}
+          >
+            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+          <div className="absolute -bottom-14 left-1/2 -translate-x-1/2">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              className="hidden"
+              onChange={handleAvatarFileChange}
+            />
+            <button
+              type="button"
+              disabled={uploadingAvatar}
+              onClick={() => fileInputRef.current?.click()}
+              className="group relative rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-600 focus-visible:ring-offset-2 disabled:opacity-60"
+              aria-label={tProfile("changeAvatar")}
+            >
+              <div className="relative h-28 w-28 overflow-hidden rounded-full shadow-[0px_4.64px_6.96px_-4.64px_rgba(0,0,0,0.10),0px_11.6px_17.4px_-3.48px_rgba(0,0,0,0.10)] ring-4 ring-white">
                 <img
                   src={resolvedAvatarSrc}
-                  alt={tProfile("avatar")}
+                  alt=""
                   className="h-full w-full object-cover"
                   onError={() => setAvatarFailed(true)}
                 />
-              </div>
-              <div className="flex items-center gap-2">
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/png,image/jpeg,image/webp"
-                  className="hidden"
-                  onChange={handleAvatarFileChange}
-                />
-                <button
-                  type="button"
-                  disabled={uploadingAvatar}
-                  onClick={() => fileInputRef.current?.click()}
-                  className="rounded bg-[#5E81AC] px-2 py-1.5 text-xs font-medium text-white hover:bg-[#4a6a8a] disabled:opacity-50"
-                >
-                  {uploadingAvatar ? "..." : tProfile("changeAvatar")}
-                </button>
-              </div>
-            </dd>
-          </div>
-          <div>
-            <dt className="text-gray-500">{tProfile("username")}</dt>
-            {editingUsername ? (
-              <dd className="mt-1 space-y-2">
-                <input
-                  type="text"
-                  value={editValue}
-                  onChange={(e) => setEditValue(e.target.value)}
-                  minLength={3}
-                  maxLength={50}
-                  className="w-full rounded border border-gray-300 px-2 py-1.5 text-gray-900 focus:border-transparent focus:ring-2 focus:ring-[#5E81AC] dark:border-gray-600 dark:bg-zinc-800 dark:text-white"
-                  placeholder={tProfile("usernamePlaceholder")}
-                  autoFocus
-                />
-                <div className="flex justify-end gap-2">
-                  <button
-                    type="button"
-                    onClick={handleSaveUsername}
-                    disabled={saving}
-                    className="rounded bg-[#5E81AC] px-2 py-1.5 text-xs font-medium text-white hover:bg-[#4a6a8a] disabled:opacity-50"
-                  >
-                    {saving ? "..." : tProfile("saveUsername")}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => { setEditingUsername(false); setEditValue(username); setError(""); }}
-                    className="rounded border border-gray-300 px-2 py-1.5 text-xs text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-zinc-700"
-                  >
-                    {tCommon("cancel")}
-                  </button>
+                {uploadingAvatar && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/45 text-xs font-medium text-white">
+                    …
+                  </div>
+                )}
+                <div className="pointer-events-none absolute inset-0 flex items-end justify-center bg-gradient-to-t from-black/35 to-transparent pb-2 opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
+                  <span className="rounded-full bg-white/90 px-2 py-0.5 text-[10px] font-medium text-zinc-800 shadow-sm">
+                    {tProfile("changeAvatar")}
+                  </span>
                 </div>
-              </dd>
-            ) : (
-              <dd className="flex items-center justify-between font-medium text-gray-900">
-                <span>{username || "—"}</span>
+              </div>
+            </button>
+          </div>
+        </div>
+
+        <div className="min-h-0 flex-1 overflow-y-auto px-8 pb-8 pt-16">
+          <h2 className="sr-only">{tProfile("title")}</h2>
+          <div className="mb-6 flex w-full justify-center">
+            <div className="relative inline-flex min-h-8 items-center">
+              <span className="inline-block max-w-[min(100%,260px)] truncate text-center text-2xl font-semibold leading-8 text-zinc-800">
+                {username || "—"}
+              </span>
+              {!isEditingProfile && (
                 <button
                   type="button"
-                  onClick={() => setEditingUsername(true)}
-                  className="text-xs text-[#5E81AC] hover:underline"
+                  onClick={openProfileFieldEditors}
+                  className="absolute left-full top-1/2 ml-0.5 flex h-9 w-9 shrink-0 -translate-y-1/2 items-center justify-center rounded-full transition-colors hover:bg-sky-50"
+                  aria-label={tProfile("editProfile")}
                 >
-                  {tProfile("editUsername")}
+                  <img src="/profile/edit.svg" alt="" width={20} height={20} className="h-5 w-5" />
                 </button>
-              </dd>
-            )}
+              )}
+            </div>
           </div>
-          {email !== undefined && (
-            <div>
-              <dt className="text-gray-500">{tProfile("email")}</dt>
-              <dd className="font-medium text-gray-900">{email || "—"}</dd>
+
+          {error && (
+            <div className="mb-3 rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-600 dark:bg-red-900/20 dark:text-red-400">
+              {error}
             </div>
           )}
-          <div>
-            <dt className="text-gray-500">{tProfile("dateOfBirth")}</dt>
-            {editingDateOfBirth ? (
-              <dd className="mt-1 flex items-center gap-2">
-                <input
-                  type="date"
-                  value={editDateValue}
-                  onChange={(e) => setEditDateValue(e.target.value)}
-                  className="flex-1 rounded border border-gray-300 px-2 py-1.5 text-gray-900 focus:border-transparent focus:ring-2 focus:ring-[#5E81AC] dark:border-gray-600 dark:bg-zinc-800 dark:text-white"
-                  aria-label={tProfile("dateOfBirthPlaceholder")}
-                />
-                <button
-                  type="button"
-                  onClick={handleSaveDateOfBirth}
-                  disabled={saving}
-                  className="rounded bg-[#5E81AC] px-2 py-1.5 text-xs font-medium text-white hover:bg-[#4a6a8a] disabled:opacity-50"
-                >
-                  {saving ? "..." : tProfile("saveUsername")}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setEditingDateOfBirth(false); setEditDateValue(dateOfBirth ?? ""); setError(""); }}
-                  className="rounded border border-gray-300 px-2 py-1.5 text-xs text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-zinc-700"
-                >
-                  {tCommon("cancel")}
-                </button>
-              </dd>
-            ) : (
-              <dd className="flex items-center justify-between font-medium text-gray-900">
-                <span>{(dateOfBirth && dateOfBirth.trim()) ? formatBirthdayNoYear(dateOfBirth) : "—"}</span>
-                <button
-                  type="button"
-                  onClick={() => setEditingDateOfBirth(true)}
-                  className="text-xs text-[#5E81AC] hover:underline"
-                >
-                  {tProfile("editDateOfBirth")}
-                </button>
-              </dd>
-            )}
-          </div>
-          <div>
-            <dt className="text-gray-500">{tProfile("country")}</dt>
-            {editingCountry ? (
-              <dd className="mt-1 flex items-center gap-2">
-                <CountrySelect
-                  value={editCountryValue}
-                  onChange={setEditCountryValue}
-                  locale={currentLocale}
-                  placeholder={tProfile("countryPlaceholder")}
-                  className="h-8 flex-1 rounded border border-gray-300 px-2 py-1.5 text-left text-gray-900 focus:border-transparent focus:ring-2 focus:ring-[#5E81AC] dark:border-gray-600 dark:bg-zinc-800 dark:text-white"
-                />
-                <button
-                  type="button"
-                  onClick={handleSaveCountry}
-                  disabled={saving}
-                  className="rounded bg-[#5E81AC] px-2 py-1.5 text-xs font-medium text-white hover:bg-[#4a6a8a] disabled:opacity-50"
-                >
-                  {saving ? "..." : tProfile("saveUsername")}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setEditingCountry(false); setEditCountryValue((country ?? "").toUpperCase()); setError(""); }}
-                  className="rounded border border-gray-300 px-2 py-1.5 text-xs text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-zinc-700"
-                >
-                  {tCommon("cancel")}
-                </button>
-              </dd>
-            ) : (
-              <dd className="flex items-center justify-between font-medium text-gray-900">
-                <span>{(country && country.trim()) ? getCountryLabel(country, currentLocale) : "—"}</span>
-                <button
-                  type="button"
-                  onClick={() => setEditingCountry(true)}
-                  className="text-xs text-[#5E81AC] hover:underline"
-                >
-                  {tProfile("editCountry")}
-                </button>
-              </dd>
-            )}
-          </div>
-        </dl>
-
-        <div className="mt-4 space-y-3 border-t border-gray-100 pt-4">
-          <div>
-            <span className="mb-1.5 block text-xs text-gray-500">{tCommon("language")}</span>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => switchLanguage("zh")}
-                className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
-                  currentLocale === "zh"
-                    ? "bg-[#5E81AC] text-white"
-                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                }`}
-              >
-                {tCommon("localeZh")}
-              </button>
-              <button
-                type="button"
-                onClick={() => switchLanguage("en")}
-                className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
-                  currentLocale === "en"
-                    ? "bg-[#5E81AC] text-white"
-                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                }`}
-              >
-                {tCommon("localeEn")}
-              </button>
+          {successMessage && (
+            <div className="mb-3 rounded-2xl bg-emerald-50 px-4 py-3 text-sm text-emerald-800 dark:bg-emerald-900/20 dark:text-emerald-300">
+              {successMessage}
             </div>
-          </div>
-          <div className="flex justify-end gap-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-lg bg-gray-100 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-200"
-            >
-              {tCommon("confirm")}
-            </button>
+          )}
+
+          <div className="flex flex-col gap-8">
+            <div className="flex flex-col gap-3">
+              <div className="flex min-h-20 items-center gap-3.5 rounded-2xl bg-[#F2FAFF] p-4">
+                <ProfileRowIcon>
+                  <IconUser />
+                </ProfileRowIcon>
+                <div className="min-w-0 flex-1">
+                  <div className="text-sm font-normal leading-5 text-slate-500">{tProfile("username")}</div>
+                  {isEditingProfile ? (
+                    <input
+                      type="text"
+                      value={editValue}
+                      onChange={(e) => {
+                        setEditValue(e.target.value);
+                        setError("");
+                      }}
+                      minLength={3}
+                      maxLength={50}
+                      className="mt-1 w-full rounded-xl border border-sky-200 bg-white px-3 py-2 text-base font-medium text-zinc-800 shadow-sm outline-none ring-sky-300 focus:ring-2 dark:border-sky-800 dark:bg-zinc-900 dark:text-white"
+                      placeholder={tProfile("usernamePlaceholder")}
+                      autoFocus
+                    />
+                  ) : (
+                    <p className="mt-0.5 truncate text-base font-medium leading-6 text-zinc-800">{username || "—"}</p>
+                  )}
+                </div>
+              </div>
+
+              {email !== undefined && (
+                <div className="flex min-h-20 items-center gap-3.5 rounded-2xl bg-[#F2FAFF] p-4">
+                  <ProfileRowIcon>
+                    <IconMail />
+                  </ProfileRowIcon>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-sm font-normal leading-5 text-slate-500">{tProfile("email")}</div>
+                    <p className="mt-0.5 truncate text-base font-medium leading-6 text-zinc-800">{email || "—"}</p>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex min-h-20 items-center gap-3.5 rounded-2xl bg-[#F2FAFF] p-4">
+                <ProfileRowIcon flagEmoji={countryCodeToFlagEmoji(isEditingProfile ? editCountryValue : country)} />
+                <div className="min-w-0 flex-1">
+                  <div className="text-sm font-normal leading-5 text-slate-500">{tProfile("country")}</div>
+                  {isEditingProfile ? (
+                    <CountrySelect
+                      value={editCountryValue}
+                      onChange={setEditCountryValue}
+                      locale={currentLocale}
+                      placeholder={tProfile("countryPlaceholder")}
+                      className="mt-1 h-10 w-full rounded-xl border border-sky-200 bg-white px-3 text-left text-base text-zinc-800 shadow-sm outline-none ring-sky-300 focus:ring-2 dark:border-sky-800 dark:bg-zinc-900 dark:text-white"
+                    />
+                  ) : (
+                    <p className="mt-0.5 truncate text-base font-medium leading-6 text-zinc-800">
+                      {country && country.trim() ? getCountryLabel(country, currentLocale) : "—"}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex min-h-20 items-center gap-3.5 rounded-2xl bg-[#F2FAFF] p-4">
+                <ProfileRowIcon>
+                  <IconCalendar />
+                </ProfileRowIcon>
+                <div className="min-w-0 flex-1">
+                  <div className="text-sm font-normal leading-5 text-slate-500">{tProfile("dateOfBirth")}</div>
+                  {isEditingProfile ? (
+                    <input
+                      type="date"
+                      value={editDateValue}
+                      onChange={(e) => setEditDateValue(e.target.value)}
+                      className="mt-1 h-10 w-full rounded-xl border border-sky-200 bg-white px-3 text-base text-zinc-800 shadow-sm outline-none ring-sky-300 focus:ring-2 dark:border-sky-800 dark:bg-zinc-900 dark:text-white"
+                      aria-label={tProfile("dateOfBirthPlaceholder")}
+                    />
+                  ) : (
+                    <p className="mt-0.5 truncate text-base font-medium leading-6 text-zinc-800">
+                      {dateOfBirth && dateOfBirth.trim() ? formatBirthdayFull(dateOfBirth) : "—"}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {isEditingProfile && (
+              <button
+                type="button"
+                onClick={handleSaveProfile}
+                disabled={saving}
+                className="flex h-14 w-full items-center justify-center rounded-full bg-[#E45C44] text-lg font-semibold leading-7 text-white shadow-[0px_10px_15px_0px_rgba(228,92,68,0.20)] transition-colors hover:bg-[#d14d38] disabled:opacity-50"
+              >
+                {saving ? "…" : tProfile("saveChanges")}
+              </button>
+            )}
+
             <button
               type="button"
               onClick={handleLogout}
-              className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50"
+              className="inline-flex items-center justify-center gap-2 self-center text-base font-medium text-stone-500 transition-colors hover:text-stone-700"
             >
+              <img src="/profile/logout.svg" alt="" width={16} height={16} className="h-4 w-4 shrink-0" aria-hidden />
               {tCommon("logout")}
             </button>
           </div>
         </div>
       </div>
-      </div>
-    </>
+    </div>
   );
 }

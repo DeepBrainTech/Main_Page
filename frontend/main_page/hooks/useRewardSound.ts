@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback } from "react";
+import { playUiSound } from "@/lib/ui-sound";
 
 interface RewardAmount {
   coins?: number;
@@ -17,10 +18,6 @@ export function useRewardSound() {
 
     if (typeof window === "undefined" || !hasReward) return;
 
-    const audio = new Audio(REWARD_SOUND_SRC);
-    audio.volume = 0.8;
-    void audio.play().catch(() => {
-      // Some browsers block audio when the reward is not tied to a user gesture.
-    });
+    playUiSound(REWARD_SOUND_SRC, 0.8);
   }, []);
 }

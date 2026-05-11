@@ -35,7 +35,25 @@
     "diamondHelpAllDailyTasks": "Complete all daily tasks:",
     "diamondHelpSevenDayStreak": "Achieve 7-Day Streak:",
     "diamondHelpGameBadges": "Game badges rewards",
-    "diamondHelpBuyInShop": "Buy in Shop"
+    "diamondHelpBuyInShop": "Buy in Shop",
+    "settings": "Settings"
+  },
+  "settings": {
+    "title": "Settings",
+    "close": "Close settings",
+    "preferences": "Preferences",
+    "soundEffects": "Sound Effects",
+    "systemLanguage": "System Language",
+    "saveChanges": "Save Changes",
+    "support": "Support",
+    "contactUs": "Contact Us",
+    "contactUsSubtitle": "Get in touch with support",
+    "contactUsAria": "Contact support by email",
+    "termsOfService": "Terms of Service",
+    "privacyPolicy": "Privacy Policy",
+    "cookiePolicy": "Cookie Policy",
+    "legalLinksAria": "Legal links",
+    "legalLinkComingSoon": "Coming soon"
   },
   "membership": {
     "title": "Choose Your Plan",
@@ -897,11 +915,15 @@
     "age": "Age",
     "ageYears": "{age}",
     "ageUnknown": "Not set",
+    "editProfile": "Edit profile",
     "editUsername": "Edit username",
     "saveUsername": "Save",
     "usernamePlaceholder": "3-50 characters",
     "usernameUpdated": "Username updated",
-    "usernameUpdateFailed": "Update failed, please try again"
+    "usernameUpdateFailed": "Update failed, please try again",
+    "saveChanges": "Save Changes",
+    "profileUpdated": "Profile updated",
+    "closeProfile": "Close profile"
   },
   "login": {
     "title": "DeepBrain Tech",

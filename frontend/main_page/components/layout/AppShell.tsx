@@ -7,6 +7,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { type MembershipPlan } from "@/components/features/membership/MembershipPlans";
 import ProfileDialog from "@/components/features/profile/ProfileDialog";
+import SettingsDialog from "@/components/features/settings/SettingsDialog";
 import BalanceBadge from "@/components/layout/BalanceBadge";
 import CoinHelpPopover from "@/components/layout/CoinHelpPopover";
 import DiamondHelpPopover from "@/components/layout/DiamondHelpPopover";
@@ -52,6 +53,7 @@ export default function AppShell({
   const tHome = useTranslations("dashboard");
   const tMembership = useTranslations("membership");
   const [profileOpen, setProfileOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [membershipPlan, setMembershipPlan] = useState<MembershipPlan>("free");
   const [avatarFailed, setAvatarFailed] = useState(false);
   const { loading: rewardsLoading, coins, diamonds, flowers } = useRewards();
@@ -158,9 +160,9 @@ export default function AppShell({
 
             <button
               type="button"
-              onClick={() => setProfileOpen(true)}
+              onClick={() => setSettingsOpen(true)}
               className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-xl text-sky-700 hover:bg-indigo-100 sm:h-10 sm:w-10 sm:text-2xl md:h-11 md:w-11"
-              aria-label={tNav("profile")}
+              aria-label={tNav("settings")}
             >
               {"\u2699"}
             </button>
@@ -259,6 +261,8 @@ export default function AppShell({
           <main className="px-4 pt-5 sm:px-6">{children}</main>
         </div>
       </div>
+
+      <SettingsDialog open={settingsOpen} onClose={() => setSettingsOpen(false)} />
 
       <ProfileDialog
         open={profileOpen}

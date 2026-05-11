@@ -35,7 +35,25 @@
     "diamondHelpAllDailyTasks": "完成全部每日任务：",
     "diamondHelpSevenDayStreak": "达成 7 日连续签到：",
     "diamondHelpGameBadges": "游戏徽章奖励",
-    "diamondHelpBuyInShop": "商店购买"
+    "diamondHelpBuyInShop": "商店购买",
+    "settings": "设置"
+  },
+  "settings": {
+    "title": "设置",
+    "close": "关闭设置",
+    "preferences": "偏好",
+    "soundEffects": "音效",
+    "systemLanguage": "界面语言",
+    "saveChanges": "保存更改",
+    "support": "支持",
+    "contactUs": "联系我们",
+    "contactUsSubtitle": "通过邮件联系客服",
+    "contactUsAria": "通过邮件联系客服",
+    "termsOfService": "服务条款",
+    "privacyPolicy": "隐私政策",
+    "cookiePolicy": "Cookie 政策",
+    "legalLinksAria": "法律与政策链接",
+    "legalLinkComingSoon": "即将推出"
   },
   "membership": {
     "title": "选择你的计划",
@@ -897,11 +915,15 @@
     "age": "年龄",
     "ageYears": "{age}",
     "ageUnknown": "未设置",
+    "editProfile": "编辑资料",
     "editUsername": "修改用户名",
     "saveUsername": "保存",
     "usernamePlaceholder": "3-50 个字符",
     "usernameUpdated": "用户名已更新",
-    "usernameUpdateFailed": "修改失败,请重试"
+    "usernameUpdateFailed": "修改失败,请重试",
+    "saveChanges": "保存更改",
+    "profileUpdated": "资料已更新",
+    "closeProfile": "关闭个人资料"
   },
   "login": {
     "title": "DeepBrain Tech",
