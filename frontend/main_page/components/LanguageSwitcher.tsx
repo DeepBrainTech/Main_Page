@@ -1,8 +1,9 @@
 "use client";
 
-import { useRouter, usePathname } from "next/navigation";
 import { useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { usePathname, useRouter } from "@/lib/i18n-navigation";
+import { setNextLocaleCookie } from "@/lib/locale-cookie";
 
 export default function LanguageSwitcher() {
   const router = useRouter();
@@ -12,9 +13,8 @@ export default function LanguageSwitcher() {
   const tCommon = useTranslations("common");
 
   const switchLanguage = (newLocale: string) => {
-    // 替换当前路径中的语言代码
-    const newPath = pathname.replace(`/${currentLocale}`, `/${newLocale}`);
-    router.push(newPath);
+    setNextLocaleCookie(newLocale);
+    router.push(pathname || "/", { locale: newLocale });
   };
 
   const nextLocale = currentLocale === "zh" ? "en" : "zh";

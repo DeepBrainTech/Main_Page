@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter, useParams } from "next/navigation";
+import { useParams } from "next/navigation";
 import { apiFetch } from "@/lib/api-config";
-import { defaultLocale } from "@/i18n-config";
+import { defaultLocale, type Locale } from "@/i18n-config";
+import { useRouter } from "@/lib/i18n-navigation";
 
 /** 当前用户信息（来自 GET /api/auth/me） */
 export interface AuthUserInfo {
@@ -21,9 +22,7 @@ export interface AuthUserInfo {
 export function useAuth() {
   const router = useRouter();
   const params = useParams();
-  const locale = (params.locale as string) || defaultLocale;
-  /** 与当前路由语言一致，避免跳转到 `/` 后被中间件/Cookie 带到另一种语言的落地页 */
-  const landingPath = `/${locale}`;
+  const locale = ((params.locale as string) || defaultLocale) as Locale;
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState<string | undefined>(undefined);
   const [dateOfBirth, setDateOfBirth] = useState<string | null>(null);
@@ -54,7 +53,7 @@ export function useAuth() {
         setLoading(false);
       })
       .catch(() => {
-        router.push(landingPath);
+        router.push("/", { locale });
       });
   };
 
@@ -68,7 +67,7 @@ export function useAuth() {
     } catch {
       // Server may be unreachable; the user still expects to be logged out locally.
     }
-    router.push(landingPath);
+    router.push("/", { locale });
   };
 
   return {

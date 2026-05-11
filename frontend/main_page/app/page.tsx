@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import { redirect } from "next/navigation";
 import { defaultLocale } from "@/i18n-config";
+import { redirect } from "@/lib/i18n-navigation";
 
 export const metadata: Metadata = {
   title: "DeepBrain Tech",
@@ -12,5 +12,5 @@ export const metadata: Metadata = {
 };
 
 export default function RootPage() {
-  redirect(`/${defaultLocale}`);
+  redirect({ href: "/", locale: defaultLocale });
 }

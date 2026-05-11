@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useRouter, useParams } from "next/navigation";
+import { useParams } from "next/navigation";
+import { useRouter } from "@/lib/i18n-navigation";
 import { useTranslations } from "next-intl";
 import { apiFetch } from "@/lib/api-config";
 import CountrySelect from "@/components/ui/CountrySelect";
@@ -306,9 +307,9 @@ export default function RegisterPage() {
       const result = await response.json().catch(() => null);
 
       if (result?.data?.auto_login) {
-        router.push(`/${locale}/dashboard`);
+        router.push("/dashboard");
       } else {
-        router.push(`/${locale}/login?registered=true`);
+        router.push("/login?registered=true");
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : t("register.registerFailed");
@@ -549,7 +550,7 @@ export default function RegisterPage() {
                   setCompleteProfileUsername(opts.username ?? "");
                   setShowCompleteProfile(true);
                 } else {
-                  router.push(`/${locale}/dashboard`);
+                  router.push("/dashboard");
                 }
               }}
               onError={(code) => {
@@ -565,7 +566,7 @@ export default function RegisterPage() {
         <div className="mt-6 text-center text-sm text-slate-600">
           <span>{t("register.hasAccount")} </span>
           <button
-            onClick={() => router.push(`/${locale}/login`)}
+            onClick={() => router.push("/login")}
             className="font-semibold text-blue-600 hover:underline"
           >
             {t("register.loginLink")}
@@ -574,7 +575,7 @@ export default function RegisterPage() {
 
         <div className="mt-4 text-center">
           <button
-            onClick={() => router.push(`/${locale}`)}
+            onClick={() => router.push("/")}
             className="text-sm text-slate-500 hover:text-slate-700 hover:underline"
           >
             {t("common.back")}
@@ -587,7 +588,7 @@ export default function RegisterPage() {
           onClose={() => setShowCompleteProfile(false)}
           onSuccess={() => {
             setShowCompleteProfile(false);
-            router.push(`/${locale}/dashboard`);
+            router.push("/dashboard");
           }}
         />
       </main>

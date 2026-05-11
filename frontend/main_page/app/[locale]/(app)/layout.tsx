@@ -1,7 +1,7 @@
 "use client";
 
-import { useParams, usePathname, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { usePathname, useRouter } from "@/lib/i18n-navigation";
 import AppShell, { type AppTab } from "@/components/layout/AppShell";
 import CompleteProfileDialog from "@/components/features/profile/CompleteProfileDialog";
 import { useAuth } from "@/hooks/useAuth";
@@ -22,19 +22,17 @@ export default function AuthedAppLayout({ children }: { children: React.ReactNod
   const tCommon = useTranslations("common");
   const router = useRouter();
   const pathname = usePathname();
-  const params = useParams();
-  const locale = params.locale as string;
   const { username, email, dateOfBirth, country, avatarUrl, loading, needsProfileCompletion, refetch, logout } = useAuth();
 
   const currentSegment = pathname.split("/").filter(Boolean).pop()?.toLowerCase() ?? "dashboard";
   const activeTab = SEGMENT_TO_TAB[currentSegment] ?? null;
 
   const tabHrefMap: Record<AppTab, string> = {
-    dashboard: `/${locale}/dashboard`,
-    brainGames: `/${locale}/braingames`,
-    leaderboard: `/${locale}/leaderboard`,
-    test: `/${locale}/test`,
-    learning: `/${locale}/learning`,
+    dashboard: "/dashboard",
+    brainGames: "/braingames",
+    leaderboard: "/leaderboard",
+    test: "/test",
+    learning: "/learning",
   };
 
   if (loading) {
@@ -71,7 +69,7 @@ export default function AuthedAppLayout({ children }: { children: React.ReactNod
         avatarUrl={avatarUrl}
         onLogout={() => {
           logout();
-          router.push(`/${locale}/login`);
+          router.push("/login");
         }}
         onProfileUpdate={refetch}
       >

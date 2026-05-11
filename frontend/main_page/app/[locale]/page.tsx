@@ -1,7 +1,8 @@
 ﻿"use client";
 
 import { useEffect } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
+import { useRouter } from "@/lib/i18n-navigation";
 import { apiFetch } from "@/lib/api-config";
 import {
   DecorativeBackground,
@@ -32,7 +33,7 @@ export default function Home() {
     apiFetch("/api/auth/verify")
       .then((res) => {
         if (res.ok) {
-          router.push(`/${locale}/dashboard`);
+          router.push("/dashboard");
         }
       })
       .catch(() => {
@@ -41,11 +42,11 @@ export default function Home() {
   }, [locale, router]);
 
   const goLogin = () => {
-    router.push(`/${locale}/login`);
+    router.push("/login");
   };
 
   const goRegister = () => {
-    router.push(`/${locale}/register`);
+    router.push("/register");
   };
 
   return (

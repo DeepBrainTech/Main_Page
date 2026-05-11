@@ -1,6 +1,7 @@
 "use client";
 
-import { useRouter, useParams } from "next/navigation";
+import { useParams } from "next/navigation";
+import { useRouter } from "@/lib/i18n-navigation";
 import { useTranslations } from "next-intl";
 import { apiFetch } from "@/lib/api-config";
 import { getUserTimezone, postGamePlayedRecord } from "@/services/userApi";
@@ -40,7 +41,7 @@ export function useGameLauncher() {
       });
 
       if (response.status === 401) {
-        router.push(`/${locale}/login`);
+        router.push("/login");
         return;
       }
 

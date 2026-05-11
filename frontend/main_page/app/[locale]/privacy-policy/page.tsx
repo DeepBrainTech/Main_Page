@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { Link } from "@/lib/i18n-navigation";
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 import type { Locale } from "@/i18n-config";
@@ -46,7 +46,7 @@ export default async function PrivacyPolicyPage({ params }: PageProps) {
       <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:py-10">
         <p className="mb-6">
           <Link
-            href={`/${locale}`}
+            href="/"
             className="text-sm font-semibold text-sky-700 underline-offset-4 hover:text-sky-800 hover:underline dark:text-sky-400 dark:hover:text-sky-300"
           >
             {t("backToHome")}

@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
-import { useParams } from "next/navigation";
-import Link from "next/link";
+import { Link } from "@/lib/i18n-navigation";
 import Image from "next/image";
 import { type MembershipPlan } from "@/components/features/membership/MembershipPlans";
 import ProfileDialog from "@/components/features/profile/ProfileDialog";
@@ -48,7 +47,6 @@ export default function AppShell({
   onProfileUpdate,
   children,
 }: AppShellProps) {
-  const params = useParams();
   const tNav = useTranslations("nav");
   const tHome = useTranslations("dashboard");
   const tMembership = useTranslations("membership");
@@ -58,7 +56,6 @@ export default function AppShell({
   const [avatarFailed, setAvatarFailed] = useState(false);
   const { loading: rewardsLoading, coins, diamonds, flowers } = useRewards();
   const resolvedAvatarSrc = !avatarFailed && avatarUrl ? avatarUrl : "/dashboard/default.png";
-  const locale = (params?.locale as string) ?? "en";
 
   useEffect(() => {
     const syncMembershipPlan = () => {
@@ -160,7 +157,10 @@ export default function AppShell({
 
             <button
               type="button"
-              onClick={() => setSettingsOpen(true)}
+              onClick={() => {
+                setProfileOpen(false);
+                setSettingsOpen(true);
+              }}
               className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-xl text-sky-700 hover:bg-indigo-100 sm:h-10 sm:w-10 sm:text-2xl md:h-11 md:w-11"
               aria-label={tNav("settings")}
             >
@@ -168,7 +168,7 @@ export default function AppShell({
             </button>
 
             <Link
-              href={`/${locale}/membership`}
+              href="/membership"
               className="shrink-0 transition hover:scale-105"
               aria-label={tMembership("statusLabel", { plan: tMembership(`plans.${membershipPlan}`) })}
             >
@@ -183,7 +183,10 @@ export default function AppShell({
 
             <button
               type="button"
-              onClick={() => setProfileOpen(true)}
+              onClick={() => {
+                setSettingsOpen(false);
+                setProfileOpen(true);
+              }}
               className="h-9 w-9 shrink-0 overflow-hidden rounded-full border border-slate-200 bg-white sm:h-10 sm:w-10 md:h-11 md:w-11"
               aria-label={tNav("profile")}
             >

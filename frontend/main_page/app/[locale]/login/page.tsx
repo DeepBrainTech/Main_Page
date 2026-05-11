@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { useRouter, useParams } from "next/navigation";
+import { useRouter } from "@/lib/i18n-navigation";
 import { useTranslations } from "next-intl";
 import { apiFetch } from "@/lib/api-config";
 import GoogleLoginButton from "@/components/auth/GoogleLoginButton";
@@ -10,8 +10,6 @@ import CompleteProfileDialog from "@/components/features/profile/CompleteProfile
 
 export default function LoginPage() {
   const router = useRouter();
-  const params = useParams();
-  const locale = params.locale as string;
   const t = useTranslations();
 
   const [username, setUsername] = useState("");
@@ -72,7 +70,7 @@ export default function LoginPage() {
         localStorage.removeItem("remember_me");
       }
 
-      router.push(`/${locale}/dashboard`);
+      router.push("/dashboard");
     } catch (err: any) {
       setError(err.message || t("login.loginFailed"));
     } finally {
@@ -143,7 +141,7 @@ export default function LoginPage() {
             </label>
             <button
               type="button"
-              onClick={() => router.push(`/${locale}/forgot-password`)}
+              onClick={() => router.push("/forgot-password")}
               className="text-sm font-medium text-blue-600 hover:underline"
             >
               {t("login.forgotPassword")}
@@ -174,7 +172,7 @@ export default function LoginPage() {
                   setCompleteProfileUsername(opts.username ?? "");
                   setShowCompleteProfile(true);
                 } else {
-                  router.push(`/${locale}/dashboard`);
+                  router.push("/dashboard");
                 }
               }}
               onError={(code) => setError(t(`auth.${code}`))}
@@ -187,7 +185,7 @@ export default function LoginPage() {
         <div className="mt-7 text-center text-sm text-slate-600">
           <span>{t("login.noAccount")} </span>
           <button
-            onClick={() => router.push(`/${locale}/register`)}
+            onClick={() => router.push("/register")}
             className="font-semibold text-blue-600 hover:underline"
           >
             {t("login.registerLink")}
@@ -196,7 +194,7 @@ export default function LoginPage() {
 
         <div className="mt-4 text-center">
           <button
-            onClick={() => router.push(`/${locale}`)}
+            onClick={() => router.push("/")}
             className="text-sm text-slate-500 hover:text-slate-700 hover:underline"
           >
             {t("common.back")}
@@ -209,7 +207,7 @@ export default function LoginPage() {
           onClose={() => setShowCompleteProfile(false)}
           onSuccess={() => {
             setShowCompleteProfile(false);
-            router.push(`/${locale}/dashboard`);
+            router.push("/dashboard");
           }}
         />
       </main>

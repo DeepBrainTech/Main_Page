@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
-import Link from "next/link";
-import { useParams, usePathname, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { locales, type Locale } from "@/i18n-config";
 import { SUPPORT_CONTACT_EMAIL } from "@/constants/support";
 import { readAppPreferences, setSoundEffectsEnabled, writeAppPreferences } from "@/lib/app-preferences";
+import { Link, usePathname, useRouter } from "@/lib/i18n-navigation";
+import { setNextLocaleCookie } from "@/lib/locale-cookie";
 
 interface SettingsDialogProps {
   open: boolean;
@@ -54,9 +55,11 @@ export default function SettingsDialog({ open, onClose }: SettingsDialogProps) {
   const handleSave = () => {
     writeAppPreferences({ soundEffects: soundOn });
     const next = draftLocale as Locale;
-    if (locales.includes(next) && next !== currentLocale) {
-      const newPath = pathname.replace(`/${currentLocale}`, `/${next}`);
-      router.push(newPath);
+    if (locales.includes(next)) {
+      setNextLocaleCookie(next);
+      if (next !== currentLocale) {
+        router.push(pathname || "/", { locale: next });
+      }
     }
     onClose();
   };
@@ -186,7 +189,7 @@ export default function SettingsDialog({ open, onClose }: SettingsDialogProps) {
                 {t("termsOfService")}
               </span>
               <Link
-                href={`/${currentLocale}/privacy-policy`}
+                href="/privacy-policy"
                 onClick={onClose}
                 className="text-[#5E5E5E] no-underline hover:text-[#5E5E5E]"
               >

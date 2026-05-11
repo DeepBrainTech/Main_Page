@@ -1,9 +1,9 @@
 "use client";
 
 import Image from "next/image";
-import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { useLocale, useTranslations } from "next-intl";
+import { useTranslations } from "next-intl";
+import { useRouter } from "@/lib/i18n-navigation";
 import { notifyLearningAccessChanged } from "@/lib/learningUnlock";
 import { notifyRewardsUpdated } from "@/lib/reward-events";
 import {
@@ -23,7 +23,6 @@ type UnlockCourseDialogProps = {
 export default function UnlockCourseDialog({ open, onClose }: UnlockCourseDialogProps) {
   const t = useTranslations("learning.home.unlockDialog");
   const router = useRouter();
-  const locale = useLocale();
   const [selectedPlan, setSelectedPlan] = useState<SelectedUnlockPlan>(null);
   const [confirmLoading, setConfirmLoading] = useState(false);
   const [confirmError, setConfirmError] = useState<string | null>(null);
@@ -41,7 +40,7 @@ export default function UnlockCourseDialog({ open, onClose }: UnlockCourseDialog
 
   const goToMembership = () => {
     onClose();
-    router.push(`/${locale}/membership`);
+    router.push("/membership");
   };
 
   const handleConfirmDiamonds = async () => {
