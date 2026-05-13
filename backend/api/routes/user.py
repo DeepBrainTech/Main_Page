@@ -49,7 +49,7 @@ router = APIRouter(prefix="/api/user", tags=["用户"])
 
 CHECK_IN_COINS = 50
 STREAK_TOTAL_COINS = 200
-STREAK_DIAMONDS = 2
+STREAK_DIAMONDS = 5
 STREAK_DAYS = 7
 DAILY_TASK_COINS = 10
 MONTHLY_TASK_DIAMONDS = 10
@@ -1011,7 +1011,7 @@ async def do_check_in(
     db: Session = Depends(get_db),
     x_user_timezone: str | None = Header(None, alias="X-User-Timezone"),
 ):
-    """签到：按用户当地时区判定今日，未签则写入并发 10 金币；连续 7 天再发 10 钻石（每个 7 日周期只发一次）"""
+    """Daily check-in (user timezone). Base CHECK_IN_COINS; each 7-day streak milestone adds streak coins to STREAK_TOTAL_COINS that day and STREAK_DIAMONDS once per 7-day window."""
     tz = (x_user_timezone or "").strip() or DEFAULT_TZ
     today = _today_in_tz(tz)
 
