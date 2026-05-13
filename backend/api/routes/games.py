@@ -2,10 +2,11 @@
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
-from fastapi import APIRouter, Depends, Header, Response
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Response, status
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
+from config.shop_items import SHOP_ITEMS, get_shop_items_by_game, is_item_available_for_game
 from database import get_db
 from models import User, UserGameReward, UserGamePlayByDay, UserRewards, GameLike, UserGamePlayed
 from schemas import APIResponse, GamePlayRecordIn
@@ -29,6 +30,55 @@ from auth import (
 
 
 router = APIRouter(prefix="/api/games", tags=["Games"])
+
+
+@router.get("/shop/catalog", response_model=APIResponse)
+async def get_shop_catalog_public(
+    game_mode: str | None = Query(
+        None,
+        description="If set, only items usable in this mode (e.g. chessmater, chess-tourmaster).",
+    ),
+):
+    """
+    Read-only shop prices for embedded game clients. Same source as GET /api/user/shop/items;
+    no auth. Redeem/consume endpoints still enforce cost server-side.
+    """
+    items = get_shop_items_by_game(game_mode)
+    return APIResponse(
+        success=True,
+        message="ok",
+        data={"items": items, "game_mode": game_mode},
+    )
+
+
+@router.get("/shop/item", response_model=APIResponse)
+async def get_shop_item_price_public(
+    item_id: str = Query(..., description="Shop item id, e.g. chess_mater_undo"),
+    game_mode: str | None = Query(
+        None,
+        description="If set, returns 400 when the item is not available for this mode.",
+    ),
+):
+    """Single-item price lookup for games that only need one SKU."""
+    item = SHOP_ITEMS.get(item_id)
+    if not item:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="invalid_item_id")
+    if game_mode and not is_item_available_for_game(item, game_mode):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="item_not_available_for_game",
+        )
+    return APIResponse(
+        success=True,
+        message="ok",
+        data={
+            "item_id": item_id,
+            "name": item["name"],
+            "games": item.get("games", []),
+            "cost": item["cost"],
+        },
+    )
+
 
 DEFAULT_TZ = "UTC"
 SUPPORTED_GAME_KEYS = {
