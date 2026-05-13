@@ -1,18 +1,13 @@
 "use client";
 
 import Image, { type StaticImageData } from "next/image";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { GAMES_BY_DIMENSION } from "@/config/brain-games";
 import { COGNITIVE_DIMENSION_KEYS } from "@/types/cognitive";
 import type { GameEntry } from "@/config/brain-games";
-import {
-  type GameLikeState,
-  fetchGameLikes,
-  likeGame,
-  unlikeGame,
-  postGamePlayedRecord,
-} from "@/services/userApi";
+import { useGameLikes } from "@/hooks/useGameLikes";
+import { postGamePlayedRecord } from "@/services/userApi";
 import chessmaterGif from "../../../public/brain-games/chessmater.gif";
 import sudokuGif from "../../../public/brain-games/sudoku.gif";
 import chessTourmasterGif from "../../../public/brain-games/chessTourmaster.gif";
@@ -50,14 +45,6 @@ const FEATURED_GAMES: { key: FeaturedKey; title: string; subtitle: string }[] = 
 const RIBBON_ZERO_FILL_KEYS = ["chessmater", "quantumgo", "fogchess"] as const;
 
 const RANK_MEDAL_SRC = ["/brain-games/gold.svg", "/brain-games/silver.svg", "/brain-games/bronze.svg"] as const;
-
-function likesMapFromStates(states: GameLikeState[]): Map<string, { count: number; likedByMe: boolean }> {
-  const m = new Map<string, { count: number; likedByMe: boolean }>();
-  for (const s of states) {
-    m.set(s.game_key, { count: s.like_count, likedByMe: s.liked_by_me });
-  }
-  return m;
-}
 
 /** Keys accepted by `POST/DELETE /api/games/likes/{game_key}` (see backend `SUPPORTED_GAME_KEYS`). */
 const BACKEND_LIKE_GAME_KEYS = new Set<string>([
@@ -146,45 +133,6 @@ function computeRibbonTopThree(
   return out.slice(0, 3);
 }
 
-function GameLikeButton(props: {
-  gameKey: string;
-  count: number;
-  likedByMe: boolean;
-  busy: boolean;
-  onToggle: (gameKey: string, currentlyLiked: boolean) => void;
-}) {
-  const { gameKey, count, likedByMe, busy, onToggle } = props;
-  return (
-    <div className="flex shrink-0 items-center gap-0.5">
-      <button
-        type="button"
-        aria-pressed={likedByMe}
-        aria-label={likedByMe ? "Unlike" : "Like"}
-        disabled={busy}
-        onClick={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          void onToggle(gameKey, likedByMe);
-        }}
-        className={`inline-flex h-9 w-9 items-center justify-center rounded-full transition ${
-          likedByMe ? "text-rose-500" : "text-slate-400 hover:bg-rose-50 hover:text-rose-400"
-        } disabled:opacity-50`}
-      >
-        <svg viewBox="0 0 24 24" className="h-[18px] w-[18px]" aria-hidden>
-          <path
-            d="M12 21s-6.716-4.577-9-8.5C.5 9.45 2.08 5.7 6.04 5.04 8.8 4.56 11 6.52 12 8.42c1-1.9 3.2-3.86 5.96-3.38 3.96.66 5.54 4.41 3.04 7.46C18.716 16.423 12 21 12 21Z"
-            fill={likedByMe ? "currentColor" : "none"}
-            stroke="currentColor"
-            strokeWidth="1.6"
-            strokeLinejoin="round"
-          />
-        </svg>
-      </button>
-      <span className="min-w-[1.25rem] text-left text-[13px] font-medium tabular-nums text-[#106FAA]">{count}</span>
-    </div>
-  );
-}
-
 /** Featured + ranking row unified min-height (prior ~280→308, then +≈10% for breathing room). */
 const FEATURE_ROW_MIN_H_PX = 339;
 const CATEGORY_ORDER: (typeof COGNITIVE_DIMENSION_KEYS)[number][] = [
@@ -254,10 +202,7 @@ export default function BrainGamesTab({ onLaunch }: BrainGamesTabProps) {
   const tBrain = useTranslations("brainGames");
   const [activeCategory, setActiveCategory] = useState<(typeof COGNITIVE_DIMENSION_KEYS)[number]>("strategy");
   const [featuredIndex, setFeaturedIndex] = useState(0);
-  const [likeStates, setLikeStates] = useState<Map<string, { count: number; likedByMe: boolean }>>(
-    () => new Map()
-  );
-  const [likeBusyKey, setLikeBusyKey] = useState<string | null>(null);
+  const { likeStates } = useGameLikes();
   /** New shuffle on browser refresh / remount — zeros slots follow this order among chessmater / quantumgo / fogchess. */
   const [ribbonZeroFillOrder] = useState(() => shuffleInPlace([...RIBBON_ZERO_FILL_KEYS]));
 
@@ -271,55 +216,10 @@ export default function BrainGamesTab({ onLaunch }: BrainGamesTabProps) {
     };
   }, []);
 
-  const applyLikesList = useCallback((list: GameLikeState[]) => {
-    setLikeStates(likesMapFromStates(list));
-  }, []);
-
-  /** Re-sync from GET /api/games/likes after a failed like/unlike, or anytime we need DB truth. */
-  const reloadLikesFromApi = useCallback(async () => {
-    try {
-      applyLikesList(await fetchGameLikes());
-    } catch {
-      /* network / auth — leave previous map */
-    }
-  }, [applyLikesList]);
-
-  useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      try {
-        const list = await fetchGameLikes();
-        if (!cancelled) applyLikesList(list);
-      } catch {
-        /* Guest or error — ribbons/cards stay at zeros */
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [applyLikesList]);
-
   const rankedTopKeys = useMemo(() => {
     const likeCount = (k: string) => likeStates.get(k)?.count ?? 0;
     return computeRibbonTopThree(likeCount, PORTAL_LIKEABLE_GAME_KEYS, ribbonZeroFillOrder);
   }, [likeStates, ribbonZeroFillOrder]);
-
-  const handleToggleGameLike = useCallback(
-    async (gameKey: string, currentlyLiked: boolean) => {
-      setLikeBusyKey(gameKey);
-      try {
-        /* Backend commits row then returns full `likes[]` rebuilt from DB (same shape as GET). */
-        const list = currentlyLiked ? await unlikeGame(gameKey) : await likeGame(gameKey);
-        applyLikesList(list);
-      } catch {
-        /* POST failed — pull full snapshot from backend */
-        await reloadLikesFromApi();
-      } finally {
-        setLikeBusyKey(null);
-      }
-    },
-    [applyLikesList, reloadLikesFromApi]
-  );
 
   const selectedGames = GAMES_BY_DIMENSION[activeCategory] ?? [];
 
@@ -554,7 +454,7 @@ export default function BrainGamesTab({ onLaunch }: BrainGamesTabProps) {
             {tBrain("categoryComingSoon")}
           </p>
         ) : (
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4">
             {selectedGames.map((entry) => {
               const imageSrc = entry.skipCover
                 ? null
@@ -562,18 +462,14 @@ export default function BrainGamesTab({ onLaunch }: BrainGamesTabProps) {
               const playerText =
                 entry.key === "quantumgo" || entry.key === "fogchess" ? tBrain("playersOneTwo") : tBrain("playersOne");
               const launch = launchForKey(entry, onLaunch);
-              const likeable = BACKEND_LIKE_GAME_KEYS.has(entry.key);
-              const likeInfo = likeStates.get(entry.key);
-              const likeCount = likeInfo?.count ?? 0;
-              const likedByMe = likeInfo?.likedByMe ?? false;
 
               return (
                 <div
                   key={entry.key}
-                  className="rounded-[32px] border border-white/60 bg-white/90 p-[15px] text-left shadow-[0px_10px_15px_0px_rgba(0,0,0,0.1),0px_4px_6px_0px_rgba(0,0,0,0.1)] transition hover:translate-y-[-2px]"
+                  className="@container/card rounded-[22px] border border-white/60 bg-white/90 p-3 text-left shadow-[0px_10px_15px_0px_rgba(0,0,0,0.1),0px_4px_6px_0px_rgba(0,0,0,0.1)] transition hover:translate-y-[-2px] sm:rounded-[26px] sm:p-3.5 md:rounded-[30px] md:p-4 lg:rounded-[32px] lg:p-[15px]"
                 >
                   <button type="button" onClick={launch} className="block w-full text-left">
-                    <div className="relative mx-auto h-[217px] w-full max-w-[344px] overflow-hidden rounded-[24px] bg-slate-200">
+                    <div className="relative aspect-[344/217] w-full overflow-hidden rounded-[18px] bg-slate-200 sm:rounded-[20px] md:rounded-[22px] lg:rounded-[24px]">
                       {imageSrc ? (
                         <Image
                           src={imageSrc}
@@ -585,38 +481,38 @@ export default function BrainGamesTab({ onLaunch }: BrainGamesTabProps) {
                       ) : null}
                     </div>
                   </button>
-                  <div className="mt-4 flex items-start justify-between gap-3 px-1">
-                    <button type="button" onClick={launch} className="min-w-0 flex-1 text-left">
-                      <p className="truncate font-['Titan_One'] text-[20px] leading-snug text-[#045E96]">{tHome(entry.nameKey)}</p>
-                      <div className="mt-2 flex items-center gap-2 text-[14px] leading-5 text-[#106FAA]">
-                        <span className="inline-flex h-[18px] w-[18px] shrink-0 text-[#106FAA]" aria-hidden>
-                          <svg viewBox="0 0 24 24" fill="none" className="h-full w-full" stroke="currentColor" strokeWidth="1.6">
-                            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-                            <circle cx="9" cy="7" r="4" />
-                            <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-                            <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-                          </svg>
-                        </span>
-                        <span>{playerText}</span>
+                  {/* Figma: left column = title + players (tight gap); Play vertically centered to that block */}
+                  <div className="mt-3 px-0 @min-[22rem]/card:mt-4 sm:px-0.5">
+                    <div className="flex min-w-0 items-center justify-between gap-2">
+                      <div className="flex min-w-0 flex-1 flex-col gap-px">
+                        <button type="button" onClick={launch} className="min-w-0 text-left">
+                          <p className="m-0 break-words font-['Titan_One'] text-[15px] font-normal leading-tight text-[#045E96] @min-[18rem]/card:text-[17px] @min-[22rem]/card:text-[19px] @min-[26rem]/card:text-xl @min-[22rem]/card:leading-snug">
+                            {tHome(entry.nameKey)}
+                          </p>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={launch}
+                          className="font-app-body flex min-w-0 items-center gap-2 py-0 text-left text-[12px] font-normal leading-snug text-[#106FAA] @min-[20rem]/card:text-sm @min-[20rem]/card:leading-5"
+                        >
+                          <span className="inline-flex h-4 w-4 shrink-0 text-[#106FAA]" aria-hidden>
+                            <svg viewBox="0 0 24 24" fill="none" className="h-full w-full" stroke="currentColor" strokeWidth="1.6">
+                              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                              <circle cx="9" cy="7" r="4" />
+                              <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                              <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                            </svg>
+                          </span>
+                          <span>{playerText}</span>
+                        </button>
                       </div>
-                    </button>
-                    <div className="mt-0.5 flex shrink-0 items-center gap-2">
-                      {likeable ? (
-                        <GameLikeButton
-                          gameKey={entry.key}
-                          count={likeCount}
-                          likedByMe={likedByMe}
-                          busy={likeBusyKey === entry.key}
-                          onToggle={handleToggleGameLike}
-                        />
-                      ) : null}
                       <button
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
                           launch();
                         }}
-                        className="inline-flex h-[33px] shrink-0 items-center justify-center rounded-full bg-[#DDEDFF] px-6 text-[14px] font-medium text-[#045E96]"
+                        className="font-app-body inline-flex h-8 min-w-[7rem] shrink-0 items-center justify-center rounded-full bg-[#DDEDFF] px-4 text-[13px] font-medium leading-5 text-[#045E96] @min-[22rem]/card:min-w-[7.25rem] @min-[22rem]/card:px-5 @min-[22rem]/card:text-sm"
                       >
                         {tBrain("ribbon.playNow")}
                       </button>
