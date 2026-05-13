@@ -115,17 +115,16 @@ export default function ProfileDialog({
     }
   }, [open, username, dateOfBirth, country, avatarUrl, currentLocale]);
 
-  /** Format YYYY-MM-DD for profile card display */
-  const formatBirthdayFull = (yyyyMmDd: string): string => {
+  /** Format YYYY-MM-DD for profile view: month and day only (year hidden). */
+  const formatBirthdayWithoutYear = (yyyyMmDd: string): string => {
     const parts = yyyyMmDd.trim().split("-");
     if (parts.length !== 3) return yyyyMmDd;
     const [y, m, d] = parts;
     const date = new Date(Number(y), Number(m) - 1, Number(d));
     if (Number.isNaN(date.getTime())) return yyyyMmDd;
     return date.toLocaleDateString(currentLocale === "zh" ? "zh-CN" : "en-US", {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
+      month: "long",
+      day: "numeric",
     });
   };
 
@@ -428,7 +427,7 @@ export default function ProfileDialog({
                     />
                   ) : (
                     <p className="mt-0.5 truncate text-base font-medium leading-6 text-zinc-800">
-                      {dateOfBirth && dateOfBirth.trim() ? formatBirthdayFull(dateOfBirth) : "—"}
+                      {dateOfBirth && dateOfBirth.trim() ? formatBirthdayWithoutYear(dateOfBirth) : "—"}
                     </p>
                   )}
                 </div>
