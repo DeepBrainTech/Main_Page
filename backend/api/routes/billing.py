@@ -520,10 +520,11 @@ async def resume_subscription(
     db: Session = Depends(get_db),
 ):
     """
-    Resume renewal (clear cancel-at-period-end) and/or undo a multi-phase SubscriptionSchedule.
+    Resume renewal (clear cancel-at-period-end) and/or undo scheduled subscription changes.
 
-    When both cancellation-at-period-end and a deferred multi-phase change exist (e.g. Premium→Plus),
-    the schedule is released first so cancel can be cleared on the subscription in one action.
+    Whenever possible, releases the SubscriptionSchedule first so all scheduled phases are cleared;
+    if release is not allowed (e.g. wrong schedule status) but cancel-at-period-end must be cleared,
+    falls back to updating the schedule in place then clearing cancel on the subscription.
     """
     if not is_stripe_billing_configured():
         raise HTTPException(status_code=503, detail="stripe_not_configured")
@@ -546,22 +547,23 @@ async def resume_subscription(
     if not cancel_cape and not (sch_id and pending_multi):
         raise HTTPException(status_code=400, detail="subscription_nothing_to_resume")
 
+    schedule_released = False
     try:
-        if cancel_cape and sch_id and pending_multi:
-            _release_subscription_schedule_by_id(sch_id)
+        if sch_id:
             try:
-                stripe.Subscription.modify(sub_id, cancel_at_period_end=False)
+                _release_subscription_schedule_by_id(sch_id)
+                schedule_released = True
+            except ValueError as e:
+                logger.warning("resume subscription schedule release skipped: %s", e)
             except stripe.error.StripeError as e:
-                try:
-                    check = stripe.Subscription.retrieve(sub_id)
-                except stripe.error.StripeError as re:
-                    logger.warning("resume subscription verify retrieve failed: %s", re)
+                if cancel_cape:
+                    logger.warning("resume subscription schedule release failed: %s", e)
+                else:
+                    logger.warning("resume subscription schedule release failed: %s", e)
                     raise HTTPException(status_code=400, detail="stripe_resume_subscription_failed") from e
-                if bool(getattr(check, "cancel_at_period_end", False)):
-                    logger.warning("resume subscription modify failed: %s", e)
-                    raise HTTPException(status_code=400, detail="stripe_resume_subscription_failed") from e
-        elif cancel_cape:
-            if sch_id:
+
+        if cancel_cape:
+            if sch_id and not schedule_released:
                 try:
                     _resume_cancel_at_period_end_via_subscription_schedule(sch_id, sub)
                 except ValueError as e:
@@ -584,16 +586,10 @@ async def resume_subscription(
                 else:
                     logger.warning("resume subscription modify failed: %s", e)
                     raise HTTPException(status_code=400, detail="stripe_resume_subscription_failed") from e
-
-        elif sch_id and pending_multi:
-            try:
-                _release_subscription_schedule_by_id(sch_id)
-            except ValueError as e:
-                logger.warning("resume subscription schedule release invalid: %s", e)
-                raise HTTPException(status_code=400, detail="stripe_subscription_invalid") from e
-            except stripe.error.StripeError as e:
-                logger.warning("resume subscription schedule release failed: %s", e)
-                raise HTTPException(status_code=400, detail="stripe_resume_subscription_failed") from e
+        elif sch_id and pending_multi and not schedule_released:
+            raise HTTPException(status_code=400, detail="stripe_resume_subscription_failed")
+    except HTTPException:
+        raise
     except stripe.error.StripeError as e:
         logger.warning("resume subscription failed: %s", e)
         raise HTTPException(status_code=400, detail="stripe_resume_subscription_failed") from e

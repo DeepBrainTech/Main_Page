@@ -503,8 +503,8 @@ export async function createStripeBillingPortalSession(locale: string): Promise<
 }
 
 /**
- * Resume Stripe renewal (clear cancel-at-period-end) and/or cancel a multi-phase
- * subscription schedule (e.g. undo a deferred downgrade). Backend picks the right Stripe calls.
+ * Resume Stripe renewal (clear cancel-at-period-end) and/or clear scheduled subscription changes.
+ * Backend releases SubscriptionSchedule when possible so future phased changes are removed.
  */
 export async function resumeStripeSubscription(): Promise<void> {
   const res = await fetch(getApiUrl("/api/billing/resume-subscription"), {
