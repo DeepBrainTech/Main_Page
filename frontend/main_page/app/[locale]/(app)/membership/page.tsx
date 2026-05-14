@@ -31,6 +31,7 @@ type MembershipErrorKey =
   | "alreadySubscribed"
   | "stripeChangeFailed"
   | "subscriptionNoChange"
+  | "planSwitchNeedResume"
   | "generic";
 
 type StripeDialogState =
@@ -80,6 +81,7 @@ export default function MembershipPage() {
   const [membershipPeriodEndIso, setMembershipPeriodEndIso] = useState<string | null>(null);
   const [subscriptionCancelAtPeriodEnd, setSubscriptionCancelAtPeriodEnd] = useState<boolean | null>(null);
   const [subscriptionSchedulePendingChange, setSubscriptionSchedulePendingChange] = useState<boolean | null>(null);
+  const [subscribedBillingInterval, setSubscribedBillingInterval] = useState<MembershipBillingInterval | null>(null);
   const [stripeDialog, setStripeDialog] = useState<StripeDialogState>(null);
   const [stripeSubmitting, setStripeSubmitting] = useState(false);
 
@@ -91,8 +93,12 @@ export default function MembershipPage() {
         setCurrentPlan(p);
       }
       setBillingInterval(m.membership_billing_interval === "annual" ? "annual" : "monthly");
+      const hasSub = Boolean(m.stripe_subscription_id);
+      setHasStripeSubscription(hasSub);
+      setSubscribedBillingInterval(
+        hasSub ? (m.membership_billing_interval === "annual" ? "annual" : "monthly") : null,
+      );
       setCheckoutEnabled(st.checkout_enabled);
-      setHasStripeSubscription(Boolean(m.stripe_subscription_id));
       setMembershipPeriodEndIso(m.membership_expires_at);
       setSubscriptionCancelAtPeriodEnd(st.subscription_cancel_at_period_end);
       setSubscriptionSchedulePendingChange(st.subscription_schedule_pending_change);
@@ -235,6 +241,11 @@ export default function MembershipPage() {
 
   const preview = stripeDialog?.phase === "ready" ? stripeDialog.preview : null;
   const dialogPlan = stripeDialog?.phase === "ready" || stripeDialog?.phase === "loading" ? stripeDialog.plan : null;
+  const dialogBillingInterval: MembershipBillingInterval =
+    preview?.change_mode === "deferred_downgrade" &&
+    (preview.pending_billing_interval === "monthly" || preview.pending_billing_interval === "annual")
+      ? preview.pending_billing_interval
+      : billingInterval;
 
   return (
     <div className="space-y-4">
@@ -258,6 +269,7 @@ export default function MembershipPage() {
         membershipPeriodEndIso={membershipPeriodEndIso}
         subscriptionCancelAtPeriodEnd={subscriptionCancelAtPeriodEnd}
         subscriptionSchedulePendingChange={subscriptionSchedulePendingChange}
+        subscribedBillingInterval={subscribedBillingInterval}
       />
 
       {stripeDialog ? (
@@ -296,7 +308,7 @@ export default function MembershipPage() {
               <p className="mt-1 text-sm text-slate-600">
                 {t("planChangeTargetSummary", {
                   plan: t(`plans.${dialogPlan}`),
-                  interval: t(billingInterval === "annual" ? "billingAnnually" : "billingMonthly"),
+                  interval: t(dialogBillingInterval === "annual" ? "billingAnnually" : "billingMonthly"),
                 })}
               </p>
             ) : null}
@@ -316,7 +328,7 @@ export default function MembershipPage() {
                             )
                           : "—",
                         plan: t(`plans.${dialogPlan}`),
-                        interval: t(billingInterval === "annual" ? "billingAnnually" : "billingMonthly"),
+                        interval: t(dialogBillingInterval === "annual" ? "billingAnnually" : "billingMonthly"),
                       })}
                     </p>
                     <div className="rounded-lg bg-slate-50 px-3 py-2.5 text-sm font-medium text-slate-800">

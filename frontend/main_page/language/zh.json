@@ -75,6 +75,9 @@
     "undoScheduledPlanChange": "保留当前套餐",
     "resumeSubscriptionHint": "恢复后，Stripe 会在每个计费周期结束时自动续订；届时将照常扣款，除非你之后再次取消。",
     "scheduledPlanChangeHint": "你已安排在本计费周期结束后切换套餐；可点击下方按钮取消该安排并继续当前套餐。",
+    "downgradeToPlusBlockedTitle": "请先恢复订阅后再切换到 Plus",
+    "upgradeToAnnual": "升级年费",
+    "upgradeToMonthly": "改为按月",
     "cancelDialog": {
       "title": "确定取消订阅？",
       "description": "确定要取消你的 {plan} 订阅吗？",
@@ -100,6 +103,7 @@
       "billingViaStripe": "会员变更仅能通过 Stripe 结账或账单门户完成。",
       "stripeChangeFailed": "无法变更订阅，请检查支付方式或稍后重试。",
       "subscriptionNoChange": "当前已是该方案与计费周期。",
+      "planSwitchNeedResume": "当前订阅已设置在计费周期结束时取消。若要更换方案，请先点击「恢复订阅」；或在本周期结束后再更换。",
       "generic": "出错了，请稍后重试。"
     },
     "checkoutSuccess": "订阅已更新，感谢支持！",

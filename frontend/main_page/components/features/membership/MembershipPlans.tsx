@@ -22,6 +22,8 @@ interface MembershipPlansProps {
   subscriptionCancelAtPeriodEnd?: boolean | null;
   /** From Stripe: true if a multi-phase schedule implies a future plan change (e.g. deferred downgrade). */
   subscriptionSchedulePendingChange?: boolean | null;
+  /** Billing interval of the active paid subscription (from server); may differ from tab while browsing. */
+  subscribedBillingInterval?: MembershipBillingInterval | null;
 }
 
 type PlanFeature = {
@@ -126,6 +128,7 @@ export default function MembershipPlans({
   membershipPeriodEndIso = null,
   subscriptionCancelAtPeriodEnd = null,
   subscriptionSchedulePendingChange = null,
+  subscribedBillingInterval = null,
 }: MembershipPlansProps) {
   const locale = useLocale();
   const t = useTranslations("membership");
@@ -236,6 +239,22 @@ export default function MembershipPlans({
             Boolean(onResumeSubscription) && (isCanceledAtPeriodEnd || hasPendingScheduleChange);
           const resumePrimaryLabel =
             hasPendingScheduleChange && !isCanceledAtPeriodEnd ? t("undoScheduledPlanChange") : t("resumeSubscription");
+          const blockDowngradePlusWhileCanceling =
+            currentPlan === "premium" && plan.key === "plus" && isCanceledAtPeriodEnd;
+          const showCrossGradeBillingCta =
+            isCurrent &&
+            (plan.key === "plus" || plan.key === "premium") &&
+            subscribedBillingInterval != null &&
+            subscribedBillingInterval !== billingInterval;
+          const primaryPlanButtonLabel = isFreePreview
+            ? t("freePlan")
+            : isCurrent
+              ? showCrossGradeBillingCta
+                ? billingInterval === "annual"
+                  ? t("upgradeToAnnual")
+                  : t("upgradeToMonthly")
+                : t("currentPlan")
+              : t(actionLabelKey);
 
           return (
             <article
@@ -324,16 +343,17 @@ export default function MembershipPlans({
                 <button
                   type="button"
                   onClick={() => onPlanChange(plan.key)}
-                  disabled={isCurrent || isFreePreview}
+                  disabled={(isCurrent && !showCrossGradeBillingCta) || isFreePreview || blockDowngradePlusWhileCanceling}
+                  title={blockDowngradePlusWhileCanceling ? t("downgradeToPlusBlockedTitle") : undefined}
                   className={`h-12 w-full rounded-full font-app-body text-base font-semibold leading-6 transition ${
-                    isCurrent || isFreePreview
+                    (isCurrent && !showCrossGradeBillingCta) || isFreePreview || blockDowngradePlusWhileCanceling
                       ? plan.key === "free"
                         ? "cursor-default bg-indigo-50 text-sky-700 opacity-95"
-                        : "cursor-default bg-white/20 text-white"
+                        : "cursor-default bg-white/20 text-white disabled:cursor-not-allowed disabled:opacity-55"
                       : `${styles.button} hover:-translate-y-0.5 hover:shadow-xl`
                   }`}
                 >
-                  {isFreePreview ? t("freePlan") : isCurrent ? t("currentPlan") : t(actionLabelKey)}
+                  {primaryPlanButtonLabel}
                 </button>
 
                 {isCurrent && plan.key !== "free" ? (

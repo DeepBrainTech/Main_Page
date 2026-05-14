@@ -449,6 +449,8 @@ export function membershipErrorKeyFromDetail(detail: string): string {
     case "stripe_resume_subscription_failed":
     case "stripe_cancel_subscription_failed":
       return "stripeChangeFailed";
+    case "subscription_canceling_cannot_change_plan":
+      return "planSwitchNeedResume";
     case "subscription_not_canceling_at_period_end":
     case "subscription_already_canceling_at_period_end":
     case "subscription_nothing_to_resume":

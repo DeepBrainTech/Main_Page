@@ -75,6 +75,9 @@
     "undoScheduledPlanChange": "Keep current plan",
     "resumeSubscriptionHint": "If you resume, Stripe will keep renewing your plan each billing period. You will be charged again at renewal unless you cancel later.",
     "scheduledPlanChangeHint": "You have a plan change scheduled after this billing period. Use the button below to cancel that schedule and stay on your current plan.",
+    "downgradeToPlusBlockedTitle": "Resume your subscription before switching to Plus",
+    "upgradeToAnnual": "Upgrade to annual billing",
+    "upgradeToMonthly": "Switch to monthly billing",
     "cancelDialog": {
       "title": "Cancel Subscription?",
       "description": "Are you sure you want to cancel your {plan} subscription?",
@@ -100,6 +103,7 @@
       "billingViaStripe": "Membership can only be changed through Stripe checkout or the billing portal.",
       "stripeChangeFailed": "Could not change your subscription. Check your payment method or try again later.",
       "subscriptionNoChange": "You are already on this plan and billing period.",
+      "planSwitchNeedResume": "Your subscription is set to cancel at the end of this billing period. To switch plans, tap Resume subscription first, or wait until the current period ends.",
       "generic": "Something went wrong. Please try again."
     },
     "checkoutSuccess": "Subscription updated. Thank you!",

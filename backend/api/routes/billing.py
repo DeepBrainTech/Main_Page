@@ -145,12 +145,8 @@ def _load_subscription_change_context(
     if not sub_id:
         raise HTTPException(status_code=400, detail="stripe_subscription_missing")
 
-    new_price_id = get_price_id(body.plan, body.billing_interval)
-    if not new_price_id:
-        raise HTTPException(status_code=503, detail="stripe_price_not_configured")
-
     try:
-        sub = stripe.Subscription.retrieve(sub_id)
+        sub = stripe.Subscription.retrieve(sub_id, expand=["schedule"])
     except stripe.error.InvalidRequestError:
         current_user.stripe_subscription_id = None
         db.add(current_user)
@@ -161,8 +157,27 @@ def _load_subscription_change_context(
         raise HTTPException(status_code=400, detail="stripe_subscription_inactive")
 
     current_pid = _first_subscription_price_id(sub)
+    if not current_pid:
+        raise HTTPException(status_code=400, detail="stripe_subscription_invalid")
+
+    cur = _resolve_plan_from_subscription(sub)
+    new_price_id = get_price_id(body.plan, body.billing_interval)
+    if not new_price_id:
+        raise HTTPException(status_code=503, detail="stripe_price_not_configured")
+    # Premium→Plus at period end must keep the subscription's billing cadence (Stripe rejects mixed
+    # monthly/annual phases on the same schedule item when the UI tab does not match the live price).
+    if _is_premium_to_plus_deferred_downgrade(cur, body.plan) and cur is not None:
+        _, cur_iv = cur
+        if cur_iv in ("monthly", "annual"):
+            pid_deferred = get_price_id(body.plan, cur_iv)
+            if pid_deferred:
+                new_price_id = pid_deferred
+
     if current_pid == new_price_id:
         raise HTTPException(status_code=400, detail="subscription_no_change")
+
+    if bool(getattr(sub, "cancel_at_period_end", False)):
+        raise HTTPException(status_code=400, detail="subscription_canceling_cannot_change_plan")
 
     try:
         items_data = sub["items"].data
@@ -355,6 +370,7 @@ def _apply_premium_to_plus_at_period_end(
     meta: dict,
 ) -> stripe.Subscription:
     """Use a two-phase Subscription Schedule: keep Premium until period end, then Plus."""
+    sub = stripe.Subscription.retrieve(sub.id, expand=["schedule"])
     period_start = int(sub.current_period_start)
     period_end = int(sub.current_period_end)
     try:
@@ -373,6 +389,14 @@ def _apply_premium_to_plus_at_period_end(
         },
     ]
     sch_id = _schedule_id_on_subscription(sub)
+    if sch_id:
+        try:
+            sched = stripe.SubscriptionSchedule.retrieve(sch_id)
+            if getattr(sched, "status", None) not in ("not_started", "active"):
+                sch_id = None
+        except stripe.error.StripeError as e:
+            logger.warning("subscription schedule retrieve before plus downgrade: %s", e)
+            sch_id = None
     try:
         if sch_id:
             stripe.SubscriptionSchedule.modify(
@@ -756,6 +780,11 @@ async def preview_subscription_change(
     currency = (getattr(sub, "currency", None) or "usd").lower()
 
     if _is_premium_to_plus_deferred_downgrade(cur, body.plan):
+        pending_iv = body.billing_interval
+        if cur is not None:
+            _, cur_iv = cur
+            if cur_iv in ("monthly", "annual"):
+                pending_iv = cur_iv
         return APIResponse(
             success=True,
             message="ok",
@@ -769,7 +798,7 @@ async def preview_subscription_change(
                 "subscription_current_period_end": period_end,
                 "payment_method_label": pm_label,
                 "pending_plan": body.plan,
-                "pending_billing_interval": body.billing_interval,
+                "pending_billing_interval": pending_iv,
             },
         )
 
@@ -816,10 +845,14 @@ async def change_subscription(
     meta = dict(sub.metadata or {})
     meta["user_id"] = str(current_user.id)
     meta["plan"] = body.plan
-    meta["billing_interval"] = body.billing_interval
 
     cur = _resolve_plan_from_subscription(sub)
     deferred = _is_premium_to_plus_deferred_downgrade(cur, body.plan)
+    if deferred and cur is not None:
+        _, cur_iv = cur
+        meta["billing_interval"] = cur_iv if cur_iv in ("monthly", "annual") else body.billing_interval
+    else:
+        meta["billing_interval"] = body.billing_interval
 
     if deferred:
         current_pid = _first_subscription_price_id(sub)
