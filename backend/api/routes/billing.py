@@ -2,6 +2,7 @@
 Stripe Checkout, Customer Billing Portal, subscription change preview, and webhooks.
 """
 import logging
+import time
 from datetime import datetime
 
 import stripe
@@ -193,6 +194,141 @@ def _schedule_id_on_subscription(sub: stripe.Subscription) -> str | None:
     return None
 
 
+def _stripe_expandable_id(val: object) -> str | None:
+    if val is None:
+        return None
+    if isinstance(val, str) and val:
+        return val
+    oid = getattr(val, "id", None)
+    return str(oid) if oid else None
+
+
+def _subscription_primary_item_id(sub: stripe.Subscription) -> str:
+    try:
+        return str(sub["items"].data[0].id)
+    except (AttributeError, KeyError, IndexError) as e:
+        raise ValueError("subscription has no items") from e
+
+
+def _schedule_modify_phases_from_retrieved(
+    sched: stripe.SubscriptionSchedule,
+    sub: stripe.Subscription,
+) -> list[dict]:
+    """
+    Build `phases` for SubscriptionSchedule.modify from a retrieved schedule.
+    Omits fully past phases (Stripe allows omitting past phases on update).
+    """
+    now_ts = int(time.time())
+    fallback_si = _subscription_primary_item_id(sub)
+    raw_phases = getattr(sched, "phases", None) or []
+    if not raw_phases:
+        raise ValueError("schedule has no phases")
+
+    out: list[dict] = []
+    for ph in raw_phases:
+        start_raw = getattr(ph, "start_date", None)
+        if start_raw is None:
+            continue
+        sd = int(start_raw)
+        end_raw = getattr(ph, "end_date", None)
+        ed_int = int(end_raw) if end_raw is not None else None
+        if ed_int is not None and ed_int <= now_ts:
+            continue
+
+        phase: dict = {"start_date": sd, "items": []}
+        if ed_int is not None:
+            phase["end_date"] = ed_int
+
+        ph_items = getattr(ph, "items", None) or []
+        for it in ph_items:
+            price_id = _stripe_expandable_id(getattr(it, "price", None)) or _stripe_expandable_id(
+                getattr(it, "plan", None)
+            )
+            if not price_id:
+                continue
+            qty = int(getattr(it, "quantity", None) or 1)
+            si_id = _stripe_expandable_id(getattr(it, "subscription_item", None)) or fallback_si
+            phase["items"].append({"subscription_item": si_id, "price": price_id, "quantity": qty})
+
+        if not phase["items"]:
+            raise ValueError("schedule phase has no usable items")
+        out.append(phase)
+
+    if not out:
+        pid = _first_subscription_price_id(sub)
+        if not pid:
+            raise ValueError("cannot derive price from subscription for schedule phases")
+        out = [
+            {
+                "start_date": int(sub.current_period_start),
+                "end_date": int(sub.current_period_end),
+                "items": [{"subscription_item": fallback_si, "price": pid, "quantity": 1}],
+            }
+        ]
+    return out
+
+
+def _resume_cancel_at_period_end_via_subscription_schedule(
+    schedule_id: str,
+    sub: stripe.Subscription,
+) -> None:
+    """Clear cancel-at-period-end when Stripe requires updating the subscription schedule."""
+    sched = stripe.SubscriptionSchedule.retrieve(schedule_id)
+    phases = _schedule_modify_phases_from_retrieved(sched, sub)
+    meta = getattr(sched, "metadata", None) if isinstance(getattr(sched, "metadata", None), dict) else {}
+    end_behavior = getattr(sched, "end_behavior", None) or "release"
+    stripe.SubscriptionSchedule.modify(
+        schedule_id,
+        phases=phases,
+        proration_behavior="none",
+        end_behavior=end_behavior,
+        metadata=meta,
+    )
+
+
+def _subscription_schedule_pending_multi_phase(sub: stripe.Subscription) -> bool:
+    """
+    True when the subscription's expanded schedule still has 2+ non-past phases
+    (e.g. Premium until period end, then Plus).
+    """
+    sch = getattr(sub, "schedule", None)
+    if sch is None or isinstance(sch, str):
+        return False
+    phases = getattr(sch, "phases", None) or []
+    now_ts = int(time.time())
+    active_like = 0
+    for ph in phases:
+        end_raw = getattr(ph, "end_date", None)
+        ed_int = int(end_raw) if end_raw is not None else None
+        if ed_int is not None and ed_int <= now_ts:
+            continue
+        active_like += 1
+    return active_like >= 2
+
+
+def _release_subscription_schedule_by_id(schedule_id: str) -> None:
+    """Release an active / not_started schedule (removes future phases; subscription keeps current items)."""
+    sched = stripe.SubscriptionSchedule.retrieve(schedule_id)
+    st = getattr(sched, "status", None)
+    if st not in ("not_started", "active"):
+        raise ValueError(f"subscription schedule not releasable: status={st!r}")
+    stripe.SubscriptionSchedule.release(schedule_id)
+
+
+def _stripe_invalid_request_suggests_schedule_conflict(err: stripe.error.InvalidRequestError) -> bool:
+    body = getattr(err, "json_body", None) or {}
+    err_obj = body.get("error", {}) if isinstance(body, dict) else {}
+    code = (err_obj.get("code") or "") if isinstance(err_obj, dict) else ""
+    msg = (err_obj.get("message") or str(err) or "").lower()
+    if "subscription_schedule" in msg or "subscription schedule" in msg:
+        return True
+    if "schedule" in msg and "managed" in msg:
+        return True
+    if isinstance(code, str) and "schedule" in code.lower():
+        return True
+    return False
+
+
 def _release_active_subscription_schedule(sub_id: str) -> None:
     """Drop an active schedule so Subscription.modify can apply an immediate upgrade."""
     try:
@@ -348,15 +484,21 @@ async def billing_status(current_user: User = Depends(get_current_active_user)):
     portal = bool(checkout and getattr(current_user, "stripe_customer_id", None))
     has_sub = bool(getattr(current_user, "stripe_subscription_id", None))
     cancel_at_period_end: bool | None = None
+    has_schedule: bool | None = None
+    schedule_pending_change: bool | None = None
     if checkout and has_sub:
         _stripe_configure()
         try:
-            sub = stripe.Subscription.retrieve(current_user.stripe_subscription_id)
+            sub = stripe.Subscription.retrieve(current_user.stripe_subscription_id, expand=["schedule"])
             if sub.status in ("active", "trialing", "past_due"):
                 cancel_at_period_end = bool(getattr(sub, "cancel_at_period_end", False))
+                has_schedule = _schedule_id_on_subscription(sub) is not None
+                schedule_pending_change = _subscription_schedule_pending_multi_phase(sub)
         except stripe.error.StripeError as e:
             logger.warning("billing status subscription retrieve failed: %s", e)
             cancel_at_period_end = None
+            has_schedule = None
+            schedule_pending_change = None
 
     return APIResponse(
         success=True,
@@ -366,13 +508,23 @@ async def billing_status(current_user: User = Depends(get_current_active_user)):
             "portal_enabled": portal,
             "has_stripe_subscription": has_sub,
             "subscription_cancel_at_period_end": cancel_at_period_end,
+            "subscription_has_schedule": has_schedule,
+            "subscription_schedule_pending_change": schedule_pending_change,
         },
     )
 
 
 @router.post("/resume-subscription", response_model=APIResponse)
-async def resume_subscription(current_user: User = Depends(get_current_active_user)):
-    """Undo cancel-at-period-end so Stripe renews the subscription on the next billing cycle."""
+async def resume_subscription(
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Resume renewal (clear cancel-at-period-end) and/or undo a multi-phase SubscriptionSchedule.
+
+    When both cancellation-at-period-end and a deferred multi-phase change exist (e.g. Premium→Plus),
+    the schedule is released first so cancel can be cleared on the subscription in one action.
+    """
     if not is_stripe_billing_configured():
         raise HTTPException(status_code=503, detail="stripe_not_configured")
     sub_id = getattr(current_user, "stripe_subscription_id", None)
@@ -380,19 +532,78 @@ async def resume_subscription(current_user: User = Depends(get_current_active_us
         raise HTTPException(status_code=400, detail="stripe_subscription_missing")
     _stripe_configure()
     try:
-        sub = stripe.Subscription.retrieve(sub_id)
+        sub = stripe.Subscription.retrieve(sub_id, expand=["schedule"])
     except stripe.error.StripeError as e:
         logger.warning("resume subscription retrieve failed: %s", e)
         raise HTTPException(status_code=400, detail="stripe_subscription_invalid") from e
     if sub.status not in ("active", "trialing", "past_due"):
         raise HTTPException(status_code=400, detail="stripe_subscription_inactive")
-    if not bool(getattr(sub, "cancel_at_period_end", False)):
-        raise HTTPException(status_code=400, detail="subscription_not_canceling_at_period_end")
+
+    cancel_cape = bool(getattr(sub, "cancel_at_period_end", False))
+    sch_id = _schedule_id_on_subscription(sub)
+    pending_multi = _subscription_schedule_pending_multi_phase(sub)
+
+    if not cancel_cape and not (sch_id and pending_multi):
+        raise HTTPException(status_code=400, detail="subscription_nothing_to_resume")
+
     try:
-        stripe.Subscription.modify(sub_id, cancel_at_period_end=False)
+        if cancel_cape and sch_id and pending_multi:
+            _release_subscription_schedule_by_id(sch_id)
+            try:
+                stripe.Subscription.modify(sub_id, cancel_at_period_end=False)
+            except stripe.error.StripeError as e:
+                try:
+                    check = stripe.Subscription.retrieve(sub_id)
+                except stripe.error.StripeError as re:
+                    logger.warning("resume subscription verify retrieve failed: %s", re)
+                    raise HTTPException(status_code=400, detail="stripe_resume_subscription_failed") from e
+                if bool(getattr(check, "cancel_at_period_end", False)):
+                    logger.warning("resume subscription modify failed: %s", e)
+                    raise HTTPException(status_code=400, detail="stripe_resume_subscription_failed") from e
+        elif cancel_cape:
+            if sch_id:
+                try:
+                    _resume_cancel_at_period_end_via_subscription_schedule(sch_id, sub)
+                except ValueError as e:
+                    logger.warning("resume subscription schedule phase build failed: %s", e)
+                    raise HTTPException(status_code=400, detail="stripe_subscription_invalid") from e
+            try:
+                stripe.Subscription.modify(sub_id, cancel_at_period_end=False)
+            except stripe.error.StripeError as e:
+                if sch_id:
+                    try:
+                        check = stripe.Subscription.retrieve(sub_id)
+                    except stripe.error.StripeError as re:
+                        logger.warning("resume subscription verify retrieve failed: %s", re)
+                        raise HTTPException(status_code=400, detail="stripe_resume_subscription_failed") from e
+                    if not bool(getattr(check, "cancel_at_period_end", False)):
+                        pass
+                    else:
+                        logger.warning("resume subscription modify failed: %s", e)
+                        raise HTTPException(status_code=400, detail="stripe_resume_subscription_failed") from e
+                else:
+                    logger.warning("resume subscription modify failed: %s", e)
+                    raise HTTPException(status_code=400, detail="stripe_resume_subscription_failed") from e
+
+        elif sch_id and pending_multi:
+            try:
+                _release_subscription_schedule_by_id(sch_id)
+            except ValueError as e:
+                logger.warning("resume subscription schedule release invalid: %s", e)
+                raise HTTPException(status_code=400, detail="stripe_subscription_invalid") from e
+            except stripe.error.StripeError as e:
+                logger.warning("resume subscription schedule release failed: %s", e)
+                raise HTTPException(status_code=400, detail="stripe_resume_subscription_failed") from e
     except stripe.error.StripeError as e:
-        logger.warning("resume subscription modify failed: %s", e)
+        logger.warning("resume subscription failed: %s", e)
         raise HTTPException(status_code=400, detail="stripe_resume_subscription_failed") from e
+
+    try:
+        updated = stripe.Subscription.retrieve(sub_id, expand=["schedule"])
+    except stripe.error.StripeError as e:
+        logger.warning("resume subscription post-update retrieve failed: %s", e)
+        raise HTTPException(status_code=400, detail="stripe_subscription_invalid") from e
+    sync_user_from_stripe_subscription(db, current_user, updated)
     return APIResponse(success=True, message="ok", data={"resumed": True})
 
 
@@ -409,7 +620,7 @@ async def cancel_subscription_at_period_end(
         raise HTTPException(status_code=400, detail="stripe_subscription_missing")
     _stripe_configure()
     try:
-        sub = stripe.Subscription.retrieve(sub_id)
+        sub = stripe.Subscription.retrieve(sub_id, expand=["schedule"])
     except stripe.error.StripeError as e:
         logger.warning("cancel-at-period-end retrieve failed: %s", e)
         raise HTTPException(status_code=400, detail="stripe_subscription_invalid") from e
@@ -417,8 +628,24 @@ async def cancel_subscription_at_period_end(
         raise HTTPException(status_code=400, detail="stripe_subscription_inactive")
     if bool(getattr(sub, "cancel_at_period_end", False)):
         raise HTTPException(status_code=400, detail="subscription_already_canceling_at_period_end")
+    sch_id = _schedule_id_on_subscription(sub)
     try:
         updated = stripe.Subscription.modify(sub_id, cancel_at_period_end=True)
+    except stripe.error.InvalidRequestError as e:
+        if sch_id and _stripe_invalid_request_suggests_schedule_conflict(e):
+            try:
+                _release_subscription_schedule_by_id(sch_id)
+            except (ValueError, stripe.error.StripeError) as re:
+                logger.warning("cancel-at-period-end schedule release failed: %s", re)
+                raise HTTPException(status_code=400, detail="stripe_cancel_subscription_failed") from e
+            try:
+                updated = stripe.Subscription.modify(sub_id, cancel_at_period_end=True)
+            except stripe.error.StripeError as e2:
+                logger.warning("cancel-at-period-end modify after release failed: %s", e2)
+                raise HTTPException(status_code=400, detail="stripe_cancel_subscription_failed") from e2
+        else:
+            logger.warning("cancel-at-period-end modify failed: %s", e)
+            raise HTTPException(status_code=400, detail="stripe_cancel_subscription_failed") from e
     except stripe.error.StripeError as e:
         logger.warning("cancel-at-period-end modify failed: %s", e)
         raise HTTPException(status_code=400, detail="stripe_cancel_subscription_failed") from e

@@ -451,6 +451,7 @@ export function membershipErrorKeyFromDetail(detail: string): string {
       return "stripeChangeFailed";
     case "subscription_not_canceling_at_period_end":
     case "subscription_already_canceling_at_period_end":
+    case "subscription_nothing_to_resume":
       return "subscriptionNoChange";
     case "subscription_no_change":
       return "subscriptionNoChange";
@@ -501,7 +502,10 @@ export async function createStripeBillingPortalSession(locale: string): Promise<
   return url;
 }
 
-/** Clear Stripe cancel-at-period-end so the subscription renews on future billing dates. */
+/**
+ * Resume Stripe renewal (clear cancel-at-period-end) and/or cancel a multi-phase
+ * subscription schedule (e.g. undo a deferred downgrade). Backend picks the right Stripe calls.
+ */
 export async function resumeStripeSubscription(): Promise<void> {
   const res = await fetch(getApiUrl("/api/billing/resume-subscription"), {
     method: "POST",
@@ -608,6 +612,8 @@ export async function fetchBillingStatus(): Promise<{
   portal_enabled: boolean;
   has_stripe_subscription: boolean;
   subscription_cancel_at_period_end: boolean | null;
+  subscription_has_schedule: boolean | null;
+  subscription_schedule_pending_change: boolean | null;
 }> {
   const res = await fetch(getApiUrl("/api/billing/status"), { headers: getAuthHeaders() });
   if (!res.ok) {
@@ -616,6 +622,8 @@ export async function fetchBillingStatus(): Promise<{
       portal_enabled: false,
       has_stripe_subscription: false,
       subscription_cancel_at_period_end: null,
+      subscription_has_schedule: null,
+      subscription_schedule_pending_change: null,
     };
   }
   const json = (await res.json()) as {
@@ -624,6 +632,8 @@ export async function fetchBillingStatus(): Promise<{
       portal_enabled?: boolean;
       has_stripe_subscription?: boolean;
       subscription_cancel_at_period_end?: boolean | null;
+      subscription_has_schedule?: boolean | null;
+      subscription_schedule_pending_change?: boolean | null;
     };
   };
   const d = json?.data ?? {};
@@ -633,6 +643,11 @@ export async function fetchBillingStatus(): Promise<{
     has_stripe_subscription: Boolean(d.has_stripe_subscription),
     subscription_cancel_at_period_end:
       typeof d.subscription_cancel_at_period_end === "boolean" ? d.subscription_cancel_at_period_end : null,
+    subscription_has_schedule: typeof d.subscription_has_schedule === "boolean" ? d.subscription_has_schedule : null,
+    subscription_schedule_pending_change:
+      typeof d.subscription_schedule_pending_change === "boolean"
+        ? d.subscription_schedule_pending_change
+        : null,
   };
 }
 

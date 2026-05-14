@@ -72,7 +72,9 @@
     "freePlan": "免费计划",
     "cancelSubscription": "取消订阅",
     "resumeSubscription": "恢复订阅",
+    "undoScheduledPlanChange": "保留当前套餐",
     "resumeSubscriptionHint": "恢复后，Stripe 会在每个计费周期结束时自动续订；届时将照常扣款，除非你之后再次取消。",
+    "scheduledPlanChangeHint": "你已安排在本计费周期结束后切换套餐；可点击下方按钮取消该安排并继续当前套餐。",
     "cancelDialog": {
       "title": "确定取消订阅？",
       "description": "确定要取消你的 {plan} 订阅吗？",

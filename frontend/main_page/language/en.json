@@ -72,7 +72,9 @@
     "freePlan": "Free Plan",
     "cancelSubscription": "Cancel Subscription",
     "resumeSubscription": "Resume subscription",
+    "undoScheduledPlanChange": "Keep current plan",
     "resumeSubscriptionHint": "If you resume, Stripe will keep renewing your plan each billing period. You will be charged again at renewal unless you cancel later.",
+    "scheduledPlanChangeHint": "You have a plan change scheduled after this billing period. Use the button below to cancel that schedule and stay on your current plan.",
     "cancelDialog": {
       "title": "Cancel Subscription?",
       "description": "Are you sure you want to cancel your {plan} subscription?",

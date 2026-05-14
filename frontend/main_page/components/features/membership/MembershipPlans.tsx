@@ -20,6 +20,8 @@ interface MembershipPlansProps {
   membershipPeriodEndIso?: string | null;
   /** From Stripe: true if cancel at period end; false if active renewal; null if unknown. */
   subscriptionCancelAtPeriodEnd?: boolean | null;
+  /** From Stripe: true if a multi-phase schedule implies a future plan change (e.g. deferred downgrade). */
+  subscriptionSchedulePendingChange?: boolean | null;
 }
 
 type PlanFeature = {
@@ -123,6 +125,7 @@ export default function MembershipPlans({
   onCancelPaidSubscription,
   membershipPeriodEndIso = null,
   subscriptionCancelAtPeriodEnd = null,
+  subscriptionSchedulePendingChange = null,
 }: MembershipPlansProps) {
   const locale = useLocale();
   const t = useTranslations("membership");
@@ -222,13 +225,17 @@ export default function MembershipPlans({
             currentPlan === "premium" && plan.key === "plus" ? "downgradeToPlus" : `actions.${plan.key}`;
           const price = planDisplayPrices[plan.key][billingInterval === "annual" ? "annual" : "monthly"];
 
+          const isCanceledAtPeriodEnd = subscriptionCancelAtPeriodEnd === true;
+          const hasPendingScheduleChange = subscriptionSchedulePendingChange === true;
           const showRenewRow =
             isCurrent &&
             (plan.key === "plus" || plan.key === "premium") &&
-            Boolean(membershipPeriodEndIso);
-          const periodDateLabel =
-            membershipPeriodEndIso && showRenewRow ? formatMembershipPeriodDate(membershipPeriodEndIso, locale) : "";
-          const isCanceledAtPeriodEnd = subscriptionCancelAtPeriodEnd === true;
+            Boolean(membershipPeriodEndIso || hasPendingScheduleChange || isCanceledAtPeriodEnd);
+          const periodDateLabel = membershipPeriodEndIso ? formatMembershipPeriodDate(membershipPeriodEndIso, locale) : "";
+          const showResumeRow =
+            Boolean(onResumeSubscription) && (isCanceledAtPeriodEnd || hasPendingScheduleChange);
+          const resumePrimaryLabel =
+            hasPendingScheduleChange && !isCanceledAtPeriodEnd ? t("undoScheduledPlanChange") : t("resumeSubscription");
 
           return (
             <article
@@ -293,14 +300,23 @@ export default function MembershipPlans({
               <div
                 className={`mt-auto flex w-full flex-col gap-3 pt-8 ${showRenewRow ? "min-h-[7.75rem]" : "min-h-[6.25rem]"} justify-end`}
               >
-                {showRenewRow && periodDateLabel ? (
+                {showRenewRow ? (
                   <div className="text-center font-['Outfit'] text-base font-normal leading-6 text-amber-300">
-                    {isCanceledAtPeriodEnd
-                      ? t("planExpiresOn", { date: periodDateLabel })
-                      : t("planRenewOn", { date: periodDateLabel })}
+                    {periodDateLabel ? (
+                      isCanceledAtPeriodEnd ? (
+                        <span>{t("planExpiresOn", { date: periodDateLabel })}</span>
+                      ) : (
+                        <span>{t("planRenewOn", { date: periodDateLabel })}</span>
+                      )
+                    ) : null}
                     {isCanceledAtPeriodEnd ? (
                       <p className="mt-1.5 px-1 font-app-body text-xs font-normal leading-5 text-amber-200/90">
                         {t("resumeSubscriptionHint")}
+                      </p>
+                    ) : null}
+                    {hasPendingScheduleChange ? (
+                      <p className={`px-1 font-app-body text-xs font-normal leading-5 text-amber-200/90 ${periodDateLabel ? "mt-1.5" : "mt-0"}`}>
+                        {t("scheduledPlanChangeHint")}
                       </p>
                     ) : null}
                   </div>
@@ -321,14 +337,14 @@ export default function MembershipPlans({
                 </button>
 
                 {isCurrent && plan.key !== "free" ? (
-                  isCanceledAtPeriodEnd && onResumeSubscription ? (
+                  showResumeRow ? (
                     <button
                       type="button"
                       onClick={() => void handleResumeClick()}
                       disabled={resumeSubmitting}
                       className="h-10 w-full rounded-full border border-emerald-300/50 bg-emerald-500/15 font-app-body text-sm font-medium leading-5 text-white transition hover:bg-emerald-500/25 disabled:opacity-60"
                     >
-                      {resumeSubmitting ? tCommon("loading") : t("resumeSubscription")}
+                      {resumeSubmitting ? tCommon("loading") : resumePrimaryLabel}
                     </button>
                   ) : !isCanceledAtPeriodEnd ? (
                     <button

@@ -79,6 +79,7 @@ export default function MembershipPage() {
   const [hasStripeSubscription, setHasStripeSubscription] = useState(false);
   const [membershipPeriodEndIso, setMembershipPeriodEndIso] = useState<string | null>(null);
   const [subscriptionCancelAtPeriodEnd, setSubscriptionCancelAtPeriodEnd] = useState<boolean | null>(null);
+  const [subscriptionSchedulePendingChange, setSubscriptionSchedulePendingChange] = useState<boolean | null>(null);
   const [stripeDialog, setStripeDialog] = useState<StripeDialogState>(null);
   const [stripeSubmitting, setStripeSubmitting] = useState(false);
 
@@ -94,6 +95,7 @@ export default function MembershipPage() {
       setHasStripeSubscription(Boolean(m.stripe_subscription_id));
       setMembershipPeriodEndIso(m.membership_expires_at);
       setSubscriptionCancelAtPeriodEnd(st.subscription_cancel_at_period_end);
+      setSubscriptionSchedulePendingChange(st.subscription_schedule_pending_change);
       setLoadError(null);
     } catch {
       setLoadError("loadFailed");
@@ -255,6 +257,7 @@ export default function MembershipPage() {
         onCancelPaidSubscription={hasStripeSubscription ? cancelSubscriptionAtPeriodEndOnSite : undefined}
         membershipPeriodEndIso={membershipPeriodEndIso}
         subscriptionCancelAtPeriodEnd={subscriptionCancelAtPeriodEnd}
+        subscriptionSchedulePendingChange={subscriptionSchedulePendingChange}
       />
 
       {stripeDialog ? (
