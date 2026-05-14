@@ -55,6 +55,8 @@ class UserResponse(UserBase):
     membership_plan: str = "free"
     membership_expires_at: Optional[datetime] = None
     membership_billing_interval: Optional[str] = None
+    stripe_customer_id: Optional[str] = None
+    stripe_subscription_id: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -69,7 +71,14 @@ class MembershipPlanUpdateBody(BaseModel):
     billing_interval: Literal["monthly", "annual"] = "monthly"
 
 
-class CompleteProfileBody(BaseModel):
+class BillingCheckoutBody(BaseModel):
+    plan: Literal["plus", "premium"]
+    billing_interval: Literal["monthly", "annual"] = "monthly"
+    locale: str = Field(default="en", min_length=2, max_length=5)
+
+
+class BillingPortalBody(BaseModel):
+    locale: str = Field(default="en", min_length=2, max_length=5)
     """Google 用户补全资料：用户名、出生日期"""
     username: Optional[str] = Field(None, min_length=3, max_length=50)
     date_of_birth: Optional[date] = None

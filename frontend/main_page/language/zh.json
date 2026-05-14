@@ -83,6 +83,17 @@
       "closeAria": "关闭对话框"
     },
     "downgradeToPlus": "切换到 Plus",
+    "errors": {
+      "loadFailed": "无法加载会员信息，请登录后重试。",
+      "saveFailed": "无法保存计划，请稍后重试。",
+      "checkoutFailed": "无法打开支付页面，请稍后重试。",
+      "portalFailed": "无法打开账单管理页面，请稍后重试。",
+      "stripeNotConfigured": "尚未配置在线支付（Stripe）。",
+      "alreadySubscribed": "你已有一个有效订阅，请在账单门户中更改或取消。",
+      "cancelViaPortal": "请在账单门户（Stripe）中取消付费订阅。",
+      "generic": "出错了，请稍后重试。"
+    },
+    "checkoutSuccess": "订阅已更新，感谢支持！",
     "plans": {
       "free": "Free",
       "plus": "Plus",

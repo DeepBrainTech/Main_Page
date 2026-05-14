@@ -107,3 +107,11 @@ def ensure_users_table_compatibility():
         conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS membership_plan VARCHAR(20) DEFAULT 'free'"))
         conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS membership_expires_at TIMESTAMP WITHOUT TIME ZONE"))
         conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS membership_billing_interval VARCHAR(10)"))
+        conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS stripe_customer_id VARCHAR(255)"))
+        conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS stripe_subscription_id VARCHAR(255)"))
+        conn.execute(
+            text(
+                "CREATE UNIQUE INDEX IF NOT EXISTS uq_users_stripe_subscription_id "
+                "ON users (stripe_subscription_id) WHERE stripe_subscription_id IS NOT NULL"
+            )
+        )

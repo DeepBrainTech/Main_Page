@@ -83,6 +83,17 @@
       "closeAria": "Close dialog"
     },
     "downgradeToPlus": "Switch to Plus",
+    "errors": {
+      "loadFailed": "Unable to load membership. Sign in and try again.",
+      "saveFailed": "Could not save your plan. Try again.",
+      "checkoutFailed": "Could not start checkout. Try again later.",
+      "portalFailed": "Could not open billing portal. Try again later.",
+      "stripeNotConfigured": "Online checkout is not configured yet.",
+      "alreadySubscribed": "You already have an active subscription. Use the billing portal to change or cancel it.",
+      "cancelViaPortal": "Please cancel your paid plan in the billing portal (Stripe).",
+      "generic": "Something went wrong. Please try again."
+    },
+    "checkoutSuccess": "Subscription updated. Thank you!",
     "plans": {
       "free": "Free",
       "plus": "Plus",

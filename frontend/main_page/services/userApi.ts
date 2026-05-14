@@ -434,14 +434,103 @@ export async function updateMembershipPlan(
   });
   if (!res.ok) {
     const j = await res.json().catch(() => ({}));
-    throw new Error(j?.detail ?? "update_membership_failed");
+    const d = j?.detail;
+    const msg = typeof d === "string" ? d : Array.isArray(d) ? "validation_error" : "update_membership_failed";
+    throw new Error(msg);
   }
+}
+
+async function readApiErrorDetail(res: Response): Promise<string> {
+  const j = await res.json().catch(() => ({}));
+  const d = j?.detail;
+  if (typeof d === "string") return d;
+  return "request_failed";
+}
+
+/** Map FastAPI `detail` strings to membership i18n error keys (camelCase). */
+export function membershipErrorKeyFromDetail(detail: string): string {
+  switch (detail) {
+    case "cancel_via_billing_portal":
+      return "cancelViaPortal";
+    case "stripe_not_configured":
+    case "stripe_price_not_configured":
+    case "stripe_webhook_not_configured":
+      return "stripeNotConfigured";
+    case "already_has_active_subscription":
+      return "alreadySubscribed";
+    case "stripe_customer_missing":
+      return "portalFailed";
+    case "checkout_failed":
+      return "checkoutFailed";
+    case "portal_failed":
+      return "portalFailed";
+    case "update_membership_failed":
+    case "validation_error":
+      return "saveFailed";
+    default:
+      return "generic";
+  }
+}
+
+export async function createStripeCheckoutSession(params: {
+  plan: "plus" | "premium";
+  billing_interval: "monthly" | "annual";
+  locale: string;
+}): Promise<string> {
+  const res = await fetch(getApiUrl("/api/billing/checkout-session"), {
+    method: "POST",
+    headers: getAuthHeaders(),
+    body: JSON.stringify(params),
+  });
+  if (!res.ok) {
+    throw new Error(await readApiErrorDetail(res));
+  }
+  const json = (await res.json()) as { data?: { url?: string } };
+  const url = json?.data?.url;
+  if (!url) throw new Error("checkout_failed");
+  return url;
+}
+
+export async function createStripeBillingPortalSession(locale: string): Promise<string> {
+  const res = await fetch(getApiUrl("/api/billing/portal-session"), {
+    method: "POST",
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ locale }),
+  });
+  if (!res.ok) {
+    throw new Error(await readApiErrorDetail(res));
+  }
+  const json = (await res.json()) as { data?: { url?: string } };
+  const url = json?.data?.url;
+  if (!url) throw new Error("portal_failed");
+  return url;
+}
+
+export async function fetchBillingStatus(): Promise<{
+  checkout_enabled: boolean;
+  portal_enabled: boolean;
+  has_stripe_subscription: boolean;
+}> {
+  const res = await fetch(getApiUrl("/api/billing/status"), { headers: getAuthHeaders() });
+  if (!res.ok) {
+    return { checkout_enabled: false, portal_enabled: false, has_stripe_subscription: false };
+  }
+  const json = (await res.json()) as {
+    data?: { checkout_enabled?: boolean; portal_enabled?: boolean; has_stripe_subscription?: boolean };
+  };
+  const d = json?.data ?? {};
+  return {
+    checkout_enabled: Boolean(d.checkout_enabled),
+    portal_enabled: Boolean(d.portal_enabled),
+    has_stripe_subscription: Boolean(d.has_stripe_subscription),
+  };
 }
 
 export interface AuthMeMembership {
   membership_plan: string;
   membership_expires_at: string | null;
   membership_billing_interval: string | null;
+  stripe_subscription_id: string | null;
 }
 
 export async function fetchAuthMeMembership(): Promise<AuthMeMembership> {
@@ -454,6 +543,7 @@ export async function fetchAuthMeMembership(): Promise<AuthMeMembership> {
     membership_plan: (json?.membership_plan as string) ?? "free",
     membership_expires_at: (json?.membership_expires_at as string | null) ?? null,
     membership_billing_interval: (json?.membership_billing_interval as string | null) ?? null,
+    stripe_subscription_id: (json?.stripe_subscription_id as string | null) ?? null,
   };
 }
 

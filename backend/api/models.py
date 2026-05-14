@@ -33,6 +33,8 @@ class User(Base):
     membership_expires_at = Column(DateTime, nullable=True)
     # Last chosen billing cadence for paid tiers: "monthly" | "annual" (UI / renewals).
     membership_billing_interval = Column(String(10), nullable=True)
+    stripe_customer_id = Column(String(255), nullable=True, index=True)
+    stripe_subscription_id = Column(String(255), nullable=True, index=True)
 
     # 关联游戏访问记录
     game_accesses = relationship("GameAccess", back_populates="user")

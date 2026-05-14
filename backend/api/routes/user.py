@@ -497,6 +497,11 @@ async def update_user_membership_plan(
     db: Session = Depends(get_db),
 ):
     """Persist membership tier (Premium unlocks learning while active)."""
+    if body.plan == "free" and getattr(current_user, "stripe_subscription_id", None):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="cancel_via_billing_portal",
+        )
     current_user.membership_plan = body.plan
     if body.plan == "free":
         current_user.membership_expires_at = None

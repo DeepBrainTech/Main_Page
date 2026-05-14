@@ -49,6 +49,11 @@ services:
       - FOG_CHESS_JWT_AUD=fogchess
       - FOG_CHESS_JWT_ISS=main-portal
       - FOG_CHESS_TOKEN_EXPIRE_SECONDS=300
+      # Stripe (optional). Set keys + price ids to enable Checkout on /membership.
+      # - STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET
+      # - STRIPE_PRICE_PLUS_MONTHLY, STRIPE_PRICE_PLUS_ANNUAL, STRIPE_PRICE_PREMIUM_MONTHLY, STRIPE_PRICE_PREMIUM_ANNUAL
+      # - PUBLIC_APP_URL=https://your-frontend-origin (e.g. http://localhost:3000)
+      # Enable Customer Portal once in Stripe Dashboard → Billing → Customer portal.
     volumes:
       # 开发模式：挂载代码目录以便热重载
       - ./backend/api:/app
