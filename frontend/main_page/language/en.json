@@ -89,11 +89,14 @@
       "checkoutFailed": "Could not start checkout. Try again later.",
       "portalFailed": "Could not open billing portal. Try again later.",
       "stripeNotConfigured": "Online checkout is not configured yet.",
-      "alreadySubscribed": "You already have an active subscription. Use the billing portal to change or cancel it.",
+      "alreadySubscribed": "You already have an active subscription. Change your plan on this page or use the billing portal.",
       "cancelViaPortal": "Please cancel your paid plan in the billing portal (Stripe).",
+      "stripeChangeFailed": "Could not change your subscription. Check your payment method or try again later.",
+      "subscriptionNoChange": "You are already on this plan and billing period.",
       "generic": "Something went wrong. Please try again."
     },
     "checkoutSuccess": "Subscription updated. Thank you!",
+    "planChangeSuccess": "Your plan was updated. Prorated charges may appear on your next invoice.",
     "plans": {
       "free": "Free",
       "plus": "Plus",

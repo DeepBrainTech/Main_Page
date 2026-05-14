@@ -8,6 +8,7 @@ import MembershipPlans, {
   type MembershipPlan,
 } from "@/components/features/membership/MembershipPlans";
 import {
+  changeStripeSubscription,
   createStripeBillingPortalSession,
   createStripeCheckoutSession,
   fetchAuthMeMembership,
@@ -24,6 +25,8 @@ type MembershipErrorKey =
   | "cancelViaPortal"
   | "stripeNotConfigured"
   | "alreadySubscribed"
+  | "stripeChangeFailed"
+  | "subscriptionNoChange"
   | "generic";
 
 export default function MembershipPage() {
@@ -36,7 +39,7 @@ export default function MembershipPage() {
   const [currentPlan, setCurrentPlan] = useState<MembershipPlan>("free");
   const [billingInterval, setBillingInterval] = useState<MembershipBillingInterval>("monthly");
   const [loadError, setLoadError] = useState<MembershipErrorKey | null>(null);
-  const [successBanner, setSuccessBanner] = useState(false);
+  const [successMessage, setSuccessMessage] = useState<"checkoutSuccess" | "planChangeSuccess" | null>(null);
   const [checkoutEnabled, setCheckoutEnabled] = useState(false);
   const [hasStripeSubscription, setHasStripeSubscription] = useState(false);
 
@@ -63,7 +66,7 @@ export default function MembershipPage() {
   useEffect(() => {
     const c = searchParams.get("checkout");
     if (c === "success") {
-      setSuccessBanner(true);
+      setSuccessMessage("checkoutSuccess");
       void loadAll();
       window.dispatchEvent(new Event("membership-plan-change"));
       router.replace(pathname);
@@ -75,7 +78,7 @@ export default function MembershipPage() {
 
   const handlePlanChange = async (plan: MembershipPlan) => {
     setLoadError(null);
-    setSuccessBanner(false);
+    setSuccessMessage(null);
     try {
       if (plan === "free") {
         if (hasStripeSubscription) {
@@ -91,6 +94,14 @@ export default function MembershipPage() {
       }
 
       if ((plan === "plus" || plan === "premium") && checkoutEnabled) {
+        if (hasStripeSubscription) {
+          await changeStripeSubscription({ plan, billing_interval: billingInterval });
+          await loadAll();
+          setCurrentPlan(plan);
+          setSuccessMessage("planChangeSuccess");
+          window.dispatchEvent(new Event("membership-plan-change"));
+          return;
+        }
         const url = await createStripeCheckoutSession({
           plan,
           billing_interval: billingInterval,
@@ -113,9 +124,9 @@ export default function MembershipPage() {
 
   return (
     <div className="space-y-4">
-      {successBanner ? (
+      {successMessage ? (
         <p className="text-center text-sm font-medium text-emerald-700" role="status">
-          {t("checkoutSuccess")}
+          {t(successMessage)}
         </p>
       ) : null}
       {loadError ? (

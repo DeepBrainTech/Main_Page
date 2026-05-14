@@ -19,7 +19,7 @@ from config.stripe_billing import (
 )
 from database import get_db
 from models import User
-from schemas import APIResponse, BillingCheckoutBody, BillingPortalBody
+from schemas import APIResponse, BillingChangeSubscriptionBody, BillingCheckoutBody, BillingPortalBody
 
 logger = logging.getLogger(__name__)
 
@@ -231,6 +231,79 @@ async def create_portal_session(
         locale=_stripe_ui_locale(lo),
     )
     return APIResponse(success=True, message="ok", data={"url": session.url})
+
+
+@router.post("/change-subscription", response_model=APIResponse)
+async def change_subscription(
+    body: BillingChangeSubscriptionBody,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+):
+    """Upgrade/downgrade Plus vs Premium (or switch monthly/annual) on the active subscription with immediate proration."""
+    if not is_stripe_billing_configured():
+        raise HTTPException(status_code=503, detail="stripe_not_configured")
+    _stripe_configure()
+
+    sub_id = getattr(current_user, "stripe_subscription_id", None)
+    if not sub_id:
+        raise HTTPException(status_code=400, detail="stripe_subscription_missing")
+
+    new_price_id = get_price_id(body.plan, body.billing_interval)
+    if not new_price_id:
+        raise HTTPException(status_code=503, detail="stripe_price_not_configured")
+
+    try:
+        sub = stripe.Subscription.retrieve(sub_id)
+    except stripe.error.InvalidRequestError:
+        current_user.stripe_subscription_id = None
+        db.add(current_user)
+        db.commit()
+        raise HTTPException(status_code=400, detail="stripe_subscription_missing")
+
+    if sub.status not in ("active", "trialing", "past_due"):
+        raise HTTPException(status_code=400, detail="stripe_subscription_inactive")
+
+    current_pid = _first_subscription_price_id(sub)
+    if current_pid == new_price_id:
+        raise HTTPException(status_code=400, detail="subscription_no_change")
+
+    try:
+        items_data = sub["items"].data
+    except (AttributeError, KeyError, IndexError):
+        raise HTTPException(status_code=400, detail="stripe_subscription_invalid")
+    if not items_data:
+        raise HTTPException(status_code=400, detail="stripe_subscription_invalid")
+    item_id = items_data[0].id
+
+    meta = dict(sub.metadata or {})
+    meta["user_id"] = str(current_user.id)
+    meta["plan"] = body.plan
+    meta["billing_interval"] = body.billing_interval
+
+    try:
+        updated = stripe.Subscription.modify(
+            sub.id,
+            items=[{"id": item_id, "price": new_price_id}],
+            proration_behavior="create_prorations",
+            metadata=meta,
+        )
+    except stripe.error.StripeError as e:
+        logger.warning("subscription modify failed: %s", e)
+        raise HTTPException(status_code=400, detail="stripe_subscription_change_failed")
+
+    sync_user_from_stripe_subscription(db, current_user, updated)
+
+    return APIResponse(
+        success=True,
+        message="ok",
+        data={
+            "membership_plan": current_user.membership_plan,
+            "membership_billing_interval": current_user.membership_billing_interval,
+            "membership_expires_at": current_user.membership_expires_at.isoformat()
+            if current_user.membership_expires_at
+            else None,
+        },
+    )
 
 
 @router.post("/webhook")

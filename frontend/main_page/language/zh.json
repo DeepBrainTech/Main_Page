@@ -89,11 +89,14 @@
       "checkoutFailed": "无法打开支付页面，请稍后重试。",
       "portalFailed": "无法打开账单管理页面，请稍后重试。",
       "stripeNotConfigured": "尚未配置在线支付（Stripe）。",
-      "alreadySubscribed": "你已有一个有效订阅，请在账单门户中更改或取消。",
+      "alreadySubscribed": "你已有一个有效订阅。可在本页切换方案，或使用账单门户。",
       "cancelViaPortal": "请在账单门户（Stripe）中取消付费订阅。",
+      "stripeChangeFailed": "无法变更订阅，请检查支付方式或稍后重试。",
+      "subscriptionNoChange": "当前已是该方案与计费周期。",
       "generic": "出错了，请稍后重试。"
     },
     "checkoutSuccess": "订阅已更新，感谢支持！",
+    "planChangeSuccess": "方案已更新。差额将按 Stripe 规则计入下期账单（或立即扣款，以 Stripe 显示为准）。",
     "plans": {
       "free": "Free",
       "plus": "Plus",

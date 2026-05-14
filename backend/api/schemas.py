@@ -81,6 +81,12 @@ class BillingPortalBody(BaseModel):
     locale: str = Field(default="en", min_length=2, max_length=5)
 
 
+class BillingChangeSubscriptionBody(BaseModel):
+    """Switch paid tier or billing period on the existing Stripe subscription (prorated)."""
+    plan: Literal["plus", "premium"]
+    billing_interval: Literal["monthly", "annual"] = "monthly"
+
+
 class CompleteProfileBody(BaseModel):
     """Google 用户补全资料：用户名、出生日期"""
     username: Optional[str] = Field(None, min_length=3, max_length=50)

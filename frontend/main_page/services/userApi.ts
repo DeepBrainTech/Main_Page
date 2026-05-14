@@ -458,6 +458,13 @@ export function membershipErrorKeyFromDetail(detail: string): string {
       return "stripeNotConfigured";
     case "already_has_active_subscription":
       return "alreadySubscribed";
+    case "stripe_subscription_missing":
+    case "stripe_subscription_inactive":
+    case "stripe_subscription_invalid":
+    case "stripe_subscription_change_failed":
+      return "stripeChangeFailed";
+    case "subscription_no_change":
+      return "subscriptionNoChange";
     case "stripe_customer_missing":
       return "portalFailed";
     case "checkout_failed":
@@ -504,6 +511,20 @@ export async function createStripeBillingPortalSession(locale: string): Promise<
   const url = json?.data?.url;
   if (!url) throw new Error("portal_failed");
   return url;
+}
+
+export async function changeStripeSubscription(params: {
+  plan: "plus" | "premium";
+  billing_interval: "monthly" | "annual";
+}): Promise<void> {
+  const res = await fetch(getApiUrl("/api/billing/change-subscription"), {
+    method: "POST",
+    headers: getAuthHeaders(),
+    body: JSON.stringify(params),
+  });
+  if (!res.ok) {
+    throw new Error(await readApiErrorDetail(res));
+  }
 }
 
 export async function fetchBillingStatus(): Promise<{
