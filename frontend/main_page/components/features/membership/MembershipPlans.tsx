@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useEffect, useState } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 
 export type MembershipPlan = "free" | "plus" | "premium";
 export type MembershipBillingInterval = "monthly" | "annual";
@@ -12,6 +12,10 @@ interface MembershipPlansProps {
   billingInterval: MembershipBillingInterval;
   onBillingIntervalChange: (interval: MembershipBillingInterval) => void;
   onPlanChange: (plan: MembershipPlan) => void | Promise<void>;
+  /** ISO datetime for current paid period end (renewal / access end). */
+  membershipPeriodEndIso?: string | null;
+  /** From Stripe: true if cancel at period end; false if active renewal; null if unknown. */
+  subscriptionCancelAtPeriodEnd?: boolean | null;
 }
 
 type PlanFeature = {
@@ -94,12 +98,22 @@ const planStyles = {
   },
 };
 
+function formatMembershipPeriodDate(iso: string, siteLocale: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  const intl = siteLocale.startsWith("zh") ? "zh-CN" : "en-US";
+  return new Intl.DateTimeFormat(intl, { month: "2-digit", day: "2-digit", year: "numeric" }).format(d);
+}
+
 export default function MembershipPlans({
   currentPlan,
   billingInterval,
   onBillingIntervalChange,
   onPlanChange,
+  membershipPeriodEndIso = null,
+  subscriptionCancelAtPeriodEnd = null,
 }: MembershipPlansProps) {
+  const locale = useLocale();
   const t = useTranslations("membership");
   const tCommon = useTranslations("common");
   const periodKey = billingInterval === "annual" ? "perYear" : "perMonth";
@@ -180,6 +194,14 @@ export default function MembershipPlans({
             currentPlan === "premium" && plan.key === "plus" ? "downgradeToPlus" : `actions.${plan.key}`;
           const price = planDisplayPrices[plan.key][billingInterval === "annual" ? "annual" : "monthly"];
 
+          const showRenewRow =
+            isCurrent &&
+            (plan.key === "plus" || plan.key === "premium") &&
+            Boolean(membershipPeriodEndIso);
+          const periodDateLabel =
+            membershipPeriodEndIso && showRenewRow ? formatMembershipPeriodDate(membershipPeriodEndIso, locale) : "";
+          const isCanceledAtPeriodEnd = subscriptionCancelAtPeriodEnd === true;
+
           return (
             <article
               key={plan.key}
@@ -240,7 +262,16 @@ export default function MembershipPlans({
                 ))}
               </div>
 
-              <div className="mt-8 h-[6.25rem] space-y-3">
+              <div
+                className={`mt-auto flex w-full flex-col gap-3 pt-8 ${showRenewRow ? "min-h-[7.75rem]" : "min-h-[6.25rem]"} justify-end`}
+              >
+                {showRenewRow && periodDateLabel ? (
+                  <div className="text-center font-['Outfit'] text-base font-normal leading-6 text-amber-300">
+                    {isCanceledAtPeriodEnd
+                      ? t("planExpiresOn", { date: periodDateLabel })
+                      : t("planRenewOn", { date: periodDateLabel })}
+                  </div>
+                ) : null}
                 <button
                   type="button"
                   onClick={() => onPlanChange(plan.key)}

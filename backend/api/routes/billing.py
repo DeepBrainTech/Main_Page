@@ -173,6 +173,94 @@ def _load_subscription_change_context(
     return sub, item_id, new_price_id
 
 
+def _is_premium_to_plus_deferred_downgrade(
+    current: tuple[str, str] | None,
+    new_plan: str,
+) -> bool:
+    """Premium → Plus switches at current period end (no mid-cycle downgrade invoice)."""
+    if not current:
+        return False
+    cur_plan, _ = current
+    return cur_plan == "premium" and new_plan == "plus"
+
+
+def _schedule_id_on_subscription(sub: stripe.Subscription) -> str | None:
+    sch = getattr(sub, "schedule", None)
+    if isinstance(sch, str) and sch:
+        return sch
+    if sch is not None and getattr(sch, "id", None):
+        return str(sch.id)
+    return None
+
+
+def _release_active_subscription_schedule(sub_id: str) -> None:
+    """Drop an active schedule so Subscription.modify can apply an immediate upgrade."""
+    try:
+        sub = stripe.Subscription.retrieve(sub_id, expand=["schedule"])
+    except stripe.error.StripeError as e:
+        logger.warning("subscription retrieve for schedule release: %s", e)
+        return
+    sid = _schedule_id_on_subscription(sub)
+    if not sid:
+        return
+    try:
+        sched = stripe.SubscriptionSchedule.retrieve(sid)
+        st = getattr(sched, "status", None)
+        if st in ("not_started", "active"):
+            stripe.SubscriptionSchedule.release(sid)
+    except stripe.error.StripeError as e:
+        logger.warning("subscription schedule release failed: %s", e)
+
+
+def _apply_premium_to_plus_at_period_end(
+    sub: stripe.Subscription,
+    current_price_id: str,
+    new_price_id: str,
+    meta: dict,
+) -> stripe.Subscription:
+    """Use a two-phase Subscription Schedule: keep Premium until period end, then Plus."""
+    period_start = int(sub.current_period_start)
+    period_end = int(sub.current_period_end)
+    try:
+        si = sub["items"].data[0].id
+    except (AttributeError, KeyError, IndexError) as e:
+        raise HTTPException(status_code=400, detail="stripe_subscription_invalid") from e
+    phases: list[dict] = [
+        {
+            "start_date": period_start,
+            "end_date": period_end,
+            "items": [{"subscription_item": si, "price": current_price_id, "quantity": 1}],
+        },
+        {
+            "start_date": period_end,
+            "items": [{"subscription_item": si, "price": new_price_id, "quantity": 1}],
+        },
+    ]
+    sch_id = _schedule_id_on_subscription(sub)
+    try:
+        if sch_id:
+            stripe.SubscriptionSchedule.modify(
+                sch_id,
+                phases=phases,
+                proration_behavior="none",
+                end_behavior="release",
+                metadata=meta,
+            )
+        else:
+            sched = stripe.SubscriptionSchedule.create(from_subscription=sub.id)
+            stripe.SubscriptionSchedule.modify(
+                sched.id,
+                phases=phases,
+                proration_behavior="none",
+                end_behavior="release",
+                metadata=meta,
+            )
+    except stripe.error.StripeError as e:
+        logger.warning("subscription schedule create/modify failed: %s", e)
+        raise HTTPException(status_code=400, detail="stripe_subscription_change_failed") from e
+    return stripe.Subscription.retrieve(sub.id)
+
+
 def _serialize_invoice_lines(inv: stripe.Invoice, limit: int = 25) -> list[dict]:
     out: list[dict] = []
     try:
@@ -182,8 +270,62 @@ def _serialize_invoice_lines(inv: stripe.Invoice, limit: int = 25) -> list[dict]
     for li in data[:limit]:
         desc = getattr(li, "description", None) or ""
         amt = int(getattr(li, "amount", 0) or 0)
-        out.append({"description": desc, "amount": amt})
+        proration = bool(getattr(li, "proration", False))
+        typ = getattr(li, "type", None) or ""
+        out.append({"description": desc, "amount": amt, "proration": proration, "type": typ})
     return out
+
+
+def _format_payment_method(pm: stripe.PaymentMethod | None) -> str | None:
+    if pm is None:
+        return None
+    ptype = getattr(pm, "type", None) or ""
+    if ptype == "card":
+        card = getattr(pm, "card", None)
+        if not card:
+            return None
+        brand = (getattr(card, "display_brand", None) or getattr(card, "brand", None) or "card").upper()
+        last4 = getattr(card, "last4", None) or "????"
+        return f"{brand} *{last4}"
+    if ptype == "link":
+        return "Link"
+    if ptype == "amazon_pay":
+        return "Amazon Pay"
+    return ptype.replace("_", " ").title() if ptype else None
+
+
+def _default_payment_method_label(customer_id: str, subscription_id: str) -> str | None:
+    """Human-readable default card/wallet for subscription change preview."""
+    try:
+        sub = stripe.Subscription.retrieve(subscription_id, expand=["default_payment_method"])
+    except stripe.error.StripeError as e:
+        logger.warning("subscription retrieve for pm failed: %s", e)
+        return None
+
+    pm = getattr(sub, "default_payment_method", None)
+    if isinstance(pm, str) and pm:
+        try:
+            pm = stripe.PaymentMethod.retrieve(pm)
+        except stripe.error.StripeError:
+            pm = None
+    label = _format_payment_method(pm) if isinstance(pm, stripe.PaymentMethod) else None
+    if label:
+        return label
+
+    try:
+        cust = stripe.Customer.retrieve(customer_id, expand=["invoice_settings.default_payment_method"])
+    except stripe.error.StripeError as e:
+        logger.warning("customer retrieve for pm failed: %s", e)
+        return None
+
+    inv_set = getattr(cust, "invoice_settings", None)
+    pm2 = getattr(inv_set, "default_payment_method", None) if inv_set else None
+    if isinstance(pm2, str) and pm2:
+        try:
+            pm2 = stripe.PaymentMethod.retrieve(pm2)
+        except stripe.error.StripeError:
+            pm2 = None
+    return _format_payment_method(pm2) if isinstance(pm2, stripe.PaymentMethod) else None
 
 
 def _invoice_summary(inv: stripe.Invoice | None) -> dict | None:
@@ -204,13 +346,26 @@ def _invoice_summary(inv: stripe.Invoice | None) -> dict | None:
 async def billing_status(current_user: User = Depends(get_current_active_user)):
     checkout = is_stripe_billing_configured()
     portal = bool(checkout and getattr(current_user, "stripe_customer_id", None))
+    has_sub = bool(getattr(current_user, "stripe_subscription_id", None))
+    cancel_at_period_end: bool | None = None
+    if checkout and has_sub:
+        _stripe_configure()
+        try:
+            sub = stripe.Subscription.retrieve(current_user.stripe_subscription_id)
+            if sub.status in ("active", "trialing", "past_due"):
+                cancel_at_period_end = bool(getattr(sub, "cancel_at_period_end", False))
+        except stripe.error.StripeError as e:
+            logger.warning("billing status subscription retrieve failed: %s", e)
+            cancel_at_period_end = None
+
     return APIResponse(
         success=True,
         message="ok",
         data={
             "checkout_enabled": checkout,
             "portal_enabled": portal,
-            "has_stripe_subscription": bool(getattr(current_user, "stripe_subscription_id", None)),
+            "has_stripe_subscription": has_sub,
+            "subscription_cancel_at_period_end": cancel_at_period_end,
         },
     )
 
@@ -305,39 +460,63 @@ async def preview_subscription_change(
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db),
 ):
-    """Preview proration and line items before modifying the subscription (Stripe upcoming invoice)."""
+    """Preview proration (upgrade) or deferred period-end switch (Premium → Plus)."""
     if not is_stripe_billing_configured():
         raise HTTPException(status_code=503, detail="stripe_not_configured")
     _stripe_configure()
 
-    sub, item_id, new_price_id = _load_subscription_change_context(current_user, db, body)
+    sub, _item_id, new_price_id = _load_subscription_change_context(current_user, db, body)
     cust = sub.customer
     cust_id = cust if isinstance(cust, str) else getattr(cust, "id", None)
     if not cust_id:
         raise HTTPException(status_code=400, detail="stripe_subscription_invalid")
 
+    period_end = int(sub.current_period_end) if sub.current_period_end else None
+    pm_label = _default_payment_method_label(str(cust_id), sub.id)
+    cur = _resolve_plan_from_subscription(sub)
+    currency = (getattr(sub, "currency", None) or "usd").lower()
+
+    if _is_premium_to_plus_deferred_downgrade(cur, body.plan):
+        return APIResponse(
+            success=True,
+            message="ok",
+            data={
+                "change_mode": "deferred_downgrade",
+                "currency": currency,
+                "amount_due": 0,
+                "total": 0,
+                "subtotal": 0,
+                "lines": [],
+                "subscription_current_period_end": period_end,
+                "payment_method_label": pm_label,
+                "pending_plan": body.plan,
+                "pending_billing_interval": body.billing_interval,
+            },
+        )
+
     try:
         inv = stripe.Invoice.upcoming(
             customer=str(cust_id),
             subscription=sub.id,
-            subscription_items=[{"id": item_id, "price": new_price_id}],
+            subscription_items=[{"id": _item_id, "price": new_price_id}],
             subscription_proration_behavior="create_prorations",
         )
     except stripe.error.StripeError as e:
         logger.warning("subscription preview invoice failed: %s", e)
         raise HTTPException(status_code=400, detail="stripe_subscription_preview_failed")
 
-    period_end = int(sub.current_period_end) if sub.current_period_end else None
     return APIResponse(
         success=True,
         message="ok",
         data={
+            "change_mode": "immediate_upgrade",
             "currency": inv.currency or "usd",
             "amount_due": int(inv.amount_due or 0),
             "total": int(inv.total or 0),
             "subtotal": int(inv.subtotal or 0),
             "lines": _serialize_invoice_lines(inv),
             "subscription_current_period_end": period_end,
+            "payment_method_label": pm_label,
         },
     )
 
@@ -348,7 +527,7 @@ async def change_subscription(
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db),
 ):
-    """Upgrade/downgrade Plus vs Premium (or switch monthly/annual) on the active subscription with immediate proration."""
+    """Plus ↔ Premium: Plus→Premium applies immediately with proration; Premium→Plus takes effect at period end."""
     if not is_stripe_billing_configured():
         raise HTTPException(status_code=503, detail="stripe_not_configured")
     _stripe_configure()
@@ -359,6 +538,37 @@ async def change_subscription(
     meta["user_id"] = str(current_user.id)
     meta["plan"] = body.plan
     meta["billing_interval"] = body.billing_interval
+
+    cur = _resolve_plan_from_subscription(sub)
+    deferred = _is_premium_to_plus_deferred_downgrade(cur, body.plan)
+
+    if deferred:
+        current_pid = _first_subscription_price_id(sub)
+        if not current_pid:
+            raise HTTPException(status_code=400, detail="stripe_subscription_invalid")
+        updated = _apply_premium_to_plus_at_period_end(sub, current_pid, new_price_id, meta)
+        sync_user_from_stripe_subscription(db, current_user, updated)
+        eff = current_user.membership_expires_at.isoformat() if current_user.membership_expires_at else None
+        return APIResponse(
+            success=True,
+            message="ok",
+            data={
+                "change_mode": "deferred_downgrade",
+                "membership_plan": current_user.membership_plan,
+                "membership_billing_interval": current_user.membership_billing_interval,
+                "membership_expires_at": eff,
+                "deferred_effective_at": eff,
+                "invoice": None,
+            },
+        )
+
+    _release_active_subscription_schedule(sub.id)
+    sub = stripe.Subscription.retrieve(sub.id)
+    try:
+        items_data = sub["items"].data
+        item_id = items_data[0].id
+    except (AttributeError, KeyError, IndexError):
+        raise HTTPException(status_code=400, detail="stripe_subscription_invalid")
 
     try:
         updated = stripe.Subscription.modify(
@@ -397,11 +607,13 @@ async def change_subscription(
         success=True,
         message="ok",
         data={
+            "change_mode": "immediate_upgrade",
             "membership_plan": current_user.membership_plan,
             "membership_billing_interval": current_user.membership_billing_interval,
             "membership_expires_at": current_user.membership_expires_at.isoformat()
             if current_user.membership_expires_at
             else None,
+            "deferred_effective_at": None,
             "invoice": invoice_payload,
         },
     )

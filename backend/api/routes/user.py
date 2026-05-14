@@ -37,7 +37,6 @@ from schemas import (
     AssessmentSessionCreate,
     LearningQuestionAttemptCreate,
     MentalMathUnlockDiamondsBody,
-    MembershipPlanUpdateBody,
 )
 from auth import get_current_active_user
 from config.shop_items import SHOP_ITEMS, get_shop_items_by_game, is_item_available_for_game
@@ -60,9 +59,6 @@ MONTHLY_TARGET = 20
 
 # 未传或无效时区时回退到 UTC
 DEFAULT_TZ = "UTC"
-
-MEMBERSHIP_PREMIUM_PERIOD_DAYS = int(os.getenv("MEMBERSHIP_PREMIUM_PERIOD_DAYS", "30"))
-MEMBERSHIP_PREMIUM_ANNUAL_PERIOD_DAYS = int(os.getenv("MEMBERSHIP_PREMIUM_ANNUAL_PERIOD_DAYS", "365"))
 
 
 def _to_progress_percent(numerator: int, denominator: int) -> int:
@@ -488,54 +484,6 @@ async def unlock_mental_math_with_diamonds(
     access = _compute_mental_math_bundle_access(current_user, ent)
     access["diamonds"] = rewards.diamonds
     return APIResponse(success=True, message="ok", data=access)
-
-
-@router.put("/membership", response_model=APIResponse)
-async def update_user_membership_plan(
-    body: MembershipPlanUpdateBody,
-    current_user: User = Depends(get_current_active_user),
-    db: Session = Depends(get_db),
-):
-    """Persist membership tier (Premium unlocks learning while active)."""
-    if body.plan == "free" and getattr(current_user, "stripe_subscription_id", None):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="cancel_via_billing_portal",
-        )
-    current_user.membership_plan = body.plan
-    if body.plan == "free":
-        current_user.membership_expires_at = None
-        current_user.membership_billing_interval = None
-    else:
-        current_user.membership_billing_interval = body.billing_interval
-        if body.plan == "premium":
-            days = (
-                MEMBERSHIP_PREMIUM_ANNUAL_PERIOD_DAYS
-                if body.billing_interval == "annual"
-                else MEMBERSHIP_PREMIUM_PERIOD_DAYS
-            )
-            current_user.membership_expires_at = datetime.utcnow() + timedelta(days=days)
-        else:
-            current_user.membership_expires_at = None
-
-    db.add(current_user)
-    db.commit()
-    db.refresh(current_user)
-
-    ent = _get_course_entitlement(db, current_user.id, MENTAL_MATH_COURSE_KEY)
-    access = _compute_mental_math_bundle_access(current_user, ent)
-    return APIResponse(
-        success=True,
-        message="ok",
-        data={
-            "membership_plan": current_user.membership_plan,
-            "membership_expires_at": current_user.membership_expires_at.isoformat()
-            if current_user.membership_expires_at
-            else None,
-            "membership_billing_interval": current_user.membership_billing_interval,
-            "mental_math_access": access,
-        },
-    )
 
 
 def _get_or_create_rewards(db: Session, user_id: int) -> UserRewards:

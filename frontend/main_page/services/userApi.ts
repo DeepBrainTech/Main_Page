@@ -423,23 +423,6 @@ export async function unlockMentalMathWithDiamonds(
   return json.data as MentalMathBundleAccessData;
 }
 
-export async function updateMembershipPlan(
-  plan: "free" | "plus" | "premium",
-  billingInterval: "monthly" | "annual" = "monthly"
-): Promise<void> {
-  const res = await fetch(getApiUrl("/api/user/membership"), {
-    method: "PUT",
-    headers: getAuthHeaders(),
-    body: JSON.stringify({ plan, billing_interval: billingInterval }),
-  });
-  if (!res.ok) {
-    const j = await res.json().catch(() => ({}));
-    const d = j?.detail;
-    const msg = typeof d === "string" ? d : Array.isArray(d) ? "validation_error" : "update_membership_failed";
-    throw new Error(msg);
-  }
-}
-
 async function readApiErrorDetail(res: Response): Promise<string> {
   const j = await res.json().catch(() => ({}));
   const d = j?.detail;
@@ -472,7 +455,6 @@ export function membershipErrorKeyFromDetail(detail: string): string {
       return "checkoutFailed";
     case "portal_failed":
       return "portalFailed";
-    case "update_membership_failed":
     case "validation_error":
       return "saveFailed";
     default:
@@ -514,15 +496,24 @@ export async function createStripeBillingPortalSession(locale: string): Promise<
   return url;
 }
 
-export type StripeInvoiceLine = { description: string; amount: number };
+export type StripeInvoiceLine = {
+  description: string;
+  amount: number;
+  proration?: boolean;
+  type?: string;
+};
 
 export type StripeChangePreview = {
+  change_mode?: "deferred_downgrade" | "immediate_upgrade";
+  pending_plan?: string;
+  pending_billing_interval?: string;
   currency: string;
   amount_due: number;
   total: number;
   subtotal: number;
   lines: StripeInvoiceLine[];
   subscription_current_period_end: number | null;
+  payment_method_label?: string | null;
 };
 
 export type StripeChangeInvoice = {
@@ -537,6 +528,8 @@ export type StripeChangeInvoice = {
 };
 
 export type ChangeStripeSubscriptionResult = {
+  change_mode?: "deferred_downgrade" | "immediate_upgrade";
+  deferred_effective_at?: string | null;
   membership_plan: string;
   membership_billing_interval: string | null;
   membership_expires_at: string | null;
@@ -587,19 +580,32 @@ export async function fetchBillingStatus(): Promise<{
   checkout_enabled: boolean;
   portal_enabled: boolean;
   has_stripe_subscription: boolean;
+  subscription_cancel_at_period_end: boolean | null;
 }> {
   const res = await fetch(getApiUrl("/api/billing/status"), { headers: getAuthHeaders() });
   if (!res.ok) {
-    return { checkout_enabled: false, portal_enabled: false, has_stripe_subscription: false };
+    return {
+      checkout_enabled: false,
+      portal_enabled: false,
+      has_stripe_subscription: false,
+      subscription_cancel_at_period_end: null,
+    };
   }
   const json = (await res.json()) as {
-    data?: { checkout_enabled?: boolean; portal_enabled?: boolean; has_stripe_subscription?: boolean };
+    data?: {
+      checkout_enabled?: boolean;
+      portal_enabled?: boolean;
+      has_stripe_subscription?: boolean;
+      subscription_cancel_at_period_end?: boolean | null;
+    };
   };
   const d = json?.data ?? {};
   return {
     checkout_enabled: Boolean(d.checkout_enabled),
     portal_enabled: Boolean(d.portal_enabled),
     has_stripe_subscription: Boolean(d.has_stripe_subscription),
+    subscription_cancel_at_period_end:
+      typeof d.subscription_cancel_at_period_end === "boolean" ? d.subscription_cancel_at_period_end : null,
   };
 }
 

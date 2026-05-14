@@ -66,11 +66,6 @@ class MentalMathUnlockDiamondsBody(BaseModel):
     tier: Literal["three_month", "lifetime"]
 
 
-class MembershipPlanUpdateBody(BaseModel):
-    plan: Literal["free", "plus", "premium"]
-    billing_interval: Literal["monthly", "annual"] = "monthly"
-
-
 class BillingCheckoutBody(BaseModel):
     plan: Literal["plus", "premium"]
     billing_interval: Literal["monthly", "annual"] = "monthly"

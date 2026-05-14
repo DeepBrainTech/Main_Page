@@ -15,9 +15,9 @@ import {
   fetchBillingStatus,
   membershipErrorKeyFromDetail,
   previewStripeSubscriptionChange,
-  updateMembershipPlan,
   type StripeChangeInvoice,
   type StripeChangePreview,
+  type StripeInvoiceLine,
 } from "@/services/userApi";
 
 type MembershipErrorKey =
@@ -26,6 +26,7 @@ type MembershipErrorKey =
   | "checkoutFailed"
   | "portalFailed"
   | "cancelViaPortal"
+  | "billingViaStripe"
   | "stripeNotConfigured"
   | "alreadySubscribed"
   | "stripeChangeFailed"
@@ -44,6 +45,16 @@ function formatMinorUnits(amount: number, currency: string, locale: string): str
   } catch {
     return `${(amount / 100).toFixed(2)} ${cur}`;
   }
+}
+
+function splitInvoiceLines(lines: StripeInvoiceLine[]) {
+  const positive = lines.filter((l) => l.amount > 0);
+  const negative = lines.filter((l) => l.amount < 0);
+  return {
+    positive,
+    negative,
+    positiveSum: positive.reduce((s, l) => s + l.amount, 0),
+  };
 }
 
 function invoiceStatusLabel(status: string, tMem: (key: string) => string): string {
@@ -120,9 +131,15 @@ export default function MembershipPage() {
   const [billingInterval, setBillingInterval] = useState<MembershipBillingInterval>("monthly");
   const [loadError, setLoadError] = useState<MembershipErrorKey | null>(null);
   const [successMessage, setSuccessMessage] = useState<"checkoutSuccess" | null>(null);
-  const [planChangeSummary, setPlanChangeSummary] = useState<{ invoice: StripeChangeInvoice | null } | null>(null);
+  const [planChangeSummary, setPlanChangeSummary] = useState<{
+    invoice: StripeChangeInvoice | null;
+    changeMode?: "deferred_downgrade" | "immediate_upgrade";
+    deferredEffectiveAt?: string | null;
+  } | null>(null);
   const [checkoutEnabled, setCheckoutEnabled] = useState(false);
   const [hasStripeSubscription, setHasStripeSubscription] = useState(false);
+  const [membershipPeriodEndIso, setMembershipPeriodEndIso] = useState<string | null>(null);
+  const [subscriptionCancelAtPeriodEnd, setSubscriptionCancelAtPeriodEnd] = useState<boolean | null>(null);
   const [stripeDialog, setStripeDialog] = useState<StripeDialogState>(null);
   const [stripeSubmitting, setStripeSubmitting] = useState(false);
 
@@ -136,6 +153,8 @@ export default function MembershipPage() {
       setBillingInterval(m.membership_billing_interval === "annual" ? "annual" : "monthly");
       setCheckoutEnabled(st.checkout_enabled);
       setHasStripeSubscription(Boolean(m.stripe_subscription_id));
+      setMembershipPeriodEndIso(m.membership_expires_at);
+      setSubscriptionCancelAtPeriodEnd(st.subscription_cancel_at_period_end);
       setLoadError(null);
     } catch {
       setLoadError("loadFailed");
@@ -178,9 +197,12 @@ export default function MembershipPage() {
       const result = await changeStripeSubscription({ plan, billing_interval: billingInterval });
       setStripeDialog(null);
       await loadAll();
-      setCurrentPlan(plan);
       setSuccessMessage(null);
-      setPlanChangeSummary({ invoice: result.invoice ?? null });
+      setPlanChangeSummary({
+        invoice: result.invoice ?? null,
+        changeMode: result.change_mode,
+        deferredEffectiveAt: result.deferred_effective_at ?? null,
+      });
       window.dispatchEvent(new Event("membership-plan-change"));
     } catch (e) {
       const detail = e instanceof Error ? e.message : "request_failed";
@@ -202,10 +224,10 @@ export default function MembershipPage() {
           window.location.href = url;
           return;
         }
-        await updateMembershipPlan(plan, "monthly");
-        setCurrentPlan(plan);
-        setBillingInterval("monthly");
-        window.dispatchEvent(new Event("membership-plan-change"));
+        if (currentPlan === "free") {
+          return;
+        }
+        setLoadError("billingViaStripe");
         return;
       }
 
@@ -235,10 +257,8 @@ export default function MembershipPage() {
         return;
       }
 
-      const interval: MembershipBillingInterval = billingInterval;
-      await updateMembershipPlan(plan, interval);
-      setCurrentPlan(plan);
-      window.dispatchEvent(new Event("membership-plan-change"));
+      setLoadError("stripeNotConfigured");
+      return;
     } catch (e) {
       const detail = e instanceof Error ? e.message : "request_failed";
       const key = membershipErrorKeyFromDetail(detail) as MembershipErrorKey;
@@ -262,10 +282,19 @@ export default function MembershipPage() {
           role="status"
         >
           <p className="font-semibold text-emerald-900">{t("planChangeDoneTitle")}</p>
-          {!planChangeSummary.invoice ? (
-            <p className="mt-2 text-emerald-800">{t("planChangeNoInvoiceDetail")}</p>
-          ) : (
+          {planChangeSummary.changeMode === "deferred_downgrade" && planChangeSummary.deferredEffectiveAt ? (
+            <p className="mt-2 text-emerald-800">
+              {t("planChangeDeferredSuccess", {
+                plan: t("plans.plus"),
+                date: new Date(planChangeSummary.deferredEffectiveAt).toLocaleDateString(intlLocale, {
+                  dateStyle: "long",
+                }),
+              })}
+            </p>
+          ) : planChangeSummary.invoice ? (
             <PlanChangeResultDetails inv={planChangeSummary.invoice} t={t} intlLocale={intlLocale} />
+          ) : (
+            <p className="mt-2 text-emerald-800">{t("planChangeNoInvoiceDetail")}</p>
           )}
         </div>
       ) : null}
@@ -279,17 +308,36 @@ export default function MembershipPage() {
         billingInterval={billingInterval}
         onBillingIntervalChange={setBillingInterval}
         onPlanChange={handlePlanChange}
+        membershipPeriodEndIso={membershipPeriodEndIso}
+        subscriptionCancelAtPeriodEnd={subscriptionCancelAtPeriodEnd}
       />
 
       {stripeDialog ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="presentation">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+          role="presentation"
+          onClick={() => !stripeSubmitting && setStripeDialog(null)}
+        >
           <div
-            className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-xl border border-slate-200 bg-white p-5 shadow-xl"
+            className="relative max-h-[90vh] w-full max-w-md overflow-y-auto rounded-xl border border-slate-200 bg-white p-5 pt-6 shadow-xl"
             role="dialog"
             aria-modal="true"
             aria-labelledby="stripe-plan-change-title"
+            onClick={(e) => e.stopPropagation()}
           >
-            <h2 id="stripe-plan-change-title" className="text-lg font-semibold text-slate-900">
+            <button
+              type="button"
+              className="absolute right-3 top-3 rounded p-1 text-slate-500 hover:bg-slate-100 hover:text-slate-800 disabled:opacity-40"
+              aria-label={t("planChangeCloseAria")}
+              onClick={() => !stripeSubmitting && setStripeDialog(null)}
+              disabled={stripeSubmitting}
+            >
+              <span className="text-xl leading-none" aria-hidden>
+                ×
+              </span>
+            </button>
+
+            <h2 id="stripe-plan-change-title" className="pr-10 text-lg font-semibold text-slate-900">
               {t("planChangeConfirmTitle")}
             </h2>
             {dialogPlan ? (
@@ -300,51 +348,117 @@ export default function MembershipPage() {
                 })}
               </p>
             ) : null}
-            <p className="mt-3 text-sm text-slate-600">{t("planChangeConfirmSubtitle")}</p>
 
             {stripeDialog.phase === "loading" ? (
-              <p className="mt-6 text-center text-sm text-slate-600">{t("planChangeLoadingPreview")}</p>
-            ) : preview ? (
-              <div className="mt-4 space-y-3 text-sm text-slate-800">
-                <p className="font-medium text-slate-900">
-                  {preview.amount_due > 0
-                    ? t("planChangeAmountDueNow", {
-                        amount: formatMinorUnits(preview.amount_due, preview.currency, intlLocale),
-                      })
-                    : t("planChangeNoAmountDue", {
-                        amount: formatMinorUnits(preview.amount_due, preview.currency, intlLocale),
+              <p className="mt-8 text-center text-sm text-slate-600">{t("planChangeLoadingPreview")}</p>
+            ) : preview && dialogPlan ? (
+              <>
+                {preview.change_mode === "deferred_downgrade" ? (
+                  <div className="mt-5 space-y-3 text-sm text-slate-800">
+                    <p className="leading-relaxed text-slate-800">
+                      {t("planChangeDeferredPreviewSummary", {
+                        date: preview.subscription_current_period_end
+                          ? new Date(preview.subscription_current_period_end * 1000).toLocaleDateString(
+                              intlLocale,
+                              { dateStyle: "long" },
+                            )
+                          : "—",
+                        plan: t(`plans.${dialogPlan}`),
+                        interval: t(billingInterval === "annual" ? "billingAnnually" : "billingMonthly"),
                       })}
-                </p>
-                <p>
-                  {t("planChangeInvoiceTotal", {
-                    amount: formatMinorUnits(preview.total, preview.currency, intlLocale),
-                  })}
-                </p>
-                {preview.subscription_current_period_end ? (
-                  <p>
-                    {t("planChangeNextPeriod", {
-                      date: new Date(preview.subscription_current_period_end * 1000).toLocaleDateString(intlLocale, {
-                        dateStyle: "medium",
-                      }),
-                    })}
-                  </p>
-                ) : null}
-                {preview.lines.length > 0 ? (
-                  <div>
-                    <p className="mb-1 font-medium text-slate-900">{t("planChangeLinesHeading")}</p>
-                    <ul className="max-h-40 list-inside list-disc overflow-y-auto text-xs text-slate-700">
-                      {preview.lines.map((line, i) => (
-                        <li key={`${line.description}-${i}`}>
-                          {line.description || "—"} — {formatMinorUnits(line.amount, preview.currency, intlLocale)}
-                        </li>
-                      ))}
-                    </ul>
+                    </p>
+                    <div className="rounded-lg bg-slate-50 px-3 py-2.5 text-sm font-medium text-slate-800">
+                      {t("planChangeDeferredNoChargeToday")}
+                    </div>
+                    <div className="flex items-start justify-between gap-3 pt-1 text-sm">
+                      <span className="text-slate-600">{t("planChangePaymentMethod")}</span>
+                      <span className="max-w-[58%] text-right font-medium text-slate-900">
+                        {preview.payment_method_label || t("planChangePaymentMethodUnknown")}
+                      </span>
+                    </div>
                   </div>
-                ) : null}
-              </div>
+                ) : (
+                  <>
+                    {(() => {
+                      const { positive, negative, positiveSum } = splitInvoiceLines(preview.lines);
+                      const headline = positiveSum > 0 ? positiveSum : Math.max(0, preview.subtotal);
+                      return (
+                        <div className="mt-5 space-y-1 text-sm text-slate-800">
+                          <div className="flex items-start justify-between gap-3 border-b border-slate-200 pb-4">
+                            <div className="min-w-0 flex-1">
+                              <p className="font-semibold text-slate-900">{t(`plans.${dialogPlan}`)}</p>
+                              <p className="mt-1 text-xs text-slate-500">
+                                {billingInterval === "annual"
+                                  ? t("planChangeBillingNoteAnnual")
+                                  : t("planChangeBillingNoteMonthly")}
+                              </p>
+                              {positive.length > 1 ? (
+                                <ul className="mt-2 space-y-0.5 text-xs text-slate-600">
+                                  {positive.map((line, i) => (
+                                    <li key={`p-${i}`} className="truncate">
+                                      {line.description || "—"}
+                                    </li>
+                                  ))}
+                                </ul>
+                              ) : null}
+                            </div>
+                            <p className="shrink-0 text-base font-semibold tabular-nums text-slate-900">
+                              {formatMinorUnits(headline, preview.currency, intlLocale)}
+                            </p>
+                          </div>
+
+                          {negative.length > 0 ? (
+                            <div className="border-b border-slate-200 py-4">
+                              <p className="text-sm font-semibold text-slate-900">{t("planChangeAdjustmentTitle")}</p>
+                              <ul className="mt-2 space-y-2">
+                                {negative.map((line, i) => (
+                                  <li key={`n-${i}`} className="flex justify-between gap-3 text-sm">
+                                    <span className="min-w-0 flex-1 text-slate-600">
+                                      {line.description || t("planChangeAdjustmentTitle")}
+                                    </span>
+                                    <span className="shrink-0 font-medium tabular-nums text-emerald-600">
+                                      {formatMinorUnits(line.amount, preview.currency, intlLocale)}
+                                    </span>
+                                  </li>
+                                ))}
+                              </ul>
+                              <p className="mt-2 text-xs text-slate-500">{t("planChangeAdjustmentCreditHint")}</p>
+                            </div>
+                          ) : null}
+
+                          <div className="flex items-center justify-between gap-3 pt-3">
+                            <span className="font-semibold text-slate-900">{t("planChangeTotalDueToday")}</span>
+                            <span className="text-lg font-bold tabular-nums text-slate-900">
+                              {formatMinorUnits(preview.amount_due, preview.currency, intlLocale)}
+                            </span>
+                          </div>
+
+                          <div className="flex items-start justify-between gap-3 pt-2 text-sm">
+                            <span className="text-slate-600">{t("planChangePaymentMethod")}</span>
+                            <span className="max-w-[58%] text-right font-medium text-slate-900">
+                              {preview.payment_method_label || t("planChangePaymentMethodUnknown")}
+                            </span>
+                          </div>
+                          {preview.subscription_current_period_end ? (
+                            <p className="pt-2 text-xs text-slate-500">
+                              {t("planChangeNextPeriod", {
+                                date: new Date(preview.subscription_current_period_end * 1000).toLocaleDateString(
+                                  intlLocale,
+                                  { dateStyle: "medium" },
+                                ),
+                              })}
+                            </p>
+                          ) : null}
+                        </div>
+                      );
+                    })()}
+                  </>
+                )}
+                <p className="mt-4 text-xs leading-relaxed text-slate-500">{t("planChangeConfirmSubtitle")}</p>
+              </>
             ) : null}
 
-            <div className="mt-6 flex flex-wrap justify-end gap-2">
+            <div className="mt-6 flex flex-wrap justify-end gap-2 border-t border-slate-100 pt-4">
               <button
                 type="button"
                 className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-800 hover:bg-slate-50 disabled:opacity-50"
@@ -355,11 +469,21 @@ export default function MembershipPage() {
               </button>
               <button
                 type="button"
-                className="rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-700 disabled:opacity-50"
+                className={`rounded-lg px-4 py-2 text-sm font-medium text-white disabled:opacity-50 ${
+                  preview && preview.change_mode !== "deferred_downgrade" && preview.amount_due > 0
+                    ? "bg-slate-900 hover:bg-slate-800"
+                    : "bg-sky-600 hover:bg-sky-700"
+                }`}
                 onClick={() => void confirmStripePlanChange()}
                 disabled={stripeSubmitting || stripeDialog.phase !== "ready"}
               >
-                {stripeSubmitting ? tCommon("loading") : t("planChangeConfirm")}
+                {stripeSubmitting
+                  ? tCommon("loading")
+                  : preview?.change_mode === "deferred_downgrade"
+                    ? t("planChangeConfirmDeferred")
+                    : preview && preview.amount_due > 0
+                      ? t("planChangePayNow")
+                      : t("planChangeConfirmNoPayment")}
               </button>
             </div>
           </div>
