@@ -370,6 +370,62 @@ async def billing_status(current_user: User = Depends(get_current_active_user)):
     )
 
 
+@router.post("/resume-subscription", response_model=APIResponse)
+async def resume_subscription(current_user: User = Depends(get_current_active_user)):
+    """Undo cancel-at-period-end so Stripe renews the subscription on the next billing cycle."""
+    if not is_stripe_billing_configured():
+        raise HTTPException(status_code=503, detail="stripe_not_configured")
+    sub_id = getattr(current_user, "stripe_subscription_id", None)
+    if not sub_id:
+        raise HTTPException(status_code=400, detail="stripe_subscription_missing")
+    _stripe_configure()
+    try:
+        sub = stripe.Subscription.retrieve(sub_id)
+    except stripe.error.StripeError as e:
+        logger.warning("resume subscription retrieve failed: %s", e)
+        raise HTTPException(status_code=400, detail="stripe_subscription_invalid") from e
+    if sub.status not in ("active", "trialing", "past_due"):
+        raise HTTPException(status_code=400, detail="stripe_subscription_inactive")
+    if not bool(getattr(sub, "cancel_at_period_end", False)):
+        raise HTTPException(status_code=400, detail="subscription_not_canceling_at_period_end")
+    try:
+        stripe.Subscription.modify(sub_id, cancel_at_period_end=False)
+    except stripe.error.StripeError as e:
+        logger.warning("resume subscription modify failed: %s", e)
+        raise HTTPException(status_code=400, detail="stripe_resume_subscription_failed") from e
+    return APIResponse(success=True, message="ok", data={"resumed": True})
+
+
+@router.post("/cancel-subscription-at-period-end", response_model=APIResponse)
+async def cancel_subscription_at_period_end(
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+):
+    """Schedule subscription cancellation at the end of the current billing period (no Customer Portal redirect)."""
+    if not is_stripe_billing_configured():
+        raise HTTPException(status_code=503, detail="stripe_not_configured")
+    sub_id = getattr(current_user, "stripe_subscription_id", None)
+    if not sub_id:
+        raise HTTPException(status_code=400, detail="stripe_subscription_missing")
+    _stripe_configure()
+    try:
+        sub = stripe.Subscription.retrieve(sub_id)
+    except stripe.error.StripeError as e:
+        logger.warning("cancel-at-period-end retrieve failed: %s", e)
+        raise HTTPException(status_code=400, detail="stripe_subscription_invalid") from e
+    if sub.status not in ("active", "trialing", "past_due"):
+        raise HTTPException(status_code=400, detail="stripe_subscription_inactive")
+    if bool(getattr(sub, "cancel_at_period_end", False)):
+        raise HTTPException(status_code=400, detail="subscription_already_canceling_at_period_end")
+    try:
+        updated = stripe.Subscription.modify(sub_id, cancel_at_period_end=True)
+    except stripe.error.StripeError as e:
+        logger.warning("cancel-at-period-end modify failed: %s", e)
+        raise HTTPException(status_code=400, detail="stripe_cancel_subscription_failed") from e
+    sync_user_from_stripe_subscription(db, current_user, updated)
+    return APIResponse(success=True, message="ok", data={"cancel_at_period_end": True})
+
+
 @router.post("/checkout-session", response_model=APIResponse)
 async def create_checkout_session(
     body: BillingCheckoutBody,

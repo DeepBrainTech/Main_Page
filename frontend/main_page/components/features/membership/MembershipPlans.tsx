@@ -12,6 +12,10 @@ interface MembershipPlansProps {
   billingInterval: MembershipBillingInterval;
   onBillingIntervalChange: (interval: MembershipBillingInterval) => void;
   onPlanChange: (plan: MembershipPlan) => void | Promise<void>;
+  /** When subscription is cancel-at-period-end, call Stripe to resume renewal billing. */
+  onResumeSubscription?: () => void | Promise<void>;
+  /** Paid + Stripe: cancel at period end via API (no Customer Portal redirect). */
+  onCancelPaidSubscription?: () => void | Promise<void>;
   /** ISO datetime for current paid period end (renewal / access end). */
   membershipPeriodEndIso?: string | null;
   /** From Stripe: true if cancel at period end; false if active renewal; null if unknown. */
@@ -98,6 +102,11 @@ const planStyles = {
   },
 };
 
+/** Defer close so the same pointer event cannot activate elements under the modal. */
+function scheduleCancelDialogClose(close: () => void) {
+  setTimeout(close, 0);
+}
+
 function formatMembershipPeriodDate(iso: string, siteLocale: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "";
@@ -110,6 +119,8 @@ export default function MembershipPlans({
   billingInterval,
   onBillingIntervalChange,
   onPlanChange,
+  onResumeSubscription,
+  onCancelPaidSubscription,
   membershipPeriodEndIso = null,
   subscriptionCancelAtPeriodEnd = null,
 }: MembershipPlansProps) {
@@ -119,11 +130,14 @@ export default function MembershipPlans({
   const periodKey = billingInterval === "annual" ? "perYear" : "perMonth";
   const [pendingCancelPlan, setPendingCancelPlan] = useState<MembershipPlan | null>(null);
   const [cancelSubmitting, setCancelSubmitting] = useState(false);
+  const [resumeSubmitting, setResumeSubmitting] = useState(false);
 
   useEffect(() => {
     if (!pendingCancelPlan) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && !cancelSubmitting) setPendingCancelPlan(null);
+      if (e.key === "Escape" && !cancelSubmitting) {
+        scheduleCancelDialogClose(() => setPendingCancelPlan(null));
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -138,10 +152,24 @@ export default function MembershipPlans({
     if (!pendingCancelPlan || cancelSubmitting) return;
     setCancelSubmitting(true);
     try {
-      await onPlanChange("free");
+      if (onCancelPaidSubscription) {
+        await onCancelPaidSubscription();
+      } else {
+        await onPlanChange("free");
+      }
       setPendingCancelPlan(null);
     } finally {
       setCancelSubmitting(false);
+    }
+  };
+
+  const handleResumeClick = async () => {
+    if (!onResumeSubscription || resumeSubmitting) return;
+    setResumeSubmitting(true);
+    try {
+      await onResumeSubscription();
+    } finally {
+      setResumeSubmitting(false);
     }
   };
 
@@ -270,6 +298,11 @@ export default function MembershipPlans({
                     {isCanceledAtPeriodEnd
                       ? t("planExpiresOn", { date: periodDateLabel })
                       : t("planRenewOn", { date: periodDateLabel })}
+                    {isCanceledAtPeriodEnd ? (
+                      <p className="mt-1.5 px-1 font-app-body text-xs font-normal leading-5 text-amber-200/90">
+                        {t("resumeSubscriptionHint")}
+                      </p>
+                    ) : null}
                   </div>
                 ) : null}
                 <button
@@ -288,13 +321,24 @@ export default function MembershipPlans({
                 </button>
 
                 {isCurrent && plan.key !== "free" ? (
-                  <button
-                    type="button"
-                    onClick={() => setPendingCancelPlan(plan.key)}
-                    className="h-10 w-full rounded-full border border-white/30 bg-white/10 font-app-body text-sm font-medium leading-5 text-white transition hover:bg-white/15"
-                  >
-                    {t("cancelSubscription")}
-                  </button>
+                  isCanceledAtPeriodEnd && onResumeSubscription ? (
+                    <button
+                      type="button"
+                      onClick={() => void handleResumeClick()}
+                      disabled={resumeSubmitting}
+                      className="h-10 w-full rounded-full border border-emerald-300/50 bg-emerald-500/15 font-app-body text-sm font-medium leading-5 text-white transition hover:bg-emerald-500/25 disabled:opacity-60"
+                    >
+                      {resumeSubmitting ? tCommon("loading") : t("resumeSubscription")}
+                    </button>
+                  ) : !isCanceledAtPeriodEnd ? (
+                    <button
+                      type="button"
+                      onClick={() => setPendingCancelPlan(plan.key)}
+                      className="h-10 w-full rounded-full border border-white/30 bg-white/10 font-app-body text-sm font-medium leading-5 text-white transition hover:bg-white/15"
+                    >
+                      {t("cancelSubscription")}
+                    </button>
+                  ) : null
                 ) : null}
               </div>
             </article>
@@ -309,7 +353,7 @@ export default function MembershipPlans({
             className="absolute inset-0 bg-slate-900/40 backdrop-blur-[2px]"
             aria-label={t("cancelDialog.closeAria")}
             onClick={() => {
-              if (!cancelSubmitting) setPendingCancelPlan(null);
+              if (!cancelSubmitting) scheduleCancelDialogClose(() => setPendingCancelPlan(null));
             }}
           />
           <div
@@ -322,7 +366,7 @@ export default function MembershipPlans({
               type="button"
               className="absolute right-4 top-4 rounded-md p-1 text-neutral-700 opacity-70 transition hover:bg-slate-100 hover:opacity-100"
               onClick={() => {
-                if (!cancelSubmitting) setPendingCancelPlan(null);
+                if (!cancelSubmitting) scheduleCancelDialogClose(() => setPendingCancelPlan(null));
               }}
               aria-label={t("cancelDialog.closeAria")}
             >
@@ -361,7 +405,7 @@ export default function MembershipPlans({
               <button
                 type="button"
                 className="h-14 w-full rounded-full bg-gradient-to-r from-sky-700 via-sky-700 to-blue-600 font-app-body text-base font-bold leading-6 text-white shadow-md transition hover:brightness-105"
-                onClick={() => setPendingCancelPlan(null)}
+                onClick={() => scheduleCancelDialogClose(() => setPendingCancelPlan(null))}
               >
                 {t("cancelDialog.keepPlan", { plan: t(`plans.${pendingCancelPlan}`) })}
               </button>

@@ -8,14 +8,14 @@ import MembershipPlans, {
   type MembershipPlan,
 } from "@/components/features/membership/MembershipPlans";
 import {
+  cancelStripeSubscriptionAtPeriodEnd,
   changeStripeSubscription,
-  createStripeBillingPortalSession,
   createStripeCheckoutSession,
   fetchAuthMeMembership,
   fetchBillingStatus,
   membershipErrorKeyFromDetail,
   previewStripeSubscriptionChange,
-  type StripeChangeInvoice,
+  resumeStripeSubscription,
   type StripeChangePreview,
   type StripeInvoiceLine,
 } from "@/services/userApi";
@@ -57,65 +57,9 @@ function splitInvoiceLines(lines: StripeInvoiceLine[]) {
   };
 }
 
-function invoiceStatusLabel(status: string, tMem: (key: string) => string): string {
-  switch (status) {
-    case "paid":
-      return tMem("invoiceStatusPaid");
-    case "open":
-      return tMem("invoiceStatusOpen");
-    case "draft":
-      return tMem("invoiceStatusDraft");
-    case "void":
-      return tMem("invoiceStatusVoid");
-    case "uncollectible":
-      return tMem("invoiceStatusUncollectible");
-    default:
-      return tMem("invoiceStatusOther");
-  }
-}
-
-function PlanChangeResultDetails({
-  inv,
-  t,
-  intlLocale,
-}: {
-  inv: StripeChangeInvoice;
-  t: (key: string, values?: Record<string, string | number | Date>) => string;
-  intlLocale: string;
-}) {
-  return (
-    <div className="mt-2 space-y-1.5 text-emerald-900">
-      <p>{t("planChangeInvoiceTotalResult", { amount: formatMinorUnits(inv.total, inv.currency, intlLocale) })}</p>
-      {inv.amount_paid > 0 ? (
-        <p>{t("planChangeAmountPaid", { amount: formatMinorUnits(inv.amount_paid, inv.currency, intlLocale) })}</p>
-      ) : null}
-      {inv.amount_due > 0 ? (
-        <p>{t("planChangeAmountDueResult", { amount: formatMinorUnits(inv.amount_due, inv.currency, intlLocale) })}</p>
-      ) : null}
-      <p>{t("planChangeInvoiceStatus", { status: invoiceStatusLabel(inv.status, t) })}</p>
-      {inv.hosted_invoice_url ? (
-        <a
-          href={inv.hosted_invoice_url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="mt-1 inline-block font-medium text-sky-800 underline underline-offset-2 hover:text-sky-950"
-        >
-          {t("planChangeViewInvoice")}
-        </a>
-      ) : (
-        <p className="text-emerald-800">{t("planChangeNoInvoiceDetail")}</p>
-      )}
-      {inv.lines && inv.lines.length > 0 ? (
-        <ul className="mt-2 max-h-32 list-inside list-disc overflow-y-auto text-xs text-emerald-900/90">
-          {inv.lines.map((line, i) => (
-            <li key={`${line.description}-${i}`}>
-              {line.description || "—"} — {formatMinorUnits(line.amount, inv.currency, intlLocale)}
-            </li>
-          ))}
-        </ul>
-      ) : null}
-    </div>
-  );
+/** Close on the next task so the same pointer event cannot activate elements under the modal. */
+function scheduleStripeDialogClose(close: () => void) {
+  setTimeout(close, 0);
 }
 
 export default function MembershipPage() {
@@ -131,11 +75,6 @@ export default function MembershipPage() {
   const [billingInterval, setBillingInterval] = useState<MembershipBillingInterval>("monthly");
   const [loadError, setLoadError] = useState<MembershipErrorKey | null>(null);
   const [successMessage, setSuccessMessage] = useState<"checkoutSuccess" | null>(null);
-  const [planChangeSummary, setPlanChangeSummary] = useState<{
-    invoice: StripeChangeInvoice | null;
-    changeMode?: "deferred_downgrade" | "immediate_upgrade";
-    deferredEffectiveAt?: string | null;
-  } | null>(null);
   const [checkoutEnabled, setCheckoutEnabled] = useState(false);
   const [hasStripeSubscription, setHasStripeSubscription] = useState(false);
   const [membershipPeriodEndIso, setMembershipPeriodEndIso] = useState<string | null>(null);
@@ -161,6 +100,20 @@ export default function MembershipPage() {
     }
   }, []);
 
+  const cancelSubscriptionAtPeriodEndOnSite = useCallback(async () => {
+    setLoadError(null);
+    setSuccessMessage(null);
+    try {
+      await cancelStripeSubscriptionAtPeriodEnd();
+      await loadAll();
+      window.dispatchEvent(new Event("membership-plan-change"));
+    } catch (e) {
+      const detail = e instanceof Error ? e.message : "request_failed";
+      setLoadError(membershipErrorKeyFromDetail(detail) as MembershipErrorKey);
+      throw e;
+    }
+  }, [loadAll]);
+
   useEffect(() => {
     void loadAll();
   }, [loadAll]);
@@ -169,7 +122,6 @@ export default function MembershipPage() {
     const c = searchParams.get("checkout");
     if (c === "success") {
       setSuccessMessage("checkoutSuccess");
-      setPlanChangeSummary(null);
       void loadAll();
       window.dispatchEvent(new Event("membership-plan-change"));
       router.replace(pathname);
@@ -182,7 +134,9 @@ export default function MembershipPage() {
   useEffect(() => {
     if (!stripeDialog) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && !stripeSubmitting) setStripeDialog(null);
+      if (e.key === "Escape" && !stripeSubmitting) {
+        scheduleStripeDialogClose(() => setStripeDialog(null));
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -194,15 +148,10 @@ export default function MembershipPage() {
     setStripeSubmitting(true);
     setLoadError(null);
     try {
-      const result = await changeStripeSubscription({ plan, billing_interval: billingInterval });
-      setStripeDialog(null);
+      await changeStripeSubscription({ plan, billing_interval: billingInterval });
+      scheduleStripeDialogClose(() => setStripeDialog(null));
       await loadAll();
       setSuccessMessage(null);
-      setPlanChangeSummary({
-        invoice: result.invoice ?? null,
-        changeMode: result.change_mode,
-        deferredEffectiveAt: result.deferred_effective_at ?? null,
-      });
       window.dispatchEvent(new Event("membership-plan-change"));
     } catch (e) {
       const detail = e instanceof Error ? e.message : "request_failed";
@@ -216,12 +165,14 @@ export default function MembershipPage() {
   const handlePlanChange = async (plan: MembershipPlan) => {
     setLoadError(null);
     setSuccessMessage(null);
-    setPlanChangeSummary(null);
     try {
       if (plan === "free") {
         if (hasStripeSubscription) {
-          const url = await createStripeBillingPortalSession(locale);
-          window.location.href = url;
+          try {
+            await cancelSubscriptionAtPeriodEndOnSite();
+          } catch {
+            /* loadError set in cancelSubscriptionAtPeriodEndOnSite */
+          }
           return;
         }
         if (currentPlan === "free") {
@@ -241,7 +192,7 @@ export default function MembershipPage() {
             });
             setStripeDialog({ phase: "ready", plan, preview });
           } catch (e) {
-            setStripeDialog(null);
+            scheduleStripeDialogClose(() => setStripeDialog(null));
             const detail = e instanceof Error ? e.message : "request_failed";
             const key = membershipErrorKeyFromDetail(detail) as MembershipErrorKey;
             setLoadError(key);
@@ -266,6 +217,20 @@ export default function MembershipPage() {
     }
   };
 
+  const handleResumeSubscription = useCallback(async () => {
+    setLoadError(null);
+    setSuccessMessage(null);
+    try {
+      await resumeStripeSubscription();
+      await loadAll();
+      window.dispatchEvent(new Event("membership-plan-change"));
+    } catch (e) {
+      const detail = e instanceof Error ? e.message : "request_failed";
+      const key = membershipErrorKeyFromDetail(detail) as MembershipErrorKey;
+      setLoadError(key);
+    }
+  }, [loadAll]);
+
   const preview = stripeDialog?.phase === "ready" ? stripeDialog.preview : null;
   const dialogPlan = stripeDialog?.phase === "ready" || stripeDialog?.phase === "loading" ? stripeDialog.plan : null;
 
@@ -275,28 +240,6 @@ export default function MembershipPage() {
         <p className="text-center text-sm font-medium text-emerald-700" role="status">
           {t(successMessage)}
         </p>
-      ) : null}
-      {planChangeSummary ? (
-        <div
-          className="mx-auto max-w-lg rounded-lg border border-emerald-200 bg-emerald-50/60 px-4 py-3 text-left text-sm text-emerald-950"
-          role="status"
-        >
-          <p className="font-semibold text-emerald-900">{t("planChangeDoneTitle")}</p>
-          {planChangeSummary.changeMode === "deferred_downgrade" && planChangeSummary.deferredEffectiveAt ? (
-            <p className="mt-2 text-emerald-800">
-              {t("planChangeDeferredSuccess", {
-                plan: t("plans.plus"),
-                date: new Date(planChangeSummary.deferredEffectiveAt).toLocaleDateString(intlLocale, {
-                  dateStyle: "long",
-                }),
-              })}
-            </p>
-          ) : planChangeSummary.invoice ? (
-            <PlanChangeResultDetails inv={planChangeSummary.invoice} t={t} intlLocale={intlLocale} />
-          ) : (
-            <p className="mt-2 text-emerald-800">{t("planChangeNoInvoiceDetail")}</p>
-          )}
-        </div>
       ) : null}
       {loadError ? (
         <p className="text-center text-sm text-red-600" role="alert">
@@ -308,6 +251,8 @@ export default function MembershipPage() {
         billingInterval={billingInterval}
         onBillingIntervalChange={setBillingInterval}
         onPlanChange={handlePlanChange}
+        onResumeSubscription={handleResumeSubscription}
+        onCancelPaidSubscription={hasStripeSubscription ? cancelSubscriptionAtPeriodEndOnSite : undefined}
         membershipPeriodEndIso={membershipPeriodEndIso}
         subscriptionCancelAtPeriodEnd={subscriptionCancelAtPeriodEnd}
       />
@@ -316,7 +261,9 @@ export default function MembershipPage() {
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
           role="presentation"
-          onClick={() => !stripeSubmitting && setStripeDialog(null)}
+          onClick={() => {
+            if (!stripeSubmitting) scheduleStripeDialogClose(() => setStripeDialog(null));
+          }}
         >
           <div
             className="relative max-h-[90vh] w-full max-w-md overflow-y-auto rounded-xl border border-slate-200 bg-white p-5 pt-6 shadow-xl"
@@ -329,7 +276,9 @@ export default function MembershipPage() {
               type="button"
               className="absolute right-3 top-3 rounded p-1 text-slate-500 hover:bg-slate-100 hover:text-slate-800 disabled:opacity-40"
               aria-label={t("planChangeCloseAria")}
-              onClick={() => !stripeSubmitting && setStripeDialog(null)}
+              onClick={() => {
+                if (!stripeSubmitting) scheduleStripeDialogClose(() => setStripeDialog(null));
+              }}
               disabled={stripeSubmitting}
             >
               <span className="text-xl leading-none" aria-hidden>
@@ -462,7 +411,9 @@ export default function MembershipPage() {
               <button
                 type="button"
                 className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-800 hover:bg-slate-50 disabled:opacity-50"
-                onClick={() => !stripeSubmitting && setStripeDialog(null)}
+                onClick={() => {
+                  if (!stripeSubmitting) scheduleStripeDialogClose(() => setStripeDialog(null));
+                }}
                 disabled={stripeSubmitting}
               >
                 {tCommon("cancel")}

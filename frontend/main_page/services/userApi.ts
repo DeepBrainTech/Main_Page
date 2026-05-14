@@ -446,7 +446,12 @@ export function membershipErrorKeyFromDetail(detail: string): string {
     case "stripe_subscription_inactive":
     case "stripe_subscription_invalid":
     case "stripe_subscription_change_failed":
+    case "stripe_resume_subscription_failed":
+    case "stripe_cancel_subscription_failed":
       return "stripeChangeFailed";
+    case "subscription_not_canceling_at_period_end":
+    case "subscription_already_canceling_at_period_end":
+      return "subscriptionNoChange";
     case "subscription_no_change":
       return "subscriptionNoChange";
     case "stripe_customer_missing":
@@ -494,6 +499,28 @@ export async function createStripeBillingPortalSession(locale: string): Promise<
   const url = json?.data?.url;
   if (!url) throw new Error("portal_failed");
   return url;
+}
+
+/** Clear Stripe cancel-at-period-end so the subscription renews on future billing dates. */
+export async function resumeStripeSubscription(): Promise<void> {
+  const res = await fetch(getApiUrl("/api/billing/resume-subscription"), {
+    method: "POST",
+    headers: getAuthHeaders(),
+  });
+  if (!res.ok) {
+    throw new Error(await readApiErrorDetail(res));
+  }
+}
+
+/** Schedule Stripe cancel at period end (stay on site; access until current period ends). */
+export async function cancelStripeSubscriptionAtPeriodEnd(): Promise<void> {
+  const res = await fetch(getApiUrl("/api/billing/cancel-subscription-at-period-end"), {
+    method: "POST",
+    headers: getAuthHeaders(),
+  });
+  if (!res.ok) {
+    throw new Error(await readApiErrorDetail(res));
+  }
 }
 
 export type StripeInvoiceLine = {
