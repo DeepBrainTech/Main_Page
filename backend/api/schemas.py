@@ -79,6 +79,9 @@ class BillingCheckoutBody(BaseModel):
 
 class BillingPortalBody(BaseModel):
     locale: str = Field(default="en", min_length=2, max_length=5)
+
+
+class CompleteProfileBody(BaseModel):
     """Google 用户补全资料：用户名、出生日期"""
     username: Optional[str] = Field(None, min_length=3, max_length=50)
     date_of_birth: Optional[date] = None
