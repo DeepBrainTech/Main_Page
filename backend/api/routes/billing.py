@@ -40,6 +40,13 @@ def _allowed_locale(locale: str) -> str:
     return "en"
 
 
+def _stripe_ui_locale(site_locale: str) -> str:
+    """Map site locale to Stripe Checkout / Customer Portal `locale` codes."""
+    if site_locale == "zh":
+        return "zh"
+    return "en"
+
+
 def _membership_path(locale: str) -> str:
     return f"/{locale}/membership"
 
@@ -195,6 +202,7 @@ async def create_checkout_session(
         cancel_url=cancel_url,
         metadata=meta,
         subscription_data={"metadata": meta},
+        locale=_stripe_ui_locale(lo),
     )
 
     return APIResponse(success=True, message="ok", data={"url": session.url})
@@ -220,6 +228,7 @@ async def create_portal_session(
     session = stripe.billing_portal.Session.create(
         customer=current_user.stripe_customer_id,
         return_url=return_url,
+        locale=_stripe_ui_locale(lo),
     )
     return APIResponse(success=True, message="ok", data={"url": session.url})
 
