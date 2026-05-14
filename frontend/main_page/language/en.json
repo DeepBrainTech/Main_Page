@@ -61,11 +61,28 @@
     "close": "Close membership plans",
     "statusLabel": "{plan} membership",
     "perMonth": "/month",
+    "perYear": "/year",
+    "billingMonthly": "Monthly",
+    "billingAnnually": "Annually",
+    "billingToggleAria": "Billing period",
     "bestValue": "BEST VALUE",
     "currentPlan": "Current Plan",
     "freePlan": "Free Plan",
     "cancelSubscription": "Cancel Subscription",
-    "downgradeToPlus": "Downgrade to Plus",
+    "cancelDialog": {
+      "title": "Cancel Subscription?",
+      "description": "Are you sure you want to cancel your {plan} subscription?",
+      "loseHeading": "You will lose:",
+      "losePremium1": "Daily rewards",
+      "losePremium2": "Unlimited access to all courses",
+      "losePremium3": "Catch-up feature",
+      "losePlus1": "Daily rewards",
+      "losePlus2": "Catch-up feature",
+      "keepPlan": "Keep {plan}",
+      "confirmCancel": "Yes, Cancel",
+      "closeAria": "Close dialog"
+    },
+    "downgradeToPlus": "Switch to Plus",
     "plans": {
       "free": "Free",
       "plus": "Plus",
@@ -85,21 +102,15 @@
         "title": "Pay per course",
         "description": "100 per course"
       },
-      "adsIncluded": {
-        "title": "Ads included"
-      },
       "dailyDiamonds": {
         "title": "5 Daily Diamonds",
         "description": "Login to claim rewards"
       },
       "premiumRewards": {
         "title": "5 Diamonds +",
-        "coins": "10 Coins"
+        "coins": "20 Coins"
       },
-      "adFree": {
-        "title": "Ad-free experience",
-        "description": "No interruptions"
-      },
+
       "catchUp": {
         "title": "Catch-up feature",
         "description": "Make up missed days"

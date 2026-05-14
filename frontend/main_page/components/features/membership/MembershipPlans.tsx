@@ -1,12 +1,16 @@
 "use client";
 
 import Image from "next/image";
+import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 
 export type MembershipPlan = "free" | "plus" | "premium";
+export type MembershipBillingInterval = "monthly" | "annual";
 
 interface MembershipPlansProps {
   currentPlan: MembershipPlan;
+  billingInterval: MembershipBillingInterval;
+  onBillingIntervalChange: (interval: MembershipBillingInterval) => void;
   onPlanChange: (plan: MembershipPlan) => void | Promise<void>;
 }
 
@@ -20,7 +24,6 @@ type PlanFeature = {
 
 type PlanConfig = {
   key: MembershipPlan;
-  price: string;
   bestValue?: boolean;
   features: PlanFeature[];
 };
@@ -28,35 +31,35 @@ type PlanConfig = {
 const planConfigs: PlanConfig[] = [
   {
     key: "free",
-    price: "$0",
     features: [
       { titleKey: "features.noDailyDiamonds.title", descriptionKey: "features.noDailyDiamonds.description", enabled: false, marker: "notIncluded" },
       { titleKey: "features.payPerCourse.title", descriptionKey: "features.payPerCourse.description", enabled: true, marker: "lock" },
-      { titleKey: "features.adsIncluded.title", enabled: false, marker: "notIncluded" },
     ],
   },
   {
     key: "plus",
-    price: "$4.99",
     features: [
       { titleKey: "features.dailyDiamonds.title", descriptionKey: "features.dailyDiamonds.description", enabled: true, icon: "diamond" },
       { titleKey: "features.payPerCourse.title", descriptionKey: "features.payPerCourse.description", enabled: true, marker: "lock" },
-      { titleKey: "features.adFree.title", descriptionKey: "features.adFree.description", enabled: true },
       { titleKey: "features.catchUp.title", descriptionKey: "features.catchUp.description", enabled: true },
     ],
   },
   {
     key: "premium",
-    price: "$6.99",
     bestValue: true,
     features: [
       { titleKey: "features.premiumRewards.title", descriptionKey: "features.dailyDiamonds.description", enabled: true, icon: "diamond" },
       { titleKey: "features.allContent.title", descriptionKey: "features.allContent.description", enabled: true },
-      { titleKey: "features.adFree.title", descriptionKey: "features.adFree.description", enabled: true },
       { titleKey: "features.catchUp.title", descriptionKey: "features.catchUp.description", enabled: true },
     ],
   },
 ];
+
+const planDisplayPrices: Record<MembershipPlan, { monthly: string; annual: string }> = {
+  free: { monthly: "$0", annual: "$0" },
+  plus: { monthly: "$4.99", annual: "$49.99" },
+  premium: { monthly: "$6.99", annual: "$69.99" },
+};
 
 const planStyles = {
   free: {
@@ -91,8 +94,42 @@ const planStyles = {
   },
 };
 
-export default function MembershipPlans({ currentPlan, onPlanChange }: MembershipPlansProps) {
+export default function MembershipPlans({
+  currentPlan,
+  billingInterval,
+  onBillingIntervalChange,
+  onPlanChange,
+}: MembershipPlansProps) {
   const t = useTranslations("membership");
+  const tCommon = useTranslations("common");
+  const periodKey = billingInterval === "annual" ? "perYear" : "perMonth";
+  const [pendingCancelPlan, setPendingCancelPlan] = useState<MembershipPlan | null>(null);
+  const [cancelSubmitting, setCancelSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (!pendingCancelPlan) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && !cancelSubmitting) setPendingCancelPlan(null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [pendingCancelPlan, cancelSubmitting]);
+
+  const loseKeys =
+    pendingCancelPlan === "premium"
+      ? (["losePremium1", "losePremium2", "losePremium3"] as const)
+      : (["losePlus1", "losePlus2"] as const);
+
+  const handleConfirmCancel = async () => {
+    if (!pendingCancelPlan || cancelSubmitting) return;
+    setCancelSubmitting(true);
+    try {
+      await onPlanChange("free");
+      setPendingCancelPlan(null);
+    } finally {
+      setCancelSubmitting(false);
+    }
+  };
 
   return (
     <section className="mx-auto w-full max-w-6xl px-1 py-6 sm:px-3 lg:py-10">
@@ -103,6 +140,37 @@ export default function MembershipPlans({ currentPlan, onPlanChange }: Membershi
         <p className="mt-2 font-app-body text-sm font-normal leading-6 text-sky-700 sm:text-lg">{t("subtitle")}</p>
       </div>
 
+      <div className="mb-8 flex justify-center px-2" role="tablist" aria-label={t("billingToggleAria")}>
+        <div className="flex h-12 w-full max-w-[489px] items-center gap-0 rounded-2xl border-[0.82px] border-slate-300/40 bg-white/55 p-1 shadow-sm backdrop-blur-sm">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={billingInterval === "monthly"}
+            className={`flex h-10 min-w-0 flex-1 items-center justify-center rounded-2xl px-6 font-app-body text-base font-semibold leading-6 transition sm:px-10 ${
+              billingInterval === "monthly"
+                ? "bg-gradient-to-r from-sky-700 to-blue-600 text-white shadow-[0_4px_6px_-4px_rgba(0,0,0,0.1)] shadow-md outline outline-[0.82px] outline-offset-[-0.82px] outline-slate-300/30"
+                : "text-sky-700 hover:text-sky-900"
+            }`}
+            onClick={() => onBillingIntervalChange("monthly")}
+          >
+            {t("billingMonthly")}
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={billingInterval === "annual"}
+            className={`flex h-10 min-w-0 flex-1 items-center justify-center rounded-2xl px-6 font-app-body text-base font-semibold leading-6 transition sm:px-10 ${
+              billingInterval === "annual"
+                ? "bg-gradient-to-r from-sky-700 to-blue-600 text-white shadow-[0_4px_6px_-4px_rgba(0,0,0,0.1)] shadow-md outline outline-[0.82px] outline-offset-[-0.82px] outline-slate-300/30"
+                : "text-sky-700 hover:text-sky-900"
+            }`}
+            onClick={() => onBillingIntervalChange("annual")}
+          >
+            {t("billingAnnually")}
+          </button>
+        </div>
+      </div>
+
       <div className="grid gap-4 md:grid-cols-3 lg:gap-6">
         {planConfigs.map((plan) => {
           const styles = planStyles[plan.key];
@@ -110,6 +178,7 @@ export default function MembershipPlans({ currentPlan, onPlanChange }: Membershi
           const isFreePreview = plan.key === "free" && currentPlan !== "free";
           const actionLabelKey =
             currentPlan === "premium" && plan.key === "plus" ? "downgradeToPlus" : `actions.${plan.key}`;
+          const price = planDisplayPrices[plan.key][billingInterval === "annual" ? "annual" : "monthly"];
 
           return (
             <article
@@ -126,8 +195,8 @@ export default function MembershipPlans({ currentPlan, onPlanChange }: Membershi
                 <div>
                   <h2 className={`text-2xl font-semibold leading-8 ${styles.title}`}>{t(`plans.${plan.key}`)}</h2>
                   <div className="mt-3 flex items-end gap-1.5">
-                    <span className={`font-app-body text-4xl font-bold leading-10 ${styles.price}`}>{plan.price}</span>
-                    <span className={`pb-1 font-app-body text-sm font-normal leading-6 sm:text-base ${styles.subtext}`}>{t("perMonth")}</span>
+                    <span className={`font-app-body text-4xl font-bold leading-10 ${styles.price}`}>{price}</span>
+                    <span className={`pb-1 font-app-body text-sm font-normal leading-6 sm:text-base ${styles.subtext}`}>{t(periodKey)}</span>
                   </div>
                 </div>
               </div>
@@ -190,7 +259,7 @@ export default function MembershipPlans({ currentPlan, onPlanChange }: Membershi
                 {isCurrent && plan.key !== "free" ? (
                   <button
                     type="button"
-                    onClick={() => onPlanChange("free")}
+                    onClick={() => setPendingCancelPlan(plan.key)}
                     className="h-10 w-full rounded-full border border-white/30 bg-white/10 font-app-body text-sm font-medium leading-5 text-white transition hover:bg-white/15"
                   >
                     {t("cancelSubscription")}
@@ -201,6 +270,82 @@ export default function MembershipPlans({ currentPlan, onPlanChange }: Membershi
           );
         })}
       </div>
+
+      {pendingCancelPlan ? (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <button
+            type="button"
+            className="absolute inset-0 bg-slate-900/40 backdrop-blur-[2px]"
+            aria-label={t("cancelDialog.closeAria")}
+            onClick={() => {
+              if (!cancelSubmitting) setPendingCancelPlan(null);
+            }}
+          />
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="cancel-dialog-title"
+            className="relative z-10 w-full max-w-[min(100vw-2rem,524px)] rounded-3xl border-2 border-slate-200 bg-white p-6 shadow-[0_4px_6px_-4px_rgba(0,0,0,0.1)] shadow-lg outline outline-2 outline-offset-[-2px] outline-slate-200 sm:p-8"
+          >
+            <button
+              type="button"
+              className="absolute right-4 top-4 rounded-md p-1 text-neutral-700 opacity-70 transition hover:bg-slate-100 hover:opacity-100"
+              onClick={() => {
+                if (!cancelSubmitting) setPendingCancelPlan(null);
+              }}
+              aria-label={t("cancelDialog.closeAria")}
+            >
+              <svg className="h-4 w-4" viewBox="0 0 16 16" fill="none" aria-hidden>
+                <path d="M3 3l10 10M13 3L3 13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+              </svg>
+            </button>
+
+            <div className="flex flex-col items-center text-center">
+              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-amber-50">
+                <Image src="/membership/attention.svg" alt="" width={32} height={32} className="h-8 w-8" aria-hidden />
+              </div>
+              <h2 id="cancel-dialog-title" className="mt-4 font-app-body text-2xl font-bold leading-8 text-cyan-950">
+                {t("cancelDialog.title")}
+              </h2>
+              <p className="mt-2 max-w-md font-app-body text-base font-normal leading-6 text-sky-700">
+                {t("cancelDialog.description", { plan: t(`plans.${pendingCancelPlan}`) })}
+              </p>
+            </div>
+
+            <div className="mt-6 rounded-2xl border-2 border-amber-400/30 bg-orange-50 px-4 py-4">
+              <p className="font-app-body text-sm font-medium leading-5 text-sky-700">{t("cancelDialog.loseHeading")}</p>
+              <ul className="mt-2 space-y-2">
+                {loseKeys.map((key) => (
+                  <li key={key} className="flex items-start gap-2 font-app-body text-sm font-normal leading-5 text-sky-700">
+                    <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center" aria-hidden>
+                      <Image src="/membership/notinclude.svg" alt="" width={16} height={16} className="h-4 w-4" />
+                    </span>
+                    <span>{t(`cancelDialog.${key}`)}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div className="mt-6 flex flex-col gap-3">
+              <button
+                type="button"
+                className="h-14 w-full rounded-full bg-gradient-to-r from-sky-700 via-sky-700 to-blue-600 font-app-body text-base font-bold leading-6 text-white shadow-md transition hover:brightness-105"
+                onClick={() => setPendingCancelPlan(null)}
+              >
+                {t("cancelDialog.keepPlan", { plan: t(`plans.${pendingCancelPlan}`) })}
+              </button>
+              <button
+                type="button"
+                disabled={cancelSubmitting}
+                className="h-12 w-full rounded-full bg-indigo-50 font-app-body text-base font-semibold leading-6 text-sky-700 transition hover:bg-indigo-100 disabled:opacity-60"
+                onClick={() => void handleConfirmCancel()}
+              >
+                {cancelSubmitting ? tCommon("loading") : t("cancelDialog.confirmCancel")}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </section>
   );
 }

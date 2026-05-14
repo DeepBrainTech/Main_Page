@@ -61,11 +61,28 @@
     "close": "关闭会员计划",
     "statusLabel": "{plan} 会员",
     "perMonth": "/月",
+    "perYear": "/年",
+    "billingMonthly": "按月",
+    "billingAnnually": "按年",
+    "billingToggleAria": "计费周期",
     "bestValue": "最具价值",
     "currentPlan": "当前计划",
     "freePlan": "免费计划",
     "cancelSubscription": "取消订阅",
-    "downgradeToPlus": "降级到 Plus",
+    "cancelDialog": {
+      "title": "确定取消订阅？",
+      "description": "确定要取消你的 {plan} 订阅吗？",
+      "loseHeading": "你将失去：",
+      "losePremium1": "每日 5 钻石",
+      "losePremium2": "所有课程的无限访问权限",
+      "losePremium3": "补签功能",
+      "losePlus1": "每日 5 钻石",
+      "losePlus2": "补签功能",
+      "keepPlan": "保留 {plan}",
+      "confirmCancel": "仍要取消",
+      "closeAria": "关闭对话框"
+    },
+    "downgradeToPlus": "切换到 Plus",
     "plans": {
       "free": "Free",
       "plus": "Plus",
@@ -85,9 +102,6 @@
         "title": "按课程付费",
         "description": "每门课程 100"
       },
-      "adsIncluded": {
-        "title": "包含广告"
-      },
       "dailyDiamonds": {
         "title": "每日 5 钻石",
         "description": "登录即可领取奖励"
@@ -95,10 +109,6 @@
       "premiumRewards": {
         "title": "5 钻石 +",
         "coins": "10 金币"
-      },
-      "adFree": {
-        "title": "无广告体验",
-        "description": "不被打扰"
       },
       "catchUp": {
         "title": "补签功能",

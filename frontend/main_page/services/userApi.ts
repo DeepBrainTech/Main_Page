@@ -423,11 +423,14 @@ export async function unlockMentalMathWithDiamonds(
   return json.data as MentalMathBundleAccessData;
 }
 
-export async function updateMembershipPlan(plan: "free" | "plus" | "premium"): Promise<void> {
+export async function updateMembershipPlan(
+  plan: "free" | "plus" | "premium",
+  billingInterval: "monthly" | "annual" = "monthly"
+): Promise<void> {
   const res = await fetch(getApiUrl("/api/user/membership"), {
     method: "PUT",
     headers: getAuthHeaders(),
-    body: JSON.stringify({ plan }),
+    body: JSON.stringify({ plan, billing_interval: billingInterval }),
   });
   if (!res.ok) {
     const j = await res.json().catch(() => ({}));
@@ -438,6 +441,7 @@ export async function updateMembershipPlan(plan: "free" | "plus" | "premium"): P
 export interface AuthMeMembership {
   membership_plan: string;
   membership_expires_at: string | null;
+  membership_billing_interval: string | null;
 }
 
 export async function fetchAuthMeMembership(): Promise<AuthMeMembership> {
@@ -449,6 +453,7 @@ export async function fetchAuthMeMembership(): Promise<AuthMeMembership> {
   return {
     membership_plan: (json?.membership_plan as string) ?? "free",
     membership_expires_at: (json?.membership_expires_at as string | null) ?? null,
+    membership_billing_interval: (json?.membership_billing_interval as string | null) ?? null,
   };
 }
 

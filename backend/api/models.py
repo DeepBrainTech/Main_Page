@@ -31,6 +31,8 @@ class User(Base):
     # Membership for portal (learning premium gate, etc.); persisted server-side.
     membership_plan = Column(String(20), default="free", nullable=False)
     membership_expires_at = Column(DateTime, nullable=True)
+    # Last chosen billing cadence for paid tiers: "monthly" | "annual" (UI / renewals).
+    membership_billing_interval = Column(String(10), nullable=True)
 
     # 关联游戏访问记录
     game_accesses = relationship("GameAccess", back_populates="user")

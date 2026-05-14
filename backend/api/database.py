@@ -106,3 +106,4 @@ def ensure_users_table_compatibility():
         conn.execute(text("ALTER TABLE user_cognitive_scores ADD COLUMN IF NOT EXISTS previous_total_rank INTEGER"))
         conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS membership_plan VARCHAR(20) DEFAULT 'free'"))
         conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS membership_expires_at TIMESTAMP WITHOUT TIME ZONE"))
+        conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS membership_billing_interval VARCHAR(10)"))

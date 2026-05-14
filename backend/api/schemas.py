@@ -54,6 +54,7 @@ class UserResponse(UserBase):
     age: Optional[int] = None  # 由 date_of_birth 计算，序列化时由路由填充
     membership_plan: str = "free"
     membership_expires_at: Optional[datetime] = None
+    membership_billing_interval: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -65,6 +66,7 @@ class MentalMathUnlockDiamondsBody(BaseModel):
 
 class MembershipPlanUpdateBody(BaseModel):
     plan: Literal["free", "plus", "premium"]
+    billing_interval: Literal["monthly", "annual"] = "monthly"
 
 
 class CompleteProfileBody(BaseModel):

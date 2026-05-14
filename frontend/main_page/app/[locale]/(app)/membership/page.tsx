@@ -1,11 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import MembershipPlans, { type MembershipPlan } from "@/components/features/membership/MembershipPlans";
+import MembershipPlans, {
+  type MembershipBillingInterval,
+  type MembershipPlan,
+} from "@/components/features/membership/MembershipPlans";
 import { fetchAuthMeMembership, updateMembershipPlan } from "@/services/userApi";
 
 export default function MembershipPage() {
   const [currentPlan, setCurrentPlan] = useState<MembershipPlan>("free");
+  const [billingInterval, setBillingInterval] = useState<MembershipBillingInterval>("monthly");
   const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -20,6 +24,7 @@ export default function MembershipPage() {
         if (p === "free" || p === "plus" || p === "premium") {
           setCurrentPlan(p);
         }
+        setBillingInterval(m.membership_billing_interval === "annual" ? "annual" : "monthly");
         setLoadError(null);
       } catch {
         if (!cancelled) {
@@ -34,8 +39,12 @@ export default function MembershipPage() {
 
   const handlePlanChange = async (plan: MembershipPlan) => {
     try {
-      await updateMembershipPlan(plan);
+      const interval: MembershipBillingInterval = plan === "free" ? "monthly" : billingInterval;
+      await updateMembershipPlan(plan, interval);
       setCurrentPlan(plan);
+      if (plan === "free") {
+        setBillingInterval("monthly");
+      }
       window.dispatchEvent(new Event("membership-plan-change"));
     } catch {
       setLoadError("save_failed");
@@ -49,7 +58,12 @@ export default function MembershipPage() {
           Unable to load membership. Sign in and try again.
         </p>
       ) : null}
-      <MembershipPlans currentPlan={currentPlan} onPlanChange={handlePlanChange} />
+      <MembershipPlans
+        currentPlan={currentPlan}
+        billingInterval={billingInterval}
+        onBillingIntervalChange={setBillingInterval}
+        onPlanChange={handlePlanChange}
+      />
     </div>
   );
 }
