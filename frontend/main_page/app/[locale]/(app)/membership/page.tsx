@@ -14,7 +14,10 @@ import {
   fetchAuthMeMembership,
   fetchBillingStatus,
   membershipErrorKeyFromDetail,
+  previewStripeSubscriptionChange,
   updateMembershipPlan,
+  type StripeChangeInvoice,
+  type StripeChangePreview,
 } from "@/services/userApi";
 
 type MembershipErrorKey =
@@ -29,19 +32,99 @@ type MembershipErrorKey =
   | "subscriptionNoChange"
   | "generic";
 
+type StripeDialogState =
+  | null
+  | { phase: "loading"; plan: "plus" | "premium" }
+  | { phase: "ready"; plan: "plus" | "premium"; preview: StripeChangePreview };
+
+function formatMinorUnits(amount: number, currency: string, locale: string): string {
+  const cur = currency.length === 3 ? currency.toUpperCase() : "USD";
+  try {
+    return new Intl.NumberFormat(locale, { style: "currency", currency: cur }).format(amount / 100);
+  } catch {
+    return `${(amount / 100).toFixed(2)} ${cur}`;
+  }
+}
+
+function invoiceStatusLabel(status: string, tMem: (key: string) => string): string {
+  switch (status) {
+    case "paid":
+      return tMem("invoiceStatusPaid");
+    case "open":
+      return tMem("invoiceStatusOpen");
+    case "draft":
+      return tMem("invoiceStatusDraft");
+    case "void":
+      return tMem("invoiceStatusVoid");
+    case "uncollectible":
+      return tMem("invoiceStatusUncollectible");
+    default:
+      return tMem("invoiceStatusOther");
+  }
+}
+
+function PlanChangeResultDetails({
+  inv,
+  t,
+  intlLocale,
+}: {
+  inv: StripeChangeInvoice;
+  t: (key: string, values?: Record<string, string | number | Date>) => string;
+  intlLocale: string;
+}) {
+  return (
+    <div className="mt-2 space-y-1.5 text-emerald-900">
+      <p>{t("planChangeInvoiceTotalResult", { amount: formatMinorUnits(inv.total, inv.currency, intlLocale) })}</p>
+      {inv.amount_paid > 0 ? (
+        <p>{t("planChangeAmountPaid", { amount: formatMinorUnits(inv.amount_paid, inv.currency, intlLocale) })}</p>
+      ) : null}
+      {inv.amount_due > 0 ? (
+        <p>{t("planChangeAmountDueResult", { amount: formatMinorUnits(inv.amount_due, inv.currency, intlLocale) })}</p>
+      ) : null}
+      <p>{t("planChangeInvoiceStatus", { status: invoiceStatusLabel(inv.status, t) })}</p>
+      {inv.hosted_invoice_url ? (
+        <a
+          href={inv.hosted_invoice_url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-1 inline-block font-medium text-sky-800 underline underline-offset-2 hover:text-sky-950"
+        >
+          {t("planChangeViewInvoice")}
+        </a>
+      ) : (
+        <p className="text-emerald-800">{t("planChangeNoInvoiceDetail")}</p>
+      )}
+      {inv.lines && inv.lines.length > 0 ? (
+        <ul className="mt-2 max-h-32 list-inside list-disc overflow-y-auto text-xs text-emerald-900/90">
+          {inv.lines.map((line, i) => (
+            <li key={`${line.description}-${i}`}>
+              {line.description || "—"} — {formatMinorUnits(line.amount, inv.currency, intlLocale)}
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </div>
+  );
+}
+
 export default function MembershipPage() {
   const locale = useLocale();
+  const intlLocale = locale === "zh" ? "zh-CN" : "en-US";
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const t = useTranslations("membership");
+  const tCommon = useTranslations("common");
 
   const [currentPlan, setCurrentPlan] = useState<MembershipPlan>("free");
   const [billingInterval, setBillingInterval] = useState<MembershipBillingInterval>("monthly");
   const [loadError, setLoadError] = useState<MembershipErrorKey | null>(null);
-  const [successMessage, setSuccessMessage] = useState<"checkoutSuccess" | "planChangeSuccess" | null>(null);
+  const [successMessage, setSuccessMessage] = useState<"checkoutSuccess" | null>(null);
+  const [planChangeSummary, setPlanChangeSummary] = useState<{ invoice: StripeChangeInvoice | null } | null>(null);
   const [checkoutEnabled, setCheckoutEnabled] = useState(false);
   const [hasStripeSubscription, setHasStripeSubscription] = useState(false);
+  const [stripeDialog, setStripeDialog] = useState<StripeDialogState>(null);
+  const [stripeSubmitting, setStripeSubmitting] = useState(false);
 
   const loadAll = useCallback(async () => {
     try {
@@ -67,6 +150,7 @@ export default function MembershipPage() {
     const c = searchParams.get("checkout");
     if (c === "success") {
       setSuccessMessage("checkoutSuccess");
+      setPlanChangeSummary(null);
       void loadAll();
       window.dispatchEvent(new Event("membership-plan-change"));
       router.replace(pathname);
@@ -76,9 +160,41 @@ export default function MembershipPage() {
     }
   }, [searchParams, loadAll, router, pathname]);
 
+  useEffect(() => {
+    if (!stripeDialog) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && !stripeSubmitting) setStripeDialog(null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [stripeDialog, stripeSubmitting]);
+
+  const confirmStripePlanChange = async () => {
+    if (!stripeDialog || stripeDialog.phase !== "ready") return;
+    const { plan } = stripeDialog;
+    setStripeSubmitting(true);
+    setLoadError(null);
+    try {
+      const result = await changeStripeSubscription({ plan, billing_interval: billingInterval });
+      setStripeDialog(null);
+      await loadAll();
+      setCurrentPlan(plan);
+      setSuccessMessage(null);
+      setPlanChangeSummary({ invoice: result.invoice ?? null });
+      window.dispatchEvent(new Event("membership-plan-change"));
+    } catch (e) {
+      const detail = e instanceof Error ? e.message : "request_failed";
+      const key = membershipErrorKeyFromDetail(detail) as MembershipErrorKey;
+      setLoadError(key);
+    } finally {
+      setStripeSubmitting(false);
+    }
+  };
+
   const handlePlanChange = async (plan: MembershipPlan) => {
     setLoadError(null);
     setSuccessMessage(null);
+    setPlanChangeSummary(null);
     try {
       if (plan === "free") {
         if (hasStripeSubscription) {
@@ -95,11 +211,19 @@ export default function MembershipPage() {
 
       if ((plan === "plus" || plan === "premium") && checkoutEnabled) {
         if (hasStripeSubscription) {
-          await changeStripeSubscription({ plan, billing_interval: billingInterval });
-          await loadAll();
-          setCurrentPlan(plan);
-          setSuccessMessage("planChangeSuccess");
-          window.dispatchEvent(new Event("membership-plan-change"));
+          setStripeDialog({ phase: "loading", plan });
+          try {
+            const preview = await previewStripeSubscriptionChange({
+              plan,
+              billing_interval: billingInterval,
+            });
+            setStripeDialog({ phase: "ready", plan, preview });
+          } catch (e) {
+            setStripeDialog(null);
+            const detail = e instanceof Error ? e.message : "request_failed";
+            const key = membershipErrorKeyFromDetail(detail) as MembershipErrorKey;
+            setLoadError(key);
+          }
           return;
         }
         const url = await createStripeCheckoutSession({
@@ -122,12 +246,28 @@ export default function MembershipPage() {
     }
   };
 
+  const preview = stripeDialog?.phase === "ready" ? stripeDialog.preview : null;
+  const dialogPlan = stripeDialog?.phase === "ready" || stripeDialog?.phase === "loading" ? stripeDialog.plan : null;
+
   return (
     <div className="space-y-4">
       {successMessage ? (
         <p className="text-center text-sm font-medium text-emerald-700" role="status">
           {t(successMessage)}
         </p>
+      ) : null}
+      {planChangeSummary ? (
+        <div
+          className="mx-auto max-w-lg rounded-lg border border-emerald-200 bg-emerald-50/60 px-4 py-3 text-left text-sm text-emerald-950"
+          role="status"
+        >
+          <p className="font-semibold text-emerald-900">{t("planChangeDoneTitle")}</p>
+          {!planChangeSummary.invoice ? (
+            <p className="mt-2 text-emerald-800">{t("planChangeNoInvoiceDetail")}</p>
+          ) : (
+            <PlanChangeResultDetails inv={planChangeSummary.invoice} t={t} intlLocale={intlLocale} />
+          )}
+        </div>
       ) : null}
       {loadError ? (
         <p className="text-center text-sm text-red-600" role="alert">
@@ -140,6 +280,91 @@ export default function MembershipPage() {
         onBillingIntervalChange={setBillingInterval}
         onPlanChange={handlePlanChange}
       />
+
+      {stripeDialog ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="presentation">
+          <div
+            className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-xl border border-slate-200 bg-white p-5 shadow-xl"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="stripe-plan-change-title"
+          >
+            <h2 id="stripe-plan-change-title" className="text-lg font-semibold text-slate-900">
+              {t("planChangeConfirmTitle")}
+            </h2>
+            {dialogPlan ? (
+              <p className="mt-1 text-sm text-slate-600">
+                {t("planChangeTargetSummary", {
+                  plan: t(`plans.${dialogPlan}`),
+                  interval: t(billingInterval === "annual" ? "billingAnnually" : "billingMonthly"),
+                })}
+              </p>
+            ) : null}
+            <p className="mt-3 text-sm text-slate-600">{t("planChangeConfirmSubtitle")}</p>
+
+            {stripeDialog.phase === "loading" ? (
+              <p className="mt-6 text-center text-sm text-slate-600">{t("planChangeLoadingPreview")}</p>
+            ) : preview ? (
+              <div className="mt-4 space-y-3 text-sm text-slate-800">
+                <p className="font-medium text-slate-900">
+                  {preview.amount_due > 0
+                    ? t("planChangeAmountDueNow", {
+                        amount: formatMinorUnits(preview.amount_due, preview.currency, intlLocale),
+                      })
+                    : t("planChangeNoAmountDue", {
+                        amount: formatMinorUnits(preview.amount_due, preview.currency, intlLocale),
+                      })}
+                </p>
+                <p>
+                  {t("planChangeInvoiceTotal", {
+                    amount: formatMinorUnits(preview.total, preview.currency, intlLocale),
+                  })}
+                </p>
+                {preview.subscription_current_period_end ? (
+                  <p>
+                    {t("planChangeNextPeriod", {
+                      date: new Date(preview.subscription_current_period_end * 1000).toLocaleDateString(intlLocale, {
+                        dateStyle: "medium",
+                      }),
+                    })}
+                  </p>
+                ) : null}
+                {preview.lines.length > 0 ? (
+                  <div>
+                    <p className="mb-1 font-medium text-slate-900">{t("planChangeLinesHeading")}</p>
+                    <ul className="max-h-40 list-inside list-disc overflow-y-auto text-xs text-slate-700">
+                      {preview.lines.map((line, i) => (
+                        <li key={`${line.description}-${i}`}>
+                          {line.description || "—"} — {formatMinorUnits(line.amount, preview.currency, intlLocale)}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
+
+            <div className="mt-6 flex flex-wrap justify-end gap-2">
+              <button
+                type="button"
+                className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-800 hover:bg-slate-50 disabled:opacity-50"
+                onClick={() => !stripeSubmitting && setStripeDialog(null)}
+                disabled={stripeSubmitting}
+              >
+                {tCommon("cancel")}
+              </button>
+              <button
+                type="button"
+                className="rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-700 disabled:opacity-50"
+                onClick={() => void confirmStripePlanChange()}
+                disabled={stripeSubmitting || stripeDialog.phase !== "ready"}
+              >
+                {stripeSubmitting ? tCommon("loading") : t("planChangeConfirm")}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

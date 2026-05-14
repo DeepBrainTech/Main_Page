@@ -1,5 +1,5 @@
 """
-Stripe Checkout, Customer Billing Portal, and subscription webhooks.
+Stripe Checkout, Customer Billing Portal, subscription change preview, and webhooks.
 """
 import logging
 from datetime import datetime
@@ -134,6 +134,72 @@ def _resolve_user_for_subscription(db: Session, sub: stripe.Subscription) -> Use
     return None
 
 
+def _load_subscription_change_context(
+    current_user: User,
+    db: Session,
+    body: BillingChangeSubscriptionBody,
+) -> tuple[stripe.Subscription, str, str]:
+    """Active subscription, first line item id, and target Stripe price id. Raises HTTPException."""
+    sub_id = getattr(current_user, "stripe_subscription_id", None)
+    if not sub_id:
+        raise HTTPException(status_code=400, detail="stripe_subscription_missing")
+
+    new_price_id = get_price_id(body.plan, body.billing_interval)
+    if not new_price_id:
+        raise HTTPException(status_code=503, detail="stripe_price_not_configured")
+
+    try:
+        sub = stripe.Subscription.retrieve(sub_id)
+    except stripe.error.InvalidRequestError:
+        current_user.stripe_subscription_id = None
+        db.add(current_user)
+        db.commit()
+        raise HTTPException(status_code=400, detail="stripe_subscription_missing")
+
+    if sub.status not in ("active", "trialing", "past_due"):
+        raise HTTPException(status_code=400, detail="stripe_subscription_inactive")
+
+    current_pid = _first_subscription_price_id(sub)
+    if current_pid == new_price_id:
+        raise HTTPException(status_code=400, detail="subscription_no_change")
+
+    try:
+        items_data = sub["items"].data
+    except (AttributeError, KeyError, IndexError):
+        raise HTTPException(status_code=400, detail="stripe_subscription_invalid")
+    if not items_data:
+        raise HTTPException(status_code=400, detail="stripe_subscription_invalid")
+    item_id = items_data[0].id
+    return sub, item_id, new_price_id
+
+
+def _serialize_invoice_lines(inv: stripe.Invoice, limit: int = 25) -> list[dict]:
+    out: list[dict] = []
+    try:
+        data = inv.lines.data if inv.lines else []
+    except (AttributeError, KeyError):
+        return out
+    for li in data[:limit]:
+        desc = getattr(li, "description", None) or ""
+        amt = int(getattr(li, "amount", 0) or 0)
+        out.append({"description": desc, "amount": amt})
+    return out
+
+
+def _invoice_summary(inv: stripe.Invoice | None) -> dict | None:
+    if inv is None:
+        return None
+    return {
+        "id": inv.id,
+        "currency": inv.currency or "usd",
+        "amount_due": int(inv.amount_due or 0),
+        "amount_paid": int(inv.amount_paid or 0),
+        "total": int(inv.total or 0),
+        "status": inv.status,
+        "hosted_invoice_url": inv.hosted_invoice_url,
+    }
+
+
 @router.get("/status", response_model=APIResponse)
 async def billing_status(current_user: User = Depends(get_current_active_user)):
     checkout = is_stripe_billing_configured()
@@ -233,6 +299,49 @@ async def create_portal_session(
     return APIResponse(success=True, message="ok", data={"url": session.url})
 
 
+@router.post("/preview-subscription-change", response_model=APIResponse)
+async def preview_subscription_change(
+    body: BillingChangeSubscriptionBody,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+):
+    """Preview proration and line items before modifying the subscription (Stripe upcoming invoice)."""
+    if not is_stripe_billing_configured():
+        raise HTTPException(status_code=503, detail="stripe_not_configured")
+    _stripe_configure()
+
+    sub, item_id, new_price_id = _load_subscription_change_context(current_user, db, body)
+    cust = sub.customer
+    cust_id = cust if isinstance(cust, str) else getattr(cust, "id", None)
+    if not cust_id:
+        raise HTTPException(status_code=400, detail="stripe_subscription_invalid")
+
+    try:
+        inv = stripe.Invoice.upcoming(
+            customer=str(cust_id),
+            subscription=sub.id,
+            subscription_items=[{"id": item_id, "price": new_price_id}],
+            subscription_proration_behavior="create_prorations",
+        )
+    except stripe.error.StripeError as e:
+        logger.warning("subscription preview invoice failed: %s", e)
+        raise HTTPException(status_code=400, detail="stripe_subscription_preview_failed")
+
+    period_end = int(sub.current_period_end) if sub.current_period_end else None
+    return APIResponse(
+        success=True,
+        message="ok",
+        data={
+            "currency": inv.currency or "usd",
+            "amount_due": int(inv.amount_due or 0),
+            "total": int(inv.total or 0),
+            "subtotal": int(inv.subtotal or 0),
+            "lines": _serialize_invoice_lines(inv),
+            "subscription_current_period_end": period_end,
+        },
+    )
+
+
 @router.post("/change-subscription", response_model=APIResponse)
 async def change_subscription(
     body: BillingChangeSubscriptionBody,
@@ -244,36 +353,7 @@ async def change_subscription(
         raise HTTPException(status_code=503, detail="stripe_not_configured")
     _stripe_configure()
 
-    sub_id = getattr(current_user, "stripe_subscription_id", None)
-    if not sub_id:
-        raise HTTPException(status_code=400, detail="stripe_subscription_missing")
-
-    new_price_id = get_price_id(body.plan, body.billing_interval)
-    if not new_price_id:
-        raise HTTPException(status_code=503, detail="stripe_price_not_configured")
-
-    try:
-        sub = stripe.Subscription.retrieve(sub_id)
-    except stripe.error.InvalidRequestError:
-        current_user.stripe_subscription_id = None
-        db.add(current_user)
-        db.commit()
-        raise HTTPException(status_code=400, detail="stripe_subscription_missing")
-
-    if sub.status not in ("active", "trialing", "past_due"):
-        raise HTTPException(status_code=400, detail="stripe_subscription_inactive")
-
-    current_pid = _first_subscription_price_id(sub)
-    if current_pid == new_price_id:
-        raise HTTPException(status_code=400, detail="subscription_no_change")
-
-    try:
-        items_data = sub["items"].data
-    except (AttributeError, KeyError, IndexError):
-        raise HTTPException(status_code=400, detail="stripe_subscription_invalid")
-    if not items_data:
-        raise HTTPException(status_code=400, detail="stripe_subscription_invalid")
-    item_id = items_data[0].id
+    sub, item_id, new_price_id = _load_subscription_change_context(current_user, db, body)
 
     meta = dict(sub.metadata or {})
     meta["user_id"] = str(current_user.id)
@@ -286,12 +366,32 @@ async def change_subscription(
             items=[{"id": item_id, "price": new_price_id}],
             proration_behavior="create_prorations",
             metadata=meta,
+            expand=["latest_invoice"],
         )
     except stripe.error.StripeError as e:
         logger.warning("subscription modify failed: %s", e)
         raise HTTPException(status_code=400, detail="stripe_subscription_change_failed")
 
     sync_user_from_stripe_subscription(db, current_user, updated)
+
+    invoice_payload: dict | None = None
+    li = updated.get("latest_invoice")
+    if li:
+        if isinstance(li, str):
+            try:
+                inv_full = stripe.Invoice.retrieve(li, expand=["lines"])
+                s = _invoice_summary(inv_full)
+                if s:
+                    s["lines"] = _serialize_invoice_lines(inv_full)
+                invoice_payload = s
+            except stripe.error.StripeError as e:
+                logger.warning("retrieve latest invoice failed: %s", e)
+                invoice_payload = None
+        else:
+            s = _invoice_summary(li)
+            if s:
+                s["lines"] = _serialize_invoice_lines(li)
+            invoice_payload = s
 
     return APIResponse(
         success=True,
@@ -302,6 +402,7 @@ async def change_subscription(
             "membership_expires_at": current_user.membership_expires_at.isoformat()
             if current_user.membership_expires_at
             else None,
+            "invoice": invoice_payload,
         },
     )
 

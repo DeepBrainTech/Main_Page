@@ -458,6 +458,7 @@ export function membershipErrorKeyFromDetail(detail: string): string {
       return "stripeNotConfigured";
     case "already_has_active_subscription":
       return "alreadySubscribed";
+    case "stripe_subscription_preview_failed":
     case "stripe_subscription_missing":
     case "stripe_subscription_inactive":
     case "stripe_subscription_invalid":
@@ -513,10 +514,59 @@ export async function createStripeBillingPortalSession(locale: string): Promise<
   return url;
 }
 
+export type StripeInvoiceLine = { description: string; amount: number };
+
+export type StripeChangePreview = {
+  currency: string;
+  amount_due: number;
+  total: number;
+  subtotal: number;
+  lines: StripeInvoiceLine[];
+  subscription_current_period_end: number | null;
+};
+
+export type StripeChangeInvoice = {
+  id: string;
+  currency: string;
+  amount_due: number;
+  amount_paid: number;
+  total: number;
+  status: string;
+  hosted_invoice_url: string | null;
+  lines?: StripeInvoiceLine[];
+};
+
+export type ChangeStripeSubscriptionResult = {
+  membership_plan: string;
+  membership_billing_interval: string | null;
+  membership_expires_at: string | null;
+  invoice: StripeChangeInvoice | null;
+};
+
+export async function previewStripeSubscriptionChange(params: {
+  plan: "plus" | "premium";
+  billing_interval: "monthly" | "annual";
+}): Promise<StripeChangePreview> {
+  const res = await fetch(getApiUrl("/api/billing/preview-subscription-change"), {
+    method: "POST",
+    headers: getAuthHeaders(),
+    body: JSON.stringify(params),
+  });
+  if (!res.ok) {
+    throw new Error(await readApiErrorDetail(res));
+  }
+  const json = (await res.json()) as { data?: StripeChangePreview };
+  const d = json?.data;
+  if (!d?.currency) {
+    throw new Error("stripe_subscription_preview_failed");
+  }
+  return d;
+}
+
 export async function changeStripeSubscription(params: {
   plan: "plus" | "premium";
   billing_interval: "monthly" | "annual";
-}): Promise<void> {
+}): Promise<ChangeStripeSubscriptionResult> {
   const res = await fetch(getApiUrl("/api/billing/change-subscription"), {
     method: "POST",
     headers: getAuthHeaders(),
@@ -525,6 +575,12 @@ export async function changeStripeSubscription(params: {
   if (!res.ok) {
     throw new Error(await readApiErrorDetail(res));
   }
+  const json = (await res.json()) as { data?: ChangeStripeSubscriptionResult };
+  const d = json?.data;
+  if (!d?.membership_plan) {
+    throw new Error("stripe_subscription_change_failed");
+  }
+  return d;
 }
 
 export async function fetchBillingStatus(): Promise<{
