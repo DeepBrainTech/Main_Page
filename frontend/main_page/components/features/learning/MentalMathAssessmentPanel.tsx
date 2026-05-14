@@ -2,7 +2,11 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import { useTranslations } from "next-intl";
-import { MENTAL_MATH_ASSESSMENT_SECONDS_PER_QUESTION, MENTAL_MATH_ASSESSMENT_TOPICS } from "@/config/mental-math-assessment";
+import {
+  MENTAL_MATH_ASSESSMENT_TOPICS,
+  MENTAL_MATH_ASSESSMENT_TOTAL_MINUTES,
+  MENTAL_MATH_ASSESSMENT_TOTAL_MS,
+} from "@/config/mental-math-assessment";
 import {
   createAssessmentSession,
   fetchAssessmentDetail,
@@ -14,6 +18,18 @@ import {
   type AssessmentSessionSummary,
   type AssessmentTrendPoint,
 } from "@/services/userApi";
+
+/** Intro copy uses same total duration as in-progress countdown (config). */
+const ASSESSMENT_INTRO_DISPLAY_MS = MENTAL_MATH_ASSESSMENT_TOTAL_MS;
+
+/** Paths match public/learning/previous.svg and next.svg; stroke uses currentColor for enabled/disabled tint. */
+const QUESTION_GRID_PREV_PATH =
+  "M16 12H8M12 16L8 12L12 8M22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12Z";
+const QUESTION_GRID_NEXT_PATH =
+  "M8 12H16M12 16L16 12L12 8M2 12C2 17.5228 6.47715 22 12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12Z";
+
+/** Right-panel question map: design is 4 rows × 5 pills per page. */
+const SIDE_QUESTION_PILL_PAGE_SIZE = 20;
 
 type Phase = "intro" | "inProgress" | "result";
 type Tab = "current" | "history";
@@ -62,6 +78,15 @@ function formatDuration(seconds: number): string {
   const m = Math.floor(seconds / 60);
   const s = seconds % 60;
   return `${m}:${String(s).padStart(2, "0")}`;
+}
+
+/** HH:MM:SS for countdown display (ceil to whole seconds). */
+function formatHhMmSsFromMs(ms: number): string {
+  const totalSec = Math.max(0, Math.ceil(ms / 1000));
+  const h = Math.floor(totalSec / 3600);
+  const m = Math.floor((totalSec % 3600) / 60);
+  const s = totalSec % 60;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
 }
 
 function formatDateTime(iso: string | null): string {
@@ -113,6 +138,20 @@ function buildTopicStatsFromAnswers(answers: AssessmentAnswerPayload[]): TopicSt
   return Array.from(map.values()).sort((a, b) => b.accuracy - a.accuracy);
 }
 
+/** Integer answer only (leading minus allowed). */
+function parseFillInInteger(raw: string): number | null {
+  const t = raw.trim();
+  if (t === "" || !/^-?\d+$/.test(t)) {
+    return null;
+  }
+  const n = Number(t);
+  return Number.isSafeInteger(n) ? n : null;
+}
+
+function questionExprForDisplay(expression: string): string {
+  return expression.replace(/\s*=\s*\?+\s*$/u, "").trim();
+}
+
 export default function MentalMathAssessmentPanel() {
   const t = useTranslations("learning");
   const [tab, setTab] = useState<Tab>("current");
@@ -121,10 +160,10 @@ export default function MentalMathAssessmentPanel() {
   const [questions, setQuestions] = useState<AssessmentQuestion[]>([]);
   const [records, setRecords] = useState<AssessmentRecord[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [answer, setAnswer] = useState("");
+  const [answerInput, setAnswerInput] = useState("");
   const [testStartedAt, setTestStartedAt] = useState<number | null>(null);
   const [questionStartedAt, setQuestionStartedAt] = useState<number | null>(null);
-  const [timeLeftMs, setTimeLeftMs] = useState(MENTAL_MATH_ASSESSMENT_SECONDS_PER_QUESTION * 1000);
+  const [timeLeftMs, setTimeLeftMs] = useState(MENTAL_MATH_ASSESSMENT_TOTAL_MS);
   const [saving, setSaving] = useState(false);
 
   const [history, setHistory] = useState<AssessmentSessionSummary[]>([]);
@@ -137,15 +176,37 @@ export default function MentalMathAssessmentPanel() {
 
   const [answerFilter, setAnswerFilter] = useState<AnswerFilter>("all");
   const [answerPage, setAnswerPage] = useState(1);
+  const [sideQuestionPillPage, setSideQuestionPillPage] = useState(1);
   const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({});
   const submitLockRef = useRef(false);
+  const answerInputRef = useRef<HTMLInputElement>(null);
+  const latestGlobalTimerRef = useRef<{
+    phase: Phase;
+    records: AssessmentRecord[];
+    currentIndex: number;
+    currentQuestion: AssessmentQuestion | null;
+    questions: AssessmentQuestion[];
+    questionStartedAt: number | null;
+    finishTest: (nextRecords: AssessmentRecord[]) => Promise<void>;
+  }>({
+    phase: "intro",
+    records: [],
+    currentIndex: 0,
+    currentQuestion: null,
+    questions: [],
+    questionStartedAt: null,
+    finishTest: async () => {},
+  });
 
   const availableTopicsCount = useMemo(
     () => MENTAL_MATH_ASSESSMENT_TOPICS.filter((topic) => topic.questions.length > 0).length,
     []
   );
   const currentQuestion = questions[currentIndex] ?? null;
-  const canSubmit = /^-?\d+$/.test(answer.trim());
+  const parsedFillIn = parseFillInInteger(answerInput);
+  const canSubmit = parsedFillIn !== null;
+
+  const questionPillCount = phase === "inProgress" ? questions.length : availableTopicsCount;
 
   const loadHistory = useCallback(async () => {
     setHistoryLoading(true);
@@ -186,6 +247,17 @@ export default function MentalMathAssessmentPanel() {
     })();
   }, [loadHistory]);
 
+  useEffect(() => {
+    const total = Math.max(1, Math.ceil(questionPillCount / SIDE_QUESTION_PILL_PAGE_SIZE));
+    setSideQuestionPillPage((p) => Math.min(p, total));
+  }, [questionPillCount]);
+
+  useEffect(() => {
+    if (testStartedAt !== null) {
+      setSideQuestionPillPage(1);
+    }
+  }, [testStartedAt]);
+
   const topicLabel = useCallback(
     (topicKey: string): string => {
       if (topicKey.startsWith("makingWhole.")) {
@@ -213,13 +285,28 @@ export default function MentalMathAssessmentPanel() {
     setQuestions(set);
     setRecords([]);
     setCurrentIndex(0);
-    setAnswer("");
+    setAnswerInput("");
     setTestStartedAt(now);
     setQuestionStartedAt(now);
-    setTimeLeftMs(MENTAL_MATH_ASSESSMENT_SECONDS_PER_QUESTION * 1000);
+    setTimeLeftMs(MENTAL_MATH_ASSESSMENT_TOTAL_MS);
     setPhase("inProgress");
     setTab("current");
   };
+
+  const quitTest = useCallback(() => {
+    if (typeof window !== "undefined" && !window.confirm(t("assessment.quitConfirm"))) {
+      return;
+    }
+    setPhase("intro");
+    setQuestions([]);
+    setRecords([]);
+    setCurrentIndex(0);
+    setAnswerInput("");
+    setTestStartedAt(null);
+    setQuestionStartedAt(null);
+    setTimeLeftMs(MENTAL_MATH_ASSESSMENT_TOTAL_MS);
+    setTab("current");
+  }, [t]);
 
   const finishTest = useCallback(
     async (nextRecords: AssessmentRecord[]) => {
@@ -265,12 +352,12 @@ export default function MentalMathAssessmentPanel() {
       }
       submitLockRef.current = true;
       const now = Date.now();
-      const elapsed = Math.max(0, Math.min(now - questionStartedAt, MENTAL_MATH_ASSESSMENT_SECONDS_PER_QUESTION * 1000));
-      const parsed = isTimeout ? null : Number(answer.trim());
+      const elapsed = Math.max(0, now - questionStartedAt);
+      const parsed = isTimeout ? null : parseFillInInteger(answerInput);
       const row: AssessmentRecord = {
         question: currentQuestion,
         userAnswer: parsed,
-        isCorrect: !isTimeout && parsed === currentQuestion.correctAnswer,
+        isCorrect: !isTimeout && parsed !== null && parsed === currentQuestion.correctAnswer,
         isTimeout,
         timeSpentMs: elapsed,
       };
@@ -280,33 +367,99 @@ export default function MentalMathAssessmentPanel() {
       } else {
         setRecords(next);
         setCurrentIndex((index) => index + 1);
-        setAnswer("");
+        setAnswerInput("");
         setQuestionStartedAt(Date.now());
-        setTimeLeftMs(MENTAL_MATH_ASSESSMENT_SECONDS_PER_QUESTION * 1000);
       }
       submitLockRef.current = false;
     },
-    [answer, currentIndex, currentQuestion, finishTest, phase, questionStartedAt, questions.length, records]
+    [answerInput, currentIndex, currentQuestion, finishTest, phase, questionStartedAt, questions.length, records]
   );
 
-  useEffect(() => {
-    if (phase !== "inProgress" || questionStartedAt === null || !currentQuestion) {
+  const goPreviousQuestion = useCallback(() => {
+    if (currentIndex <= 0 || phase !== "inProgress") {
       return;
     }
-    const interval = window.setInterval(() => {
-      setTimeLeftMs(
-        Math.max(0, MENTAL_MATH_ASSESSMENT_SECONDS_PER_QUESTION * 1000 - (Date.now() - questionStartedAt))
-      );
-    }, 100);
-    const timeout = window.setTimeout(
-      () => submitAnswer(true),
-      Math.max(0, MENTAL_MATH_ASSESSMENT_SECONDS_PER_QUESTION * 1000 - (Date.now() - questionStartedAt))
-    );
-    return () => {
-      window.clearInterval(interval);
-      window.clearTimeout(timeout);
+    const last = records[records.length - 1];
+    setRecords((prev) => prev.slice(0, -1));
+    setCurrentIndex((i) => i - 1);
+    setAnswerInput(last?.userAnswer !== null && last?.userAnswer !== undefined ? String(last.userAnswer) : "");
+    setQuestionStartedAt(Date.now());
+  }, [currentIndex, phase, records]);
+
+  latestGlobalTimerRef.current = {
+    phase,
+    records,
+    currentIndex,
+    currentQuestion,
+    questions,
+    questionStartedAt,
+    finishTest,
+  };
+
+  useEffect(() => {
+    if (phase !== "inProgress" || testStartedAt === null) {
+      return;
+    }
+    const totalMs = MENTAL_MATH_ASSESSMENT_TOTAL_MS;
+    let globalTimeoutFired = false;
+    const tick = () => {
+      const left = Math.max(0, testStartedAt + totalMs - Date.now());
+      setTimeLeftMs(left);
+      if (left > 0 || globalTimeoutFired) {
+        return;
+      }
+      const snap = latestGlobalTimerRef.current;
+      if (snap.phase !== "inProgress" || snap.currentQuestion === null || submitLockRef.current) {
+        return;
+      }
+      globalTimeoutFired = true;
+      submitLockRef.current = true;
+      void (async () => {
+        try {
+          const cq = snap.currentQuestion;
+          if (!cq) {
+            return;
+          }
+          const now = Date.now();
+          let next = [...snap.records];
+          const elapsed =
+            snap.questionStartedAt !== null ? Math.max(0, now - snap.questionStartedAt) : 0;
+          next.push({
+            question: cq,
+            userAnswer: null,
+            isCorrect: false,
+            isTimeout: true,
+            timeSpentMs: elapsed,
+          });
+          for (let j = snap.currentIndex + 1; j < snap.questions.length; j++) {
+            next.push({
+              question: snap.questions[j]!,
+              userAnswer: null,
+              isCorrect: false,
+              isTimeout: true,
+              timeSpentMs: 0,
+            });
+          }
+          await snap.finishTest(next);
+        } finally {
+          submitLockRef.current = false;
+        }
+      })();
     };
-  }, [currentQuestion, phase, questionStartedAt, submitAnswer]);
+    tick();
+    const id = window.setInterval(tick, 100);
+    return () => window.clearInterval(id);
+  }, [phase, testStartedAt]);
+
+  useEffect(() => {
+    if (phase !== "inProgress" || !currentQuestion) {
+      return;
+    }
+    const id = window.requestAnimationFrame(() => {
+      answerInputRef.current?.focus();
+    });
+    return () => window.cancelAnimationFrame(id);
+  }, [phase, currentIndex, currentQuestion]);
 
   const displayTopicStats: TopicStat[] = useMemo(() => {
     if (!detail) return [];
@@ -560,85 +713,330 @@ export default function MentalMathAssessmentPanel() {
     </div>
   ) : null;
 
-  return (
-    <div className="rounded-xl bg-gray-50 p-5">
-      <div className="mb-4 flex items-center justify-between">
-        <h4 className="text-xl font-semibold text-gray-800">{t("assessment.title")}</h4>
-        <div className="inline-flex rounded-lg border border-gray-200 bg-white p-1 text-sm">
-          <button type="button" onClick={() => setTab("current")} className={`rounded px-3 py-1.5 ${tab === "current" ? "bg-blue-600 text-white" : "text-gray-600"}`}>{t("assessment.tabCurrent")}</button>
-          <button type="button" onClick={() => setTab("history")} className={`rounded px-3 py-1.5 ${tab === "history" ? "bg-blue-600 text-white" : "text-gray-600"}`}>{t("assessment.tabHistory")}</button>
+  const showAssessmentSidePanel = tab === "current" && (phase === "intro" || phase === "inProgress");
+  /** Stroke stays inside viewBox: r + stroke/2 <= 60 (padding for round caps). */
+  const ringR = 52;
+  const ringStroke = 10;
+  const ringCirc = 2 * Math.PI * ringR;
+  const assessmentTotalMs = MENTAL_MATH_ASSESSMENT_TOTAL_MS;
+  const ringRemainingRatio =
+    phase === "inProgress" ? Math.min(1, Math.max(0, timeLeftMs / assessmentTotalMs)) : 1;
+  const ringDashOffset = ringCirc * (1 - ringRemainingRatio);
+  const pillNumbers = Array.from({ length: questionPillCount }, (_, i) => i + 1);
+  const totalSidePillPages = Math.max(1, Math.ceil(questionPillCount / SIDE_QUESTION_PILL_PAGE_SIZE));
+  const safeSidePillPage = Math.min(sideQuestionPillPage, totalSidePillPages);
+  const pillPageSliceStart = (safeSidePillPage - 1) * SIDE_QUESTION_PILL_PAGE_SIZE;
+  const pillPageSlice = pillNumbers.slice(pillPageSliceStart, pillPageSliceStart + SIDE_QUESTION_PILL_PAGE_SIZE);
+  const pillRowsForPage: number[][] = [];
+  for (let i = 0; i < pillPageSlice.length; i += 5) {
+    pillRowsForPage.push(pillPageSlice.slice(i, i + 5));
+  }
+  const sideTimerDisplayMs = phase === "inProgress" ? timeLeftMs : ASSESSMENT_INTRO_DISPLAY_MS;
+
+  const assessmentHeader = (
+    <div className="flex w-full flex-wrap items-center justify-between gap-3 self-stretch">
+      <div className="flex items-center gap-4 py-px">
+        <button
+          type="button"
+          onClick={() => setTab("current")}
+          className={`rounded-2xl py-3 text-left text-2xl font-semibold leading-none transition ${
+            tab === "current" ? "text-sky-700" : "text-sky-700/50 hover:text-sky-700"
+          }`}
+        >
+          {t("assessment.overviewTitle")}
+        </button>
+      </div>
+      <button
+        type="button"
+        onClick={() => setTab("history")}
+        className={`rounded-2xl bg-indigo-50 px-8 py-4 text-lg font-medium leading-7 text-sky-700 transition hover:bg-indigo-100 ${
+          tab === "history" ? "ring-2 ring-sky-600/40" : ""
+        }`}
+      >
+        {t("assessment.testHistoryCta")}
+      </button>
+    </div>
+  );
+
+  const questionPillRows = (
+    <div className="flex w-96 max-w-full flex-col gap-6">
+      <div className="flex h-10 w-full items-center justify-between py-px">
+        <h3 className="rounded-2xl py-3 text-xl font-semibold leading-none text-sky-700">
+          {t("assessment.questionsHeading")}
+        </h3>
+        <div className="flex items-center gap-6">
+          <button
+            type="button"
+            aria-label={t("assessment.questionGridPrevPage")}
+            disabled={safeSidePillPage <= 1}
+            onClick={() => setSideQuestionPillPage((p) => Math.max(1, p - 1))}
+            className="flex size-6 shrink-0 items-center justify-center rounded-full border-0 bg-transparent p-0 text-[#045E96] transition-colors hover:opacity-90 disabled:cursor-not-allowed disabled:text-[#045E9666] disabled:hover:opacity-100"
+          >
+            <svg width={24} height={24} viewBox="0 0 24 24" fill="none" className="size-6 shrink-0" aria-hidden>
+              <path
+                d={QUESTION_GRID_PREV_PATH}
+                stroke="currentColor"
+                strokeWidth={2}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </button>
+          <button
+            type="button"
+            aria-label={t("assessment.questionGridNextPage")}
+            disabled={safeSidePillPage >= totalSidePillPages}
+            onClick={() => setSideQuestionPillPage((p) => Math.min(totalSidePillPages, p + 1))}
+            className="flex size-6 shrink-0 items-center justify-center rounded-full border-0 bg-transparent p-0 text-[#045E96] transition-colors hover:opacity-90 disabled:cursor-not-allowed disabled:text-[#045E9666] disabled:hover:opacity-100"
+          >
+            <svg width={24} height={24} viewBox="0 0 24 24" fill="none" className="size-6 shrink-0" aria-hidden>
+              <path
+                d={QUESTION_GRID_NEXT_PATH}
+                stroke="currentColor"
+                strokeWidth={2}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </button>
         </div>
       </div>
-
-      {tab === "current" && phase === "intro" && (
-        <div>
-          <p className="text-gray-700">{t("assessment.subject")}</p>
-          <p className="mt-1 text-gray-700">{t("assessment.rules", { seconds: MENTAL_MATH_ASSESSMENT_SECONDS_PER_QUESTION, count: availableTopicsCount })}</p>
-          <button type="button" onClick={startTest} disabled={availableTopicsCount === 0} className="mt-4 rounded-lg bg-blue-600 px-4 py-2 font-medium text-white disabled:bg-gray-300">{t("assessment.start")}</button>
-        </div>
-      )}
-
-      {tab === "current" && phase === "inProgress" && currentQuestion && (
-        <div>
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-gray-600">{t("assessment.progress", { current: currentIndex + 1, total: questions.length })}</p>
-            <p className="rounded bg-red-50 px-2 py-1 text-sm font-semibold text-red-600">{t("assessment.timer", { seconds: Math.max(0, Math.ceil(timeLeftMs / 1000)) })}</p>
-          </div>
-          <h4 className="mt-3 text-2xl font-semibold text-gray-800">{currentQuestion.expression}</h4>
-          <div className="mt-4 flex flex-col gap-3 sm:max-w-xs">
-            <input type="text" inputMode="numeric" value={answer} onChange={(e) => (/^-?\d*$/.test(e.target.value.trim()) ? setAnswer(e.target.value.trim()) : null)} onKeyDown={(e) => (e.key === "Enter" && canSubmit ? submitAnswer(false) : null)} placeholder={t("assessment.answerPlaceholder")} className="rounded-lg border border-gray-300 bg-white px-3 py-2" />
-            <button type="button" onClick={() => submitAnswer(false)} disabled={!canSubmit} className="rounded-lg bg-blue-600 px-4 py-2 font-medium text-white disabled:bg-gray-300">{t("assessment.submit")}</button>
-          </div>
-        </div>
-      )}
-
-      {tab === "current" && phase === "result" && (
-        <div className="space-y-4">
-          {saving && <p className="text-sm text-gray-500">{t("assessment.saving")}</p>}
-          {detailDashboard}
-          <div className="flex gap-2">
-            <button type="button" onClick={startTest} className="rounded bg-blue-600 px-3 py-1.5 text-sm text-white">
-              {t("assessment.retest")}
-            </button>
-            <button type="button" onClick={() => setTab("history")} className="rounded border border-gray-300 px-3 py-1.5 text-sm text-gray-700">
-              {t("assessment.tabHistory")}
-            </button>
-          </div>
-        </div>
-      )}
-
-      {tab === "history" && (
-        <div className="space-y-4">
-          {saving && <p className="text-sm text-gray-500">{t("assessment.saving")}</p>}
-          {historyLoading && <p className="text-sm text-gray-500">{t("assessment.historyLoading")}</p>}
-          {!historyLoading && history.length === 0 && <p className="text-sm text-gray-500">{t("assessment.historyEmpty")}</p>}
-
-          {history.length > 0 && (
-            <div className="rounded-xl bg-white p-4">
-              <p className="font-semibold text-gray-900">{t("assessment.historyList")}</p>
-              <select
-                value={selectedSessionId ?? ""}
-                onChange={async (e) => {
-                  const id = Number(e.target.value);
-                  if (!id) return;
-                  setSelectedSessionId(id);
-                  setDetail(await fetchAssessmentDetail(id));
-                }}
-                className="mt-2 w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm"
-              >
-                <option value="">{t("assessment.historySelectPlaceholder")}</option>
-                {history.map((session) => (
-                  <option key={session.id} value={session.id}>
-                    {formatDateTime(session.finished_at)}
-                  </option>
-                ))}
-              </select>
+      {pillRowsForPage.map((row, rowIdx) => (
+        <div key={`${safeSidePillPage}-${rowIdx}`} className="flex h-12 w-full items-center justify-between gap-1.5">
+          {row.map((num) => (
+            <div
+              key={num}
+              className={`flex h-12 w-14 shrink-0 items-center justify-center rounded-2xl bg-indigo-50 px-5 py-3 text-center text-base font-normal leading-5 text-sky-700 ${
+                phase === "inProgress" && num === currentIndex + 1 ? "ring-2 ring-red-500/50" : ""
+              }`}
+            >
+              {t("assessment.questionPill", { num })}
             </div>
-          )}
-
-          {detailDashboard}
+          ))}
         </div>
-      )}
+      ))}
+    </div>
+  );
+
+  const sidePanel = showAssessmentSidePanel ? (
+    <aside className="relative flex w-full shrink-0 flex-col overflow-visible rounded-[32px] border border-white/60 bg-white/60 shadow-[0px_4px_6px_-4px_rgba(0,0,0,0.10)] shadow-lg outline outline-1 outline-offset-[-1.03px] outline-white/60 xl:w-[459px]">
+      <div className="flex shrink-0 flex-col items-center overflow-visible px-6 pt-14">
+        <div className="relative mx-auto mt-4 shrink-0 overflow-visible">
+          <svg
+            width={240}
+            height={240}
+            viewBox="0 0 120 120"
+            className="block -rotate-90 overflow-visible"
+            aria-hidden
+          >
+            <circle
+              cx="60"
+              cy="60"
+              r={ringR}
+              fill="none"
+              stroke="rgba(228, 92, 68, 0.3)"
+              strokeWidth={ringStroke}
+            />
+            <circle
+              cx="60"
+              cy="60"
+              r={ringR}
+              fill="none"
+              stroke="#E45C44"
+              strokeWidth={ringStroke}
+              strokeLinecap="round"
+              strokeDasharray={ringCirc}
+              strokeDashoffset={ringDashOffset}
+              className="transition-[stroke-dashoffset] duration-100 ease-linear"
+            />
+          </svg>
+          <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+            <p className="text-base font-normal leading-5 text-sky-700">{t("assessment.timeRemaining")}</p>
+            <p className="mt-1 text-4xl font-normal tabular-nums leading-none text-zinc-800">
+              {formatHhMmSsFromMs(sideTimerDisplayMs)}
+            </p>
+          </div>
+        </div>
+      </div>
+      <div className="flex w-full shrink-0 justify-center px-8 pb-8 pt-6">{questionPillRows}</div>
+    </aside>
+  ) : null;
+
+  const mainCardClass =
+    "flex min-w-0 flex-col gap-5 rounded-[32px] border border-white/60 bg-white/60 p-8 shadow-[0px_4px_6px_-4px_rgba(0,0,0,0.10)] shadow-lg outline outline-1 outline-offset-[-1.03px] outline-white/60 " +
+    (showAssessmentSidePanel ? "self-start flex-1 xl:max-w-[1094px]" : "w-full self-stretch");
+
+  const showInProgressFillIn = tab === "current" && phase === "inProgress" && currentQuestion;
+
+  return (
+    <div
+      className={
+        showAssessmentSidePanel
+          ? "flex flex-col gap-5 font-app-body xl:flex-row xl:items-start xl:gap-5"
+          : "font-app-body"
+      }
+    >
+      <div className={mainCardClass}>
+        {!showInProgressFillIn ? assessmentHeader : null}
+
+        {tab === "current" && phase === "intro" && (
+          <div className="flex flex-col gap-5 self-stretch">
+            <div className="flex flex-col gap-6 self-stretch rounded-2xl bg-white/90 p-12">
+              <div className="flex flex-col gap-2.5 self-stretch">
+                <h3 className="text-2xl font-medium leading-none text-sky-700">{t("assessment.introHeadline")}</h3>
+              </div>
+              <div className="flex flex-col gap-6 self-stretch text-sky-700">
+                <p className="text-xl font-normal leading-8">{t("assessment.introLead")}</p>
+                <p className="text-xl font-semibold leading-8">
+                  {t("assessment.introStatsLine1", { minutes: MENTAL_MATH_ASSESSMENT_TOTAL_MINUTES })}
+                  <br />
+                  {t("assessment.introStatsLine2", { count: availableTopicsCount })}
+                </p>
+                <p className="text-xl leading-8">
+                  <span className="font-semibold">{t("assessment.introRememberBold")}</span>{" "}
+                  <span className="font-normal">{t("assessment.introRememberRest")}</span>
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={startTest}
+              disabled={availableTopicsCount === 0}
+              className="flex h-14 w-full shrink-0 items-center justify-center self-stretch rounded-2xl bg-[#E45C44] text-lg font-medium leading-7 text-white shadow-[0px_10px_15px_0px_rgba(228,92,68,0.20)] transition hover:opacity-95 disabled:cursor-not-allowed disabled:bg-zinc-300 disabled:shadow-none"
+            >
+              {t("assessment.readyToGo")}
+            </button>
+          </div>
+        )}
+
+        {showInProgressFillIn ? (
+          <div className="flex flex-col gap-6 self-stretch">
+            <div className="inline-flex h-14 w-full items-center justify-between self-stretch">
+              <div className="flex items-center gap-4 py-px">
+                <div className="flex items-center justify-center gap-2.5 rounded-2xl py-3">
+                  <span className="text-lg font-semibold leading-5 text-sky-700">{t("assessment.inProgressTitle")}</span>
+                </div>
+                <div className="flex h-14 items-center justify-center gap-2.5 rounded-2xl bg-indigo-50 px-5 py-3">
+                  <span className="text-lg font-normal leading-5 text-sky-700">
+                    {t("assessment.questionCountPill", { current: currentIndex + 1, total: questions.length })}
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={quitTest}
+                className="flex h-14 shrink-0 items-center justify-center rounded-2xl bg-indigo-50 px-5 py-3 text-lg font-normal leading-5 text-sky-700 transition hover:bg-indigo-100"
+              >
+                {t("assessment.quitTest")}
+              </button>
+            </div>
+
+            <div className="flex flex-col items-center justify-start gap-2.5 self-stretch rounded-2xl bg-white/90 px-12 py-11">
+              <div className="inline-flex flex-wrap items-end justify-center gap-3">
+                <span className="text-3xl font-medium leading-9 text-sky-700">
+                  {questionExprForDisplay(currentQuestion.expression)} ={" "}
+                </span>
+                <input
+                  ref={answerInputRef}
+                  type="text"
+                  inputMode="numeric"
+                  autoComplete="off"
+                  aria-label={t("assessment.answerPlaceholder")}
+                  value={answerInput}
+                  onChange={(e) => setAnswerInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && canSubmit) {
+                      e.preventDefault();
+                      submitAnswer(false);
+                    }
+                  }}
+                  className="w-32 min-w-[5rem] border-0 border-b-2 border-red-500 bg-transparent text-center text-3xl font-medium leading-9 text-sky-700 outline-none ring-0 focus:border-red-500"
+                />
+              </div>
+            </div>
+
+            <div className="inline-flex h-14 w-full items-start justify-start gap-4 self-stretch">
+              <button
+                type="button"
+                onClick={goPreviousQuestion}
+                disabled={currentIndex <= 0}
+                className="flex h-14 w-36 shrink-0 items-center justify-center rounded-2xl bg-indigo-50 text-lg font-medium leading-7 text-sky-700 transition hover:bg-indigo-100 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                {t("assessment.previousQuestion")}
+              </button>
+              <div className="min-h-14 flex-1" aria-hidden />
+              <button
+                type="button"
+                onClick={() => submitAnswer(false)}
+                disabled={!canSubmit}
+                className="flex h-14 w-28 shrink-0 items-center justify-center rounded-2xl bg-sky-700 text-lg font-medium leading-7 text-white transition hover:opacity-95 disabled:cursor-not-allowed disabled:bg-zinc-300"
+              >
+                {t("assessment.nextQuestion")}
+              </button>
+            </div>
+          </div>
+        ) : null}
+
+        {tab === "current" && phase === "result" && (
+          <div className="space-y-4">
+            {saving && <p className="text-sm text-gray-500">{t("assessment.saving")}</p>}
+            {detailDashboard}
+            <div className="flex flex-wrap gap-3">
+              <button
+                type="button"
+                onClick={startTest}
+                className="rounded-2xl bg-[#045E96] px-5 py-2.5 text-sm font-semibold text-white transition hover:opacity-95"
+              >
+                {t("assessment.retest")}
+              </button>
+              <button
+                type="button"
+                onClick={() => setTab("history")}
+                className="rounded-2xl border border-sky-200 bg-indigo-50 px-5 py-2.5 text-sm font-medium text-sky-700 transition hover:bg-indigo-100"
+              >
+                {t("assessment.testHistoryCta")}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {tab === "history" && (
+          <div className="space-y-4">
+            {saving && <p className="text-sm text-gray-500">{t("assessment.saving")}</p>}
+            {historyLoading && <p className="text-sm text-gray-500">{t("assessment.historyLoading")}</p>}
+            {!historyLoading && history.length === 0 && (
+              <p className="text-sm text-gray-500">{t("assessment.historyEmpty")}</p>
+            )}
+
+            {history.length > 0 && (
+              <div className="rounded-2xl border border-white/80 bg-white/90 p-4">
+                <p className="font-semibold text-gray-900">{t("assessment.historyList")}</p>
+                <select
+                  value={selectedSessionId ?? ""}
+                  onChange={async (e) => {
+                    const id = Number(e.target.value);
+                    if (!id) return;
+                    setSelectedSessionId(id);
+                    setDetail(await fetchAssessmentDetail(id));
+                  }}
+                  className="mt-2 w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm"
+                >
+                  <option value="">{t("assessment.historySelectPlaceholder")}</option>
+                  {history.map((session) => (
+                    <option key={session.id} value={session.id}>
+                      {formatDateTime(session.finished_at)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {detailDashboard}
+          </div>
+        )}
+      </div>
+
+      {sidePanel}
     </div>
   );
 }

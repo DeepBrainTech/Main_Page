@@ -125,76 +125,89 @@ export default function LearningTab() {
     { titleKey: "statHours" as const, value: "11", iconSrc: "/learning/hours.svg" },
   ] as const;
 
+  /** Lesson 0 self-assessment: focus layout without dashboard stats or sidebar widgets. */
+  const hideLearningChromeForAssessment = showLessonBoard && activeLessonKey === "assessment";
+
   return (
-    <div className="grid grid-cols-1 items-stretch gap-5 pb-10 font-app-body xl:grid-cols-12 xl:grid-rows-[auto_1fr]">
-      <section className="grid grid-cols-1 gap-4 md:grid-cols-3 xl:col-span-8 xl:row-start-1">
-        {statCards.map((item) => (
-          <article
-            key={item.titleKey}
-            className="rounded-[20px] border border-white/70 bg-white/70 p-5 shadow-[0px_10px_15px_0px_rgba(0,0,0,0.1)] backdrop-blur-md"
-          >
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-[#106FAA]">{tLearn(item.titleKey)}</h3>
-              <Image
-                src={item.iconSrc}
-                alt=""
-                width={36}
-                height={36}
-                className="h-9 w-9 shrink-0 object-contain"
-                aria-hidden
-              />
-            </div>
-            <p className="mt-6 text-left font-['Titan_One'] text-3xl text-[#045E96]">{item.value}</p>
-          </article>
-        ))}
-      </section>
-
-      <aside className="space-y-5 rounded-[32px] border border-white/70 bg-white/70 p-6 shadow-[0px_10px_15px_0px_rgba(0,0,0,0.1)] backdrop-blur-md xl:col-span-4 xl:row-span-2 xl:row-start-1 xl:h-full xl:min-h-[760px]">
-        <section>
-          <h2 className="font-['Titan_One'] text-3xl text-[#045E96]">{tLearn("studyTrack")}</h2>
-          <div className="mt-4 rounded-[24px] bg-[#E4F2F9] p-5">
-            <h3 className="text-base font-semibold text-[#106FAA]">{tLearn("learningProgress")}</h3>
-            <div className="mt-4 h-[168px]">
-              <div className="flex h-[124px] items-end gap-1">
-                {weeklyProgressByMonth.flatMap(({ monthLabel, weeklyProgress }, monthIndex) =>
-                  weeklyProgress.map((progressPercent, weekIndex) => (
-                    <div
-                      key={`${monthLabel}-${weekIndex}`}
-                      className="w-[9px] rounded-full"
-                      style={{
-                        height: `${toBarHeight(progressPercent)}px`,
-                        backgroundColor: monthIndex < completedMonthCount ? "#045E96" : "#A6C4D7",
-                      }}
-                      aria-hidden
-                    />
-                  ))
-                )}
+    <div
+      className={`grid grid-cols-1 items-stretch gap-5 pb-10 font-app-body xl:grid-cols-12 ${
+        hideLearningChromeForAssessment ? "xl:grid-rows-1" : "xl:grid-rows-[auto_1fr]"
+      }`}
+    >
+      {!hideLearningChromeForAssessment ? (
+        <section className="grid grid-cols-1 gap-4 md:grid-cols-3 xl:col-span-8 xl:row-start-1">
+          {statCards.map((item) => (
+            <article
+              key={item.titleKey}
+              className="rounded-[20px] border border-white/70 bg-white/70 p-5 shadow-[0px_10px_15px_0px_rgba(0,0,0,0.1)] backdrop-blur-md"
+            >
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-[#106FAA]">{tLearn(item.titleKey)}</h3>
+                <Image
+                  src={item.iconSrc}
+                  alt=""
+                  width={36}
+                  height={36}
+                  className="h-9 w-9 shrink-0 object-contain"
+                  aria-hidden
+                />
               </div>
-              <div className="mt-2 grid grid-cols-7 text-center text-xs text-black">
-                {monthLabels.map((m) => (
-                  <span key={m}>{m}</span>
-                ))}
-              </div>
-            </div>
-          </div>
+              <p className="mt-6 text-left font-['Titan_One'] text-3xl text-[#045E96]">{item.value}</p>
+            </article>
+          ))}
         </section>
+      ) : null}
 
-        <section>
-          <h2 className="font-['Titan_One'] text-3xl text-[#045E96]">{tLearn("badges")}</h2>
-          <div className="mt-4 grid grid-cols-3 gap-3">
-            {BADGE_IDS.map((id) => (
-              <div key={id} className="flex flex-col items-center gap-2">
-                <div className="flex h-[76px] w-[76px] items-center justify-center rounded-full border-2 border-[#D8E8F4] bg-[#F7FBFF] text-2xl">
-                  🏅
+      {!hideLearningChromeForAssessment ? (
+        <aside className="space-y-5 rounded-[32px] border border-white/70 bg-white/70 p-6 shadow-[0px_10px_15px_0px_rgba(0,0,0,0.1)] backdrop-blur-md xl:col-span-4 xl:row-span-2 xl:row-start-1 xl:h-full xl:min-h-[760px]">
+          <section>
+            <h2 className="font-['Titan_One'] text-3xl text-[#045E96]">{tLearn("studyTrack")}</h2>
+            <div className="mt-4 rounded-[24px] bg-[#E4F2F9] p-5">
+              <h3 className="text-base font-semibold text-[#106FAA]">{tLearn("learningProgress")}</h3>
+              <div className="mt-4 h-[168px]">
+                <div className="flex h-[124px] items-end gap-1">
+                  {weeklyProgressByMonth.flatMap(({ monthLabel, weeklyProgress }, monthIndex) =>
+                    weeklyProgress.map((progressPercent, weekIndex) => (
+                      <div
+                        key={`${monthLabel}-${weekIndex}`}
+                        className="w-[9px] rounded-full"
+                        style={{
+                          height: `${toBarHeight(progressPercent)}px`,
+                          backgroundColor: monthIndex < completedMonthCount ? "#045E96" : "#A6C4D7",
+                        }}
+                        aria-hidden
+                      />
+                    ))
+                  )}
                 </div>
-                <p className="text-center text-xs font-medium text-black">{tLearn(id)}</p>
+                <div className="mt-2 grid grid-cols-7 text-center text-xs text-black">
+                  {monthLabels.map((m) => (
+                    <span key={m}>{m}</span>
+                  ))}
+                </div>
               </div>
-            ))}
-          </div>
-        </section>
-      </aside>
+            </div>
+          </section>
 
-      <section className="space-y-3 xl:col-span-8 xl:row-start-2">
+          <section>
+            <h2 className="font-['Titan_One'] text-3xl text-[#045E96]">{tLearn("badges")}</h2>
+            <div className="mt-4 grid grid-cols-3 gap-3">
+              {BADGE_IDS.map((id) => (
+                <div key={id} className="flex flex-col items-center gap-2">
+                  <div className="flex h-[76px] w-[76px] items-center justify-center rounded-full border-2 border-[#D8E8F4] bg-[#F7FBFF] text-2xl">
+                    🏅
+                  </div>
+                  <p className="text-center text-xs font-medium text-black">{tLearn(id)}</p>
+                </div>
+              ))}
+            </div>
+          </section>
+        </aside>
+      ) : null}
+
+      <section
+        className={`space-y-3 ${hideLearningChromeForAssessment ? "xl:col-span-12 xl:row-start-1 xl:self-start" : "xl:col-span-8 xl:row-start-2"}`}
+      >
         {!showLessonBoard ? (
           <div className="space-y-3">
             <h2 className="text-xl font-semibold text-[#106FAA]">{tLearn("lessonsHeading")}</h2>
@@ -280,19 +293,7 @@ export default function LearningTab() {
             </div>
 
             {activeLessonKey === "assessment" ? (
-              <section className="rounded-[24px] border border-white/70 bg-white/80 p-4 shadow-[0px_10px_15px_0px_rgba(0,0,0,0.1)]">
-                <div className="mb-3 flex items-center justify-between">
-                  <h3 className="text-xl font-semibold text-[#045E96]">{tLearn("lessons.assessment")}</h3>
-                  <button
-                    type="button"
-                    onClick={() => setActiveLessonKey(null)}
-                    className="rounded-full bg-[#EDF4FC] px-4 py-1.5 text-sm font-semibold text-[#045E96]"
-                  >
-                    {tLearn("backToLessons")}
-                  </button>
-                </div>
-                <MentalMathAssessmentPanel />
-              </section>
+              <MentalMathAssessmentPanel />
             ) : activeLessonKey === "makingWhole" ? (
               <section className="rounded-[24px] border border-white/70 bg-white/80 p-4 shadow-[0px_10px_15px_0px_rgba(0,0,0,0.1)]">
                 <div className="mb-3 flex items-center justify-between">

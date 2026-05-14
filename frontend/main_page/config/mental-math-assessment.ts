@@ -28,5 +28,7 @@ export const MENTAL_MATH_ASSESSMENT_TOPICS: MentalMathAssessmentTopic[] = [
   ...leftToRightFlowTopics,
 ];
 
-export const MENTAL_MATH_ASSESSMENT_SECONDS_PER_QUESTION = 10;
+/** Whole-assessment time budget (matches Lesson 0 intro copy). */
+export const MENTAL_MATH_ASSESSMENT_TOTAL_MINUTES = 5;
+export const MENTAL_MATH_ASSESSMENT_TOTAL_MS = MENTAL_MATH_ASSESSMENT_TOTAL_MINUTES * 60 * 1000;
 
