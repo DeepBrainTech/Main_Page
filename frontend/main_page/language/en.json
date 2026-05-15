@@ -98,7 +98,7 @@
       "checkoutFailed": "Could not start checkout. Try again later.",
       "portalFailed": "Could not open billing portal. Try again later.",
       "stripeNotConfigured": "Online checkout is not configured yet.",
-      "alreadySubscribed": "You already have an active subscription. Use Manage subscription to open the billing portal.",
+      "alreadySubscribed": "You already have an active subscription.",
       "cancelViaPortal": "Please cancel your paid plan in the billing portal (Stripe).",
       "billingViaStripe": "Membership can only be changed through Stripe checkout or the billing portal.",
       "stripeChangeFailed": "Could not change your subscription. Check your payment method or try again later.",
