@@ -441,22 +441,6 @@ export function membershipErrorKeyFromDetail(detail: string): string {
       return "stripeNotConfigured";
     case "already_has_active_subscription":
       return "alreadySubscribed";
-    case "stripe_subscription_preview_failed":
-    case "stripe_subscription_missing":
-    case "stripe_subscription_inactive":
-    case "stripe_subscription_invalid":
-    case "stripe_subscription_change_failed":
-    case "stripe_resume_subscription_failed":
-    case "stripe_cancel_subscription_failed":
-      return "stripeChangeFailed";
-    case "subscription_canceling_cannot_change_plan":
-      return "planSwitchNeedResume";
-    case "subscription_not_canceling_at_period_end":
-    case "subscription_already_canceling_at_period_end":
-    case "subscription_nothing_to_resume":
-      return "subscriptionNoChange";
-    case "subscription_no_change":
-      return "subscriptionNoChange";
     case "stripe_customer_missing":
       return "portalFailed";
     case "checkout_failed":
@@ -504,118 +488,11 @@ export async function createStripeBillingPortalSession(locale: string): Promise<
   return url;
 }
 
-/**
- * Resume Stripe renewal (clear cancel-at-period-end) and/or clear scheduled subscription changes.
- * Backend releases SubscriptionSchedule when possible so future phased changes are removed.
- */
-export async function resumeStripeSubscription(): Promise<void> {
-  const res = await fetch(getApiUrl("/api/billing/resume-subscription"), {
-    method: "POST",
-    headers: getAuthHeaders(),
-  });
-  if (!res.ok) {
-    throw new Error(await readApiErrorDetail(res));
-  }
-}
-
-/** Schedule Stripe cancel at period end (stay on site; access until current period ends). */
-export async function cancelStripeSubscriptionAtPeriodEnd(): Promise<void> {
-  const res = await fetch(getApiUrl("/api/billing/cancel-subscription-at-period-end"), {
-    method: "POST",
-    headers: getAuthHeaders(),
-  });
-  if (!res.ok) {
-    throw new Error(await readApiErrorDetail(res));
-  }
-}
-
-export type StripeInvoiceLine = {
-  description: string;
-  amount: number;
-  proration?: boolean;
-  type?: string;
-};
-
-export type StripeChangePreview = {
-  change_mode?: "deferred_downgrade" | "immediate_upgrade";
-  pending_plan?: string;
-  pending_billing_interval?: string;
-  currency: string;
-  amount_due: number;
-  total: number;
-  subtotal: number;
-  lines: StripeInvoiceLine[];
-  subscription_current_period_end: number | null;
-  payment_method_label?: string | null;
-};
-
-export type StripeChangeInvoice = {
-  id: string;
-  currency: string;
-  amount_due: number;
-  amount_paid: number;
-  total: number;
-  status: string;
-  hosted_invoice_url: string | null;
-  lines?: StripeInvoiceLine[];
-};
-
-export type ChangeStripeSubscriptionResult = {
-  change_mode?: "deferred_downgrade" | "immediate_upgrade";
-  deferred_effective_at?: string | null;
-  membership_plan: string;
-  membership_billing_interval: string | null;
-  membership_expires_at: string | null;
-  invoice: StripeChangeInvoice | null;
-};
-
-export async function previewStripeSubscriptionChange(params: {
-  plan: "plus" | "premium";
-  billing_interval: "monthly" | "annual";
-}): Promise<StripeChangePreview> {
-  const res = await fetch(getApiUrl("/api/billing/preview-subscription-change"), {
-    method: "POST",
-    headers: getAuthHeaders(),
-    body: JSON.stringify(params),
-  });
-  if (!res.ok) {
-    throw new Error(await readApiErrorDetail(res));
-  }
-  const json = (await res.json()) as { data?: StripeChangePreview };
-  const d = json?.data;
-  if (!d?.currency) {
-    throw new Error("stripe_subscription_preview_failed");
-  }
-  return d;
-}
-
-export async function changeStripeSubscription(params: {
-  plan: "plus" | "premium";
-  billing_interval: "monthly" | "annual";
-}): Promise<ChangeStripeSubscriptionResult> {
-  const res = await fetch(getApiUrl("/api/billing/change-subscription"), {
-    method: "POST",
-    headers: getAuthHeaders(),
-    body: JSON.stringify(params),
-  });
-  if (!res.ok) {
-    throw new Error(await readApiErrorDetail(res));
-  }
-  const json = (await res.json()) as { data?: ChangeStripeSubscriptionResult };
-  const d = json?.data;
-  if (!d?.membership_plan) {
-    throw new Error("stripe_subscription_change_failed");
-  }
-  return d;
-}
-
 export async function fetchBillingStatus(): Promise<{
   checkout_enabled: boolean;
   portal_enabled: boolean;
   has_stripe_subscription: boolean;
   subscription_cancel_at_period_end: boolean | null;
-  subscription_has_schedule: boolean | null;
-  subscription_schedule_pending_change: boolean | null;
 }> {
   const res = await fetch(getApiUrl("/api/billing/status"), { headers: getAuthHeaders() });
   if (!res.ok) {
@@ -624,8 +501,6 @@ export async function fetchBillingStatus(): Promise<{
       portal_enabled: false,
       has_stripe_subscription: false,
       subscription_cancel_at_period_end: null,
-      subscription_has_schedule: null,
-      subscription_schedule_pending_change: null,
     };
   }
   const json = (await res.json()) as {
@@ -634,8 +509,6 @@ export async function fetchBillingStatus(): Promise<{
       portal_enabled?: boolean;
       has_stripe_subscription?: boolean;
       subscription_cancel_at_period_end?: boolean | null;
-      subscription_has_schedule?: boolean | null;
-      subscription_schedule_pending_change?: boolean | null;
     };
   };
   const d = json?.data ?? {};
@@ -645,11 +518,6 @@ export async function fetchBillingStatus(): Promise<{
     has_stripe_subscription: Boolean(d.has_stripe_subscription),
     subscription_cancel_at_period_end:
       typeof d.subscription_cancel_at_period_end === "boolean" ? d.subscription_cancel_at_period_end : null,
-    subscription_has_schedule: typeof d.subscription_has_schedule === "boolean" ? d.subscription_has_schedule : null,
-    subscription_schedule_pending_change:
-      typeof d.subscription_schedule_pending_change === "boolean"
-        ? d.subscription_schedule_pending_change
-        : null,
   };
 }
 
