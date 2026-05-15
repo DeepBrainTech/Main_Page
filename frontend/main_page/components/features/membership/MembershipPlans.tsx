@@ -239,8 +239,6 @@ export default function MembershipPlans({
             Boolean(onResumeSubscription) && (isCanceledAtPeriodEnd || hasPendingScheduleChange);
           const resumePrimaryLabel =
             hasPendingScheduleChange && !isCanceledAtPeriodEnd ? t("undoScheduledPlanChange") : t("resumeSubscription");
-          const blockDowngradePlusWhileCanceling =
-            currentPlan === "premium" && plan.key === "plus" && isCanceledAtPeriodEnd;
           const showCrossGradeBillingCta =
             isCurrent &&
             (plan.key === "plus" || plan.key === "premium") &&
@@ -343,10 +341,9 @@ export default function MembershipPlans({
                 <button
                   type="button"
                   onClick={() => onPlanChange(plan.key)}
-                  disabled={(isCurrent && !showCrossGradeBillingCta) || isFreePreview || blockDowngradePlusWhileCanceling}
-                  title={blockDowngradePlusWhileCanceling ? t("downgradeToPlusBlockedTitle") : undefined}
+                  disabled={(isCurrent && !showCrossGradeBillingCta) || isFreePreview}
                   className={`h-12 w-full rounded-full font-app-body text-base font-semibold leading-6 transition ${
-                    (isCurrent && !showCrossGradeBillingCta) || isFreePreview || blockDowngradePlusWhileCanceling
+                    (isCurrent && !showCrossGradeBillingCta) || isFreePreview
                       ? plan.key === "free"
                         ? "cursor-default bg-indigo-50 text-sky-700 opacity-95"
                         : "cursor-default bg-white/20 text-white disabled:cursor-not-allowed disabled:opacity-55"

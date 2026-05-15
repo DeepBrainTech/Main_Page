@@ -3,7 +3,9 @@ Stripe Checkout, Customer Billing Portal, subscription change preview, and webho
 """
 import logging
 import time
+from dataclasses import dataclass
 from datetime import datetime
+from typing import Literal
 
 import stripe
 from fastapi import APIRouter, Depends, HTTPException, Request, status
@@ -25,6 +27,51 @@ from schemas import APIResponse, BillingChangeSubscriptionBody, BillingCheckoutB
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/billing", tags=["billing"])
+
+TransitionMode = Literal["immediate", "deferred"]
+
+
+@dataclass(frozen=True)
+class SubscriptionTransition:
+    mode: TransitionMode
+    current_plan: str
+    current_interval: str
+    target_plan: str
+    target_interval: str
+    current_price_id: str
+    target_price_id: str
+
+
+def _resolve_subscription_transition_mode(
+    current_plan: str,
+    current_interval: str,
+    target_plan: str,
+    target_interval: str,
+) -> TransitionMode:
+    """
+    When a plan change takes effect (see pay.md in repo root).
+
+    - immediate: upgrades (Plus→Premium), monthly→annual, monthly Premium→annual Plus
+    - deferred: downgrades at period end, annual→monthly, monthly Premium→monthly Plus
+    """
+    if current_plan == target_plan and current_interval == target_interval:
+        raise HTTPException(status_code=400, detail="subscription_no_change")
+
+    if current_interval == "annual" and target_interval == "monthly":
+        return "deferred"
+
+    if current_plan == "premium" and target_plan == "plus":
+        if current_interval == target_interval:
+            return "deferred"
+        return "immediate"
+
+    if current_plan == "plus" and target_plan == "premium":
+        return "immediate"
+
+    if current_plan == target_plan and current_interval == "monthly" and target_interval == "annual":
+        return "immediate"
+
+    return "immediate"
 
 
 def _stripe_configure() -> None:
@@ -139,8 +186,8 @@ def _load_subscription_change_context(
     current_user: User,
     db: Session,
     body: BillingChangeSubscriptionBody,
-) -> tuple[stripe.Subscription, str, str]:
-    """Active subscription, first line item id, and target Stripe price id. Raises HTTPException."""
+) -> tuple[stripe.Subscription, str, SubscriptionTransition]:
+    """Active subscription, line item id, and resolved transition. Raises HTTPException."""
     sub_id = getattr(current_user, "stripe_subscription_id", None)
     if not sub_id:
         raise HTTPException(status_code=400, detail="stripe_subscription_missing")
@@ -161,19 +208,18 @@ def _load_subscription_change_context(
         raise HTTPException(status_code=400, detail="stripe_subscription_invalid")
 
     cur = _resolve_plan_from_subscription(sub)
-    new_price_id = get_price_id(body.plan, body.billing_interval)
-    if not new_price_id:
-        raise HTTPException(status_code=503, detail="stripe_price_not_configured")
-    # Premium→Plus at period end must keep the subscription's billing cadence (Stripe rejects mixed
-    # monthly/annual phases on the same schedule item when the UI tab does not match the live price).
-    if _is_premium_to_plus_deferred_downgrade(cur, body.plan) and cur is not None:
-        _, cur_iv = cur
-        if cur_iv in ("monthly", "annual"):
-            pid_deferred = get_price_id(body.plan, cur_iv)
-            if pid_deferred:
-                new_price_id = pid_deferred
+    if not cur:
+        raise HTTPException(status_code=400, detail="stripe_subscription_invalid")
+    cur_plan, cur_iv = cur
+    target_plan = body.plan
+    target_iv = body.billing_interval
 
-    if current_pid == new_price_id:
+    mode = _resolve_subscription_transition_mode(cur_plan, cur_iv, target_plan, target_iv)
+    target_price_id = get_price_id(target_plan, target_iv)
+    if not target_price_id:
+        raise HTTPException(status_code=503, detail="stripe_price_not_configured")
+
+    if current_pid == target_price_id:
         raise HTTPException(status_code=400, detail="subscription_no_change")
 
     if bool(getattr(sub, "cancel_at_period_end", False)):
@@ -187,18 +233,16 @@ def _load_subscription_change_context(
     if not items_data:
         raise HTTPException(status_code=400, detail="stripe_subscription_invalid")
     item_id = items_data[0].id
-    return sub, item_id, new_price_id
-
-
-def _is_premium_to_plus_deferred_downgrade(
-    current: tuple[str, str] | None,
-    new_plan: str,
-) -> bool:
-    """Premium → Plus switches at current period end (no mid-cycle downgrade invoice)."""
-    if not current:
-        return False
-    cur_plan, _ = current
-    return cur_plan == "premium" and new_plan == "plus"
+    transition = SubscriptionTransition(
+        mode=mode,
+        current_plan=cur_plan,
+        current_interval=cur_iv,
+        target_plan=target_plan,
+        target_interval=target_iv,
+        current_price_id=current_pid,
+        target_price_id=target_price_id,
+    )
+    return sub, item_id, transition
 
 
 def _schedule_id_on_subscription(sub: stripe.Subscription) -> str | None:
@@ -231,12 +275,12 @@ def _schedule_phase_item(price_id: str, quantity: int = 1) -> dict:
     return {"price": price_id, "quantity": quantity}
 
 
-def _premium_to_plus_schedule_phases(
+def _deferred_schedule_phases(
     current_price_id: str,
     new_price_id: str,
     period_end: int,
 ) -> list[dict]:
-    """Two-phase schedule: current plan until period_end, then downgraded plan."""
+    """Two-phase schedule: current price until period_end, then target price."""
     return [
         {
             "end_date": period_end,
@@ -435,16 +479,16 @@ def _release_active_subscription_schedule(sub_id: str) -> None:
         logger.warning("subscription schedule release failed: %s", e)
 
 
-def _apply_premium_to_plus_at_period_end(
+def _apply_deferred_subscription_change(
     sub: stripe.Subscription,
     current_price_id: str,
     new_price_id: str,
     meta: dict,
 ) -> stripe.Subscription:
-    """Use a two-phase Subscription Schedule: keep Premium until period end, then Plus."""
+    """Apply a period-end plan change via a two-phase Subscription Schedule."""
     sub = stripe.Subscription.retrieve(sub.id, expand=["schedule"])
     period_end = int(sub.current_period_end)
-    phases = _premium_to_plus_schedule_phases(current_price_id, new_price_id, period_end)
+    phases = _deferred_schedule_phases(current_price_id, new_price_id, period_end)
     sch_id = _schedule_id_on_subscription(sub)
     if sch_id:
         try:
@@ -789,12 +833,12 @@ async def preview_subscription_change(
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db),
 ):
-    """Preview proration (upgrade) or deferred period-end switch (Premium → Plus)."""
+    """Preview proration (immediate) or deferred period-end switch (per pay.md rules)."""
     if not is_stripe_billing_configured():
         raise HTTPException(status_code=503, detail="stripe_not_configured")
     _stripe_configure()
 
-    sub, _item_id, new_price_id = _load_subscription_change_context(current_user, db, body)
+    sub, _item_id, transition = _load_subscription_change_context(current_user, db, body)
     cust = sub.customer
     cust_id = cust if isinstance(cust, str) else getattr(cust, "id", None)
     if not cust_id:
@@ -802,15 +846,9 @@ async def preview_subscription_change(
 
     period_end = int(sub.current_period_end) if sub.current_period_end else None
     pm_label = _default_payment_method_label(str(cust_id), sub.id)
-    cur = _resolve_plan_from_subscription(sub)
     currency = (getattr(sub, "currency", None) or "usd").lower()
 
-    if _is_premium_to_plus_deferred_downgrade(cur, body.plan):
-        pending_iv = body.billing_interval
-        if cur is not None:
-            _, cur_iv = cur
-            if cur_iv in ("monthly", "annual"):
-                pending_iv = cur_iv
+    if transition.mode == "deferred":
         return APIResponse(
             success=True,
             message="ok",
@@ -823,8 +861,8 @@ async def preview_subscription_change(
                 "lines": [],
                 "subscription_current_period_end": period_end,
                 "payment_method_label": pm_label,
-                "pending_plan": body.plan,
-                "pending_billing_interval": pending_iv,
+                "pending_plan": transition.target_plan,
+                "pending_billing_interval": transition.target_interval,
             },
         )
 
@@ -832,7 +870,7 @@ async def preview_subscription_change(
         inv = stripe.Invoice.upcoming(
             customer=str(cust_id),
             subscription=sub.id,
-            subscription_items=[{"id": _item_id, "price": new_price_id}],
+            subscription_items=[{"id": _item_id, "price": transition.target_price_id}],
             subscription_proration_behavior="create_prorations",
         )
     except stripe.error.StripeError as e:
@@ -861,30 +899,25 @@ async def change_subscription(
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db),
 ):
-    """Plus ↔ Premium: Plus→Premium applies immediately with proration; Premium→Plus takes effect at period end."""
+    """Apply plan/billing changes: immediate (proration) or deferred at period end (pay.md)."""
     if not is_stripe_billing_configured():
         raise HTTPException(status_code=503, detail="stripe_not_configured")
     _stripe_configure()
 
-    sub, item_id, new_price_id = _load_subscription_change_context(current_user, db, body)
+    sub, item_id, transition = _load_subscription_change_context(current_user, db, body)
 
     meta = dict(sub.metadata or {})
     meta["user_id"] = str(current_user.id)
-    meta["plan"] = body.plan
+    meta["plan"] = transition.target_plan
+    meta["billing_interval"] = transition.target_interval
 
-    cur = _resolve_plan_from_subscription(sub)
-    deferred = _is_premium_to_plus_deferred_downgrade(cur, body.plan)
-    if deferred and cur is not None:
-        _, cur_iv = cur
-        meta["billing_interval"] = cur_iv if cur_iv in ("monthly", "annual") else body.billing_interval
-    else:
-        meta["billing_interval"] = body.billing_interval
-
-    if deferred:
-        current_pid = _first_subscription_price_id(sub)
-        if not current_pid:
-            raise HTTPException(status_code=400, detail="stripe_subscription_invalid")
-        updated = _apply_premium_to_plus_at_period_end(sub, current_pid, new_price_id, meta)
+    if transition.mode == "deferred":
+        updated = _apply_deferred_subscription_change(
+            sub,
+            transition.current_price_id,
+            transition.target_price_id,
+            meta,
+        )
         sync_user_from_stripe_subscription(db, current_user, updated)
         eff = current_user.membership_expires_at.isoformat() if current_user.membership_expires_at else None
         return APIResponse(
@@ -896,6 +929,8 @@ async def change_subscription(
                 "membership_billing_interval": current_user.membership_billing_interval,
                 "membership_expires_at": eff,
                 "deferred_effective_at": eff,
+                "pending_plan": transition.target_plan,
+                "pending_billing_interval": transition.target_interval,
                 "invoice": None,
             },
         )
@@ -911,7 +946,7 @@ async def change_subscription(
     try:
         updated = stripe.Subscription.modify(
             sub.id,
-            items=[{"id": item_id, "price": new_price_id}],
+            items=[{"id": item_id, "price": transition.target_price_id}],
             proration_behavior="create_prorations",
             metadata=meta,
             expand=["latest_invoice"],
