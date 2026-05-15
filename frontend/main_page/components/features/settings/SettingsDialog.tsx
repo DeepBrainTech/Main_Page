@@ -52,6 +52,15 @@ export default function SettingsDialog({ open, onClose }: SettingsDialogProps) {
     setDraftLocale(currentLocale);
   }, [open, currentLocale]);
 
+  useEffect(() => {
+    if (!open) return;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [open]);
+
   const handleSave = () => {
     writeAppPreferences({ soundEffects: soundOn });
     const next = draftLocale as Locale;
@@ -68,12 +77,12 @@ export default function SettingsDialog({ open, onClose }: SettingsDialogProps) {
 
   return (
     <div
-      className="fixed inset-0 z-40 flex items-center justify-center bg-black/25 p-4 font-app-body"
+      className="fixed inset-0 z-[100] flex items-center justify-center overscroll-none bg-black/25 p-3 font-app-body sm:p-6"
       onClick={onClose}
       role="presentation"
     >
       <div
-        className="relative flex max-h-[min(895px,90vh)] w-full max-w-[454px] min-h-0 flex-col overflow-hidden rounded-3xl bg-white shadow-[0px_20px_30px_0px_rgba(0,0,0,0.15)]"
+        className="relative isolate flex max-h-[calc(100dvh-1.5rem)] w-full max-w-[454px] min-h-0 flex-col overflow-hidden rounded-3xl bg-white shadow-[0px_20px_30px_0px_rgba(0,0,0,0.15)] sm:max-h-[calc(100dvh-3rem)]"
         role="dialog"
         aria-label={t("title")}
         onClick={(e) => e.stopPropagation()}
@@ -89,7 +98,7 @@ export default function SettingsDialog({ open, onClose }: SettingsDialogProps) {
           </svg>
         </button>
 
-        <div className="min-h-0 flex-1 overflow-y-auto px-8 pb-8 pt-10">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-8 pb-8 pt-10">
           <h2 className="mb-8 text-center text-3xl font-semibold leading-10 text-sky-700">{t("title")}</h2>
 
           <div className="flex flex-col gap-3">

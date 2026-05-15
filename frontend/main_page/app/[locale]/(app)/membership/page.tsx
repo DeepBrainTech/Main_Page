@@ -182,7 +182,8 @@ export default function MembershipPage() {
       setPendingPlan(nextPlan);
       setPendingBillingInterval(nextInterval);
       setPendingEffectiveAtIso(st.pending_effective_at ?? m.membership_pending_effective_at);
-      setBillingInterval(nextInterval ?? activeInterval);
+      // Keep toggle aligned with the *active* subscription so the current plan card matches (pending interval alone is a future state).
+      setBillingInterval(activeInterval);
       setLoadError(null);
     } catch {
       setLoadError("loadFailed");

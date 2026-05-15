@@ -133,6 +133,7 @@
     "scheduledButton": "Scheduled for {date}",
     "cancelInPortal": "Cancel subscription",
     "billingTabLockedHint": "Change monthly/annual billing in the customer portal.",
+    "billingTabMatchSubscription": "Select the billing period above that matches your subscription.",
     "billingTabChangeHint": "Choose a target billing period. Some changes happen now; downgrades take effect after the current period.",
     "portalNotAvailable": "Billing is temporarily unavailable. Please try again later or contact support.",
     "planChangeLoadingPreview": "Loading billing preview…",

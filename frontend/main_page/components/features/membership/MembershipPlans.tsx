@@ -112,6 +112,32 @@ function formatMembershipPeriodDate(iso: string, siteLocale: string): string {
   return new Intl.DateTimeFormat(intl, { month: "2-digit", day: "2-digit", year: "numeric" }).format(d);
 }
 
+function CancelDialogWarningIcon() {
+  return (
+    <div className="inline-flex size-16 items-center justify-center rounded-full bg-yellow-50">
+      <Image src="/membership/attention.svg" alt="" width={32} height={32} className="h-8 w-8 shrink-0" />
+    </div>
+  );
+}
+
+function CancelDialogCloseGlyph() {
+  return (
+    <svg className="size-4" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+      <path d="M4 4l8 8M12 4L4 12" stroke="currentColor" strokeWidth="1.33" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function CancelDialogLoseRowGlyph() {
+  return (
+    <span className="flex size-4 shrink-0 items-center justify-center text-red-500" aria-hidden>
+      <svg className="size-3.5" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M4 4l8 8M12 4L4 12" stroke="currentColor" strokeWidth="1.33" strokeLinecap="round" />
+      </svg>
+    </span>
+  );
+}
+
 export default function MembershipPlans({
   currentPlan,
   currentBillingInterval,
@@ -198,7 +224,9 @@ export default function MembershipPlans({
       <div className="grid gap-4 md:grid-cols-3 lg:gap-6">
         {planConfigs.map((plan) => {
           const styles = planStyles[plan.key];
-          const isCurrent = currentPlan === plan.key && currentBillingInterval === billingInterval;
+          const isCurrent =
+            currentPlan === plan.key &&
+            (plan.key === "free" || currentBillingInterval === billingInterval);
           const isFreePreview = plan.key === "free" && currentPlan !== "free";
           const price = planDisplayPrices[plan.key][billingInterval === "annual" ? "annual" : "monthly"];
           const periodDateLabel = membershipPeriodEndIso ? formatMembershipPeriodDate(membershipPeriodEndIso, locale) : "";
@@ -225,6 +253,13 @@ export default function MembershipPlans({
                 buttonDisabled = buttonDisabled || !portalEnabled;
                 handleClick = () => setCancelDialogPlan(plan.key as "plus" | "premium");
               }
+            } else if (
+              (plan.key === "plus" || plan.key === "premium") &&
+              currentPlan === plan.key &&
+              currentBillingInterval !== billingInterval
+            ) {
+              buttonLabel = t("billingTabMatchSubscription");
+              buttonDisabled = true;
             } else if (pendingMatches) {
               buttonLabel = t("scheduledButton", { date: pendingDateLabel });
               buttonDisabled = true;
@@ -302,7 +337,7 @@ export default function MembershipPlans({
               </div>
 
               <div
-                className={`mt-auto flex w-full flex-col gap-3 pt-8 ${showStatusRow ? "min-h-[7.75rem]" : "min-h-[6.25rem]"} justify-end`}
+                className={`mt-auto flex w-full flex-col gap-3 pt-8 ${showStatusRow || isCurrent ? "min-h-[9rem]" : "min-h-[6.25rem]"} justify-end`}
               >
                 {showStatusRow ? (
                   <div className="text-center font-['Outfit'] text-base font-normal leading-6 text-amber-300">
@@ -318,6 +353,18 @@ export default function MembershipPlans({
                         {t("portalCancelHint")}
                       </p>
                     ) : null}
+                  </div>
+                ) : null}
+                {isCurrent ? (
+                  <div
+                    className={`relative mx-auto flex h-14 w-80 max-w-full shrink-0 items-center justify-center rounded-[100px] font-['Outfit'] text-base font-semibold leading-6 ${
+                      plan.key === "free"
+                        ? "border border-slate-200 bg-indigo-50/90 text-sky-800"
+                        : "bg-white/20 text-white"
+                    }`}
+                    role="status"
+                  >
+                    {t("currentPlan")}
                   </div>
                 ) : null}
                 <button
@@ -342,42 +389,53 @@ export default function MembershipPlans({
 
       {cancelDialogPlan ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 px-4 py-6" role="dialog" aria-modal="true" aria-labelledby="membership-cancel-dialog-title">
-          <div className="w-full max-w-md rounded-lg bg-white p-5 font-app-body shadow-2xl">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <h2 id="membership-cancel-dialog-title" className="text-xl font-semibold text-slate-950">
-                  {t("cancelDialog.title")}
-                </h2>
-                <p className="mt-2 text-sm leading-6 text-slate-600">
-                  {t("cancelDialog.description", { plan: t(`plans.${cancelDialogPlan}`) })}
-                </p>
+          <div className="relative flex w-full max-w-[524px] flex-col rounded-3xl bg-white font-['Outfit'] shadow-[0px_4px_6px_-4px_rgba(0,0,0,0.10)] shadow-lg outline outline-2 outline-offset-[-2px] outline-slate-200 md:h-[549px] md:min-h-[549px]">
+            <button
+              type="button"
+              className="absolute right-[19px] top-[19px] inline-flex cursor-pointer flex-col items-start justify-start rounded-sm p-0 text-neutral-950 opacity-70 transition hover:opacity-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-600 disabled:pointer-events-none disabled:opacity-40"
+              onClick={() => setCancelDialogPlan(null)}
+              disabled={redirecting}
+              aria-label={t("cancelDialog.closeAria")}
+            >
+              <CancelDialogCloseGlyph />
+            </button>
+
+            <div className="flex flex-col items-center px-8 pb-0 pt-8">
+              <CancelDialogWarningIcon />
+              <h2 id="membership-cancel-dialog-title" className="mt-6 w-full max-w-[460px] text-center text-2xl font-bold leading-8 text-cyan-950">
+                {t("cancelDialog.title")}
+              </h2>
+              <p className="mt-2 w-full max-w-[460px] text-center text-base font-normal leading-6 text-sky-700">
+                {t("cancelDialog.description", { plan: t(`plans.${cancelDialogPlan}`) })}
+              </p>
+            </div>
+
+            <div className="mx-8 mt-6 inline-flex w-[calc(100%-4rem)] max-w-[460px] flex-col items-start justify-start gap-2 rounded-2xl bg-orange-50 px-4 pb-px pt-4 outline outline-2 outline-offset-[-2px] outline-amber-400/30 max-sm:mx-4 max-sm:w-[calc(100%-2rem)]">
+              <div className="relative h-5 self-stretch">
+                <p className="text-sm font-medium leading-5 text-sky-700">{t("cancelDialog.loseHeading")}</p>
               </div>
+              <div className="flex h-auto min-h-20 flex-col justify-start gap-2 self-stretch pb-4">
+                {cancelLoseKeys.map((key) => (
+                  <div key={key} className="inline-flex h-5 items-center justify-start gap-2 self-stretch">
+                    <CancelDialogLoseRowGlyph />
+                    <span className="text-sm font-normal leading-5 text-sky-700">{t(`cancelDialog.${key}`)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="mx-8 mb-8 mt-6 inline-flex w-[calc(100%-4rem)] max-w-[460px] flex-col items-start justify-end gap-3 max-sm:mx-4 max-sm:w-[calc(100%-2rem)] md:mt-auto md:pt-2">
               <button
                 type="button"
-                className="rounded-md px-2 py-1 text-sm font-semibold text-slate-500 hover:bg-slate-100 disabled:opacity-60"
+                className="relative h-14 w-full rounded-[100px] bg-gradient-to-r from-sky-700 from-0% via-sky-700 via-[8%] to-blue-600 to-100% text-center text-base font-bold leading-6 text-white transition hover:brightness-105 disabled:opacity-60"
                 onClick={() => setCancelDialogPlan(null)}
                 disabled={redirecting}
-                aria-label={t("cancelDialog.closeAria")}
               >
-                X
+                {t("cancelDialog.keepPlan", { plan: t(`plans.${cancelDialogPlan}`) })}
               </button>
-            </div>
-
-            <div className="mt-5 rounded-lg border border-slate-200 bg-slate-50 p-4">
-              <p className="text-sm font-semibold text-slate-800">{t("cancelDialog.loseHeading")}</p>
-              <ul className="mt-2 list-inside list-disc space-y-1 text-sm text-slate-600">
-                {cancelLoseKeys.map((key) => (
-                  <li key={key}>{t(`cancelDialog.${key}`)}</li>
-                ))}
-              </ul>
-            </div>
-
-            <p className="mt-3 text-xs leading-5 text-slate-500">{t("manageInPortalHint")}</p>
-
-            <div className="mt-5 flex flex-col gap-3 sm:flex-row-reverse sm:gap-3">
               <button
                 type="button"
-                className="h-11 w-full rounded-full bg-red-600 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-60 sm:flex-1"
+                className="relative flex h-12 w-full items-center justify-center rounded-[100px] bg-indigo-50 text-center text-base font-semibold leading-6 text-sky-700 transition hover:bg-indigo-100 disabled:opacity-60"
                 onClick={() => {
                   void onManageBilling();
                   setCancelDialogPlan(null);
@@ -385,14 +443,6 @@ export default function MembershipPlans({
                 disabled={redirecting}
               >
                 {redirecting ? tCommon("loading") : t("cancelDialog.confirmCancel")}
-              </button>
-              <button
-                type="button"
-                className="h-11 w-full rounded-full border border-slate-300 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60 sm:flex-1"
-                onClick={() => setCancelDialogPlan(null)}
-                disabled={redirecting}
-              >
-                {t("cancelDialog.keepPlan", { plan: t(`plans.${cancelDialogPlan}`) })}
               </button>
             </div>
           </div>

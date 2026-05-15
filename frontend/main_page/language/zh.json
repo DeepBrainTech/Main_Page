@@ -133,6 +133,7 @@
     "scheduledButton": "已预约 {date} 生效",
     "cancelInPortal": "取消订阅",
     "billingTabLockedHint": "计费周期请在账单门户中修改。",
+    "billingTabMatchSubscription": "请在上方选择与当前订阅一致的计费周期（月付/年付）。",
     "billingTabChangeHint": "请选择目标计费周期。升级会立即处理，降级会在当前周期结束后生效。",
     "portalNotAvailable": "账单功能暂不可用，请稍后重试或联系支持。",
     "planChangeLoadingPreview": "正在加载账单预览…",

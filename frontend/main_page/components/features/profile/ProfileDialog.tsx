@@ -115,6 +115,15 @@ export default function ProfileDialog({
     }
   }, [open, username, dateOfBirth, country, avatarUrl, currentLocale]);
 
+  useEffect(() => {
+    if (!open) return;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [open]);
+
   /** Format YYYY-MM-DD for profile view: month and day only (year hidden). */
   const formatBirthdayWithoutYear = (yyyyMmDd: string): string => {
     const parts = yyyyMmDd.trim().split("-");
@@ -262,17 +271,17 @@ export default function ProfileDialog({
 
   return (
     <div
-      className="fixed inset-0 z-40 flex items-center justify-center bg-black/25 p-4 font-app-body"
+      className="fixed inset-0 z-[100] flex items-center justify-center overscroll-none bg-black/25 p-3 font-app-body sm:p-6"
       onClick={onClose}
       role="presentation"
     >
       <div
-        className="flex max-h-[90vh] w-full max-w-[454px] min-h-0 flex-col overflow-hidden rounded-3xl bg-white shadow-[0px_4.64px_27.84px_0px_rgba(4,94,150,0.08)]"
+        className="relative isolate flex max-h-[calc(100dvh-1.5rem)] w-full max-w-[454px] min-h-0 flex-col overflow-hidden rounded-3xl bg-white shadow-[0px_4.64px_27.84px_0px_rgba(4,94,150,0.08)] sm:max-h-[calc(100dvh-3rem)]"
         role="dialog"
         aria-label={tProfile("title")}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="relative h-28 shrink-0 bg-gradient-to-br from-blue-100 via-blue-100 to-indigo-50">
+        <div className="relative z-20 h-28 shrink-0 overflow-visible bg-gradient-to-br from-blue-100 via-blue-100 to-indigo-50">
           <button
             type="button"
             onClick={onClose}
@@ -320,7 +329,7 @@ export default function ProfileDialog({
           </div>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto px-8 pb-8 pt-16">
+        <div className="relative z-0 min-h-0 flex-1 overflow-y-auto overscroll-y-contain bg-white px-8 pb-8 pt-16">
           <h2 className="sr-only">{tProfile("title")}</h2>
           <div className="mb-6 flex w-full justify-center">
             <div className="relative inline-flex min-h-8 items-center">
