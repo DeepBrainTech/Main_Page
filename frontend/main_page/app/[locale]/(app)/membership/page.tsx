@@ -8,6 +8,7 @@ import MembershipPlans, {
   type MembershipPlan,
 } from "@/components/features/membership/MembershipPlans";
 import {
+  changeStripeSubscription,
   createStripeBillingPortalSession,
   createStripeCheckoutSession,
   fetchAuthMeMembership,
@@ -23,6 +24,10 @@ type MembershipErrorKey =
   | "portalNotAvailable"
   | "stripeNotConfigured"
   | "alreadySubscribed"
+  | "saveFailed"
+  | "stripeChangeFailed"
+  | "subscriptionNoChange"
+  | "planSwitchNeedResume"
   | "generic";
 
 export default function MembershipPage() {
@@ -33,14 +38,20 @@ export default function MembershipPage() {
   const t = useTranslations("membership");
 
   const [currentPlan, setCurrentPlan] = useState<MembershipPlan>("free");
+  const [currentBillingInterval, setCurrentBillingInterval] = useState<MembershipBillingInterval | null>(null);
   const [billingInterval, setBillingInterval] = useState<MembershipBillingInterval>("monthly");
   const [loadError, setLoadError] = useState<MembershipErrorKey | null>(null);
-  const [successMessage, setSuccessMessage] = useState<"checkoutSuccess" | "portalReturn" | null>(null);
+  const [successMessage, setSuccessMessage] = useState<
+    "checkoutSuccess" | "portalReturn" | "planChangeUpdated" | "planChangeScheduled" | null
+  >(null);
   const [checkoutEnabled, setCheckoutEnabled] = useState(false);
   const [portalEnabled, setPortalEnabled] = useState(false);
   const [hasStripeSubscription, setHasStripeSubscription] = useState(false);
   const [membershipPeriodEndIso, setMembershipPeriodEndIso] = useState<string | null>(null);
   const [subscriptionCancelAtPeriodEnd, setSubscriptionCancelAtPeriodEnd] = useState<boolean | null>(null);
+  const [pendingPlan, setPendingPlan] = useState<"plus" | "premium" | null>(null);
+  const [pendingBillingInterval, setPendingBillingInterval] = useState<MembershipBillingInterval | null>(null);
+  const [pendingEffectiveAtIso, setPendingEffectiveAtIso] = useState<string | null>(null);
   const [redirecting, setRedirecting] = useState(false);
 
   const loadAll = useCallback(async () => {
@@ -50,12 +61,24 @@ export default function MembershipPage() {
       if (p === "free" || p === "plus" || p === "premium") {
         setCurrentPlan(p);
       }
-      setBillingInterval(m.membership_billing_interval === "annual" ? "annual" : "monthly");
+      const activeInterval = m.membership_billing_interval === "annual" ? "annual" : "monthly";
+      setCurrentBillingInterval(activeInterval);
       setHasStripeSubscription(Boolean(m.stripe_subscription_id));
       setCheckoutEnabled(st.checkout_enabled);
       setPortalEnabled(st.portal_enabled);
       setMembershipPeriodEndIso(m.membership_expires_at);
       setSubscriptionCancelAtPeriodEnd(st.subscription_cancel_at_period_end);
+      const nextPlan =
+        st.pending_plan ?? (m.membership_pending_plan === "plus" || m.membership_pending_plan === "premium" ? m.membership_pending_plan : null);
+      const nextInterval =
+        st.pending_billing_interval ??
+        (m.membership_pending_billing_interval === "monthly" || m.membership_pending_billing_interval === "annual"
+          ? m.membership_pending_billing_interval
+          : null);
+      setPendingPlan(nextPlan);
+      setPendingBillingInterval(nextInterval);
+      setPendingEffectiveAtIso(st.pending_effective_at ?? m.membership_pending_effective_at);
+      setBillingInterval(nextInterval ?? activeInterval);
       setLoadError(null);
     } catch {
       setLoadError("loadFailed");
@@ -129,7 +152,32 @@ export default function MembershipPage() {
 
   const handlePlanAction = async (plan: MembershipPlan) => {
     if (hasStripeSubscription) {
-      await openBillingPortal();
+      if (plan !== "plus" && plan !== "premium") {
+        await openBillingPortal();
+        return;
+      }
+      setLoadError(null);
+      setSuccessMessage(null);
+      setRedirecting(true);
+      try {
+        const result = await changeStripeSubscription({
+          plan,
+          billing_interval: billingInterval,
+          locale,
+        });
+        if (result.action === "payment_pending" && result.hosted_invoice_url) {
+          window.location.href = result.hosted_invoice_url;
+          return;
+        }
+        await loadAll();
+        window.dispatchEvent(new Event("membership-plan-change"));
+        setSuccessMessage(result.action === "scheduled" ? "planChangeScheduled" : "planChangeUpdated");
+      } catch (e) {
+        const detail = e instanceof Error ? e.message : "request_failed";
+        setLoadError(membershipErrorKeyFromDetail(detail) as MembershipErrorKey);
+      } finally {
+        setRedirecting(false);
+      }
       return;
     }
     if (plan === "plus" || plan === "premium") {
@@ -156,6 +204,7 @@ export default function MembershipPage() {
       ) : null}
       <MembershipPlans
         currentPlan={currentPlan}
+        currentBillingInterval={currentBillingInterval}
         billingInterval={billingInterval}
         onBillingIntervalChange={setBillingInterval}
         onSubscribe={handleSubscribe}
@@ -167,6 +216,9 @@ export default function MembershipPage() {
         redirecting={redirecting}
         membershipPeriodEndIso={membershipPeriodEndIso}
         subscriptionCancelAtPeriodEnd={subscriptionCancelAtPeriodEnd}
+        pendingPlan={pendingPlan}
+        pendingBillingInterval={pendingBillingInterval}
+        pendingEffectiveAtIso={pendingEffectiveAtIso}
       />
     </div>
   );

@@ -297,6 +297,9 @@ def _user_to_response(user: User) -> UserResponse:
         membership_plan=getattr(user, "membership_plan", None) or "free",
         membership_expires_at=getattr(user, "membership_expires_at", None),
         membership_billing_interval=getattr(user, "membership_billing_interval", None),
+        membership_pending_plan=getattr(user, "membership_pending_plan", None),
+        membership_pending_billing_interval=getattr(user, "membership_pending_billing_interval", None),
+        membership_pending_effective_at=getattr(user, "membership_pending_effective_at", None),
         stripe_customer_id=getattr(user, "stripe_customer_id", None),
         stripe_subscription_id=getattr(user, "stripe_subscription_id", None),
     )

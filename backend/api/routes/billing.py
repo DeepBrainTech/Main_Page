@@ -22,7 +22,7 @@ from config.stripe_billing import (
 )
 from database import get_db
 from models import User
-from schemas import APIResponse, BillingCheckoutBody, BillingPortalBody
+from schemas import APIResponse, BillingChangeSubscriptionBody, BillingCheckoutBody, BillingPortalBody
 
 logger = logging.getLogger(__name__)
 
@@ -57,7 +57,11 @@ def _clear_paid_membership(user: User) -> None:
     user.membership_plan = "free"
     user.membership_expires_at = None
     user.membership_billing_interval = None
+    user.membership_pending_plan = None
+    user.membership_pending_billing_interval = None
+    user.membership_pending_effective_at = None
     user.stripe_subscription_id = None
+    user.stripe_subscription_schedule_id = None
 
 
 def _first_subscription_price_id(sub: stripe.Subscription) -> str | None:
@@ -96,6 +100,8 @@ def sync_user_from_stripe_subscription(db: Session, user: User, sub: stripe.Subs
     user.membership_plan = plan
     user.membership_billing_interval = billing_interval
     user.stripe_subscription_id = sub.id
+    schedule_id = getattr(sub, "schedule", None)
+    user.stripe_subscription_schedule_id = schedule_id if isinstance(schedule_id, str) else None
 
     cust = sub.customer
     if isinstance(cust, str):
@@ -108,8 +114,120 @@ def sync_user_from_stripe_subscription(db: Session, user: User, sub: stripe.Subs
     else:
         user.membership_expires_at = None
 
+    if (
+        user.membership_pending_plan == plan
+        and user.membership_pending_billing_interval == billing_interval
+    ):
+        user.membership_pending_plan = None
+        user.membership_pending_billing_interval = None
+        user.membership_pending_effective_at = None
+        user.stripe_subscription_schedule_id = None
+
     db.add(user)
     db.commit()
+
+
+def _subscription_item(sub: stripe.Subscription):
+    try:
+        items = sub["items"].data
+        if not items:
+            return None
+        return items[0]
+    except (KeyError, IndexError, AttributeError) as e:
+        logger.warning("subscription item parse failed: %s", e)
+        return None
+
+
+def _change_timing(
+    current_plan: str,
+    current_interval: str,
+    target_plan: str,
+    target_interval: str,
+) -> str:
+    if (current_plan, current_interval) == (target_plan, target_interval):
+        return "no_change"
+
+    if current_interval == "monthly" and current_plan == "plus":
+        return "immediate"
+
+    if current_interval == "monthly" and current_plan == "premium":
+        if target_interval == "annual":
+            return "immediate"
+        return "scheduled"
+
+    if current_interval == "annual" and current_plan == "plus":
+        if target_interval == "annual" and target_plan == "premium":
+            return "immediate"
+        return "scheduled"
+
+    if current_interval == "annual" and current_plan == "premium":
+        return "scheduled"
+
+    return "scheduled"
+
+
+def _release_existing_schedule(user: User) -> None:
+    schedule_id = getattr(user, "stripe_subscription_schedule_id", None)
+    if not schedule_id:
+        return
+    try:
+        stripe.SubscriptionSchedule.release(schedule_id)
+    except stripe.error.InvalidRequestError as e:
+        logger.warning("release existing subscription schedule failed: %s", e)
+    user.stripe_subscription_schedule_id = None
+    user.membership_pending_plan = None
+    user.membership_pending_billing_interval = None
+    user.membership_pending_effective_at = None
+
+
+def _schedule_change_at_period_end(
+    db: Session,
+    user: User,
+    sub: stripe.Subscription,
+    target_price_id: str,
+    target_plan: str,
+    target_interval: str,
+) -> datetime:
+    item = _subscription_item(sub)
+    if not item:
+        raise HTTPException(status_code=400, detail="subscription_item_missing")
+    if not sub.current_period_end:
+        raise HTTPException(status_code=400, detail="subscription_period_missing")
+
+    _release_existing_schedule(user)
+    db.add(user)
+    db.commit()
+
+    schedule = stripe.SubscriptionSchedule.create(from_subscription=sub.id)
+    current_start = int(getattr(sub, "current_period_start", 0) or datetime.utcnow().timestamp())
+    current_end = int(sub.current_period_end)
+    current_price_id = item.price.id
+    quantity = getattr(item, "quantity", None) or 1
+
+    updated_schedule = stripe.SubscriptionSchedule.modify(
+        schedule.id,
+        end_behavior="release",
+        phases=[
+            {
+                "start_date": current_start,
+                "end_date": current_end,
+                "items": [{"price": current_price_id, "quantity": quantity}],
+            },
+            {
+                "start_date": current_end,
+                "items": [{"price": target_price_id, "quantity": quantity}],
+            },
+        ],
+    )
+
+    effective_at = datetime.utcfromtimestamp(current_end)
+    user.membership_pending_plan = target_plan
+    user.membership_pending_billing_interval = target_interval
+    user.membership_pending_effective_at = effective_at
+    user.stripe_subscription_schedule_id = updated_schedule.id
+    db.add(user)
+    db.commit()
+    return effective_at
 
 
 def _user_by_stripe_customer(db: Session, customer_id: str) -> User | None:
@@ -159,6 +277,13 @@ async def billing_status(current_user: User = Depends(get_current_active_user)):
             "portal_enabled": portal,
             "has_stripe_subscription": has_sub,
             "subscription_cancel_at_period_end": cancel_at_period_end,
+            "pending_plan": getattr(current_user, "membership_pending_plan", None),
+            "pending_billing_interval": getattr(current_user, "membership_pending_billing_interval", None),
+            "pending_effective_at": (
+                current_user.membership_pending_effective_at.isoformat()
+                if getattr(current_user, "membership_pending_effective_at", None)
+                else None
+            ),
         },
     )
 
@@ -220,6 +345,120 @@ async def create_checkout_session(
     )
 
     return APIResponse(success=True, message="ok", data={"url": session.url})
+
+
+@router.post("/change-subscription", response_model=APIResponse)
+async def change_subscription(
+    body: BillingChangeSubscriptionBody,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+):
+    """Change an existing paid subscription using app rules.
+
+    Immediate upgrades are applied now and invoiced by Stripe. Downgrades and
+    shorter-cycle changes are scheduled for the current period end.
+    """
+    if not is_stripe_billing_configured():
+        raise HTTPException(status_code=503, detail="stripe_not_configured")
+    if not getattr(current_user, "stripe_subscription_id", None):
+        raise HTTPException(status_code=400, detail="subscription_missing")
+    _stripe_configure()
+
+    target_price_id = get_price_id(body.plan, body.billing_interval)
+    if not target_price_id:
+        raise HTTPException(status_code=503, detail="stripe_price_not_configured")
+
+    try:
+        sub = stripe.Subscription.retrieve(current_user.stripe_subscription_id)
+    except stripe.error.InvalidRequestError:
+        current_user.stripe_subscription_id = None
+        db.add(current_user)
+        db.commit()
+        raise HTTPException(status_code=400, detail="subscription_missing")
+
+    if sub.status not in ("active", "trialing", "past_due"):
+        raise HTTPException(status_code=400, detail="subscription_not_active")
+    if bool(getattr(sub, "cancel_at_period_end", False)):
+        raise HTTPException(status_code=400, detail="plan_switch_need_resume")
+    schedule_id = getattr(sub, "schedule", None)
+    if isinstance(schedule_id, str):
+        current_user.stripe_subscription_schedule_id = schedule_id
+
+    resolved = _resolve_plan_from_subscription(sub)
+    if not resolved:
+        raise HTTPException(status_code=400, detail="subscription_price_unknown")
+    current_plan, current_interval = resolved
+    timing = _change_timing(current_plan, current_interval, body.plan, body.billing_interval)
+    if timing == "no_change":
+        raise HTTPException(status_code=400, detail="subscription_no_change")
+
+    if timing == "scheduled":
+        effective_at = _schedule_change_at_period_end(
+            db,
+            current_user,
+            sub,
+            target_price_id,
+            body.plan,
+            body.billing_interval,
+        )
+        return APIResponse(
+            success=True,
+            message="scheduled",
+            data={
+                "action": "scheduled",
+                "plan": body.plan,
+                "billing_interval": body.billing_interval,
+                "effective_at": effective_at.isoformat(),
+            },
+        )
+
+    item = _subscription_item(sub)
+    if not item:
+        raise HTTPException(status_code=400, detail="subscription_item_missing")
+
+    _release_existing_schedule(current_user)
+    db.add(current_user)
+    db.commit()
+    try:
+        updated = stripe.Subscription.modify(
+            sub.id,
+            items=[{"id": item.id, "price": target_price_id}],
+            proration_behavior="always_invoice",
+            payment_behavior="pending_if_incomplete",
+            metadata={
+                **dict(getattr(sub, "metadata", None) or {}),
+                "user_id": str(current_user.id),
+                "plan": body.plan,
+                "billing_interval": body.billing_interval,
+            },
+            expand=["latest_invoice.payment_intent"],
+        )
+    except stripe.error.StripeError as e:
+        logger.warning("subscription change failed: %s", e)
+        raise HTTPException(status_code=400, detail="stripe_change_failed")
+
+    if getattr(updated, "pending_update", None):
+        invoice = getattr(updated, "latest_invoice", None)
+        hosted_invoice_url = getattr(invoice, "hosted_invoice_url", None) if invoice else None
+        return APIResponse(
+            success=True,
+            message="payment_pending",
+            data={
+                "action": "payment_pending",
+                "hosted_invoice_url": hosted_invoice_url,
+            },
+        )
+
+    sync_user_from_stripe_subscription(db, current_user, updated)
+    return APIResponse(
+        success=True,
+        message="updated",
+        data={
+            "action": "updated",
+            "plan": body.plan,
+            "billing_interval": body.billing_interval,
+        },
+    )
 
 
 @router.post("/portal-session", response_model=APIResponse)

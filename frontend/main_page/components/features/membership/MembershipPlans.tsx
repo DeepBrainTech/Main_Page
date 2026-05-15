@@ -8,6 +8,7 @@ export type MembershipBillingInterval = "monthly" | "annual";
 
 interface MembershipPlansProps {
   currentPlan: MembershipPlan;
+  currentBillingInterval: MembershipBillingInterval | null;
   billingInterval: MembershipBillingInterval;
   onBillingIntervalChange: (interval: MembershipBillingInterval) => void;
   onSubscribe: (plan: "plus" | "premium") => void | Promise<void>;
@@ -19,6 +20,9 @@ interface MembershipPlansProps {
   redirecting?: boolean;
   membershipPeriodEndIso?: string | null;
   subscriptionCancelAtPeriodEnd?: boolean | null;
+  pendingPlan?: "plus" | "premium" | null;
+  pendingBillingInterval?: MembershipBillingInterval | null;
+  pendingEffectiveAtIso?: string | null;
 }
 
 type PlanFeature = {
@@ -107,6 +111,7 @@ function formatMembershipPeriodDate(iso: string, siteLocale: string): string {
 
 export default function MembershipPlans({
   currentPlan,
+  currentBillingInterval,
   billingInterval,
   onBillingIntervalChange,
   onSubscribe,
@@ -118,14 +123,17 @@ export default function MembershipPlans({
   redirecting = false,
   membershipPeriodEndIso = null,
   subscriptionCancelAtPeriodEnd = null,
+  pendingPlan = null,
+  pendingBillingInterval = null,
+  pendingEffectiveAtIso = null,
 }: MembershipPlansProps) {
   const locale = useLocale();
   const t = useTranslations("membership");
   const tCommon = useTranslations("common");
   const periodKey = billingInterval === "annual" ? "perYear" : "perMonth";
 
-  const billingTabsDisabled = hasStripeSubscription;
   const isCanceledAtPeriodEnd = subscriptionCancelAtPeriodEnd === true;
+  const pendingDateLabel = pendingEffectiveAtIso ? formatMembershipPeriodDate(pendingEffectiveAtIso, locale) : "";
 
   return (
     <section className="mx-auto w-full max-w-6xl px-1 py-6 sm:px-3 lg:py-10">
@@ -135,7 +143,7 @@ export default function MembershipPlans({
         </h1>
         <p className="mt-2 font-app-body text-sm font-normal leading-6 text-sky-700 sm:text-lg">{t("subtitle")}</p>
         {hasStripeSubscription ? (
-          <p className="mt-3 font-app-body text-sm text-sky-600">{t("manageInPortalHint")}</p>
+          <p className="mt-3 font-app-body text-sm text-sky-600">{t("manageBillingHint")}</p>
         ) : null}
       </div>
 
@@ -162,7 +170,7 @@ export default function MembershipPlans({
             type="button"
             role="tab"
             aria-selected={billingInterval === "monthly"}
-            disabled={billingTabsDisabled || redirecting}
+            disabled={redirecting}
             className={`flex h-10 min-w-0 flex-1 items-center justify-center rounded-2xl px-6 font-app-body text-base font-semibold leading-6 transition sm:px-10 ${
               billingInterval === "monthly"
                 ? "bg-gradient-to-r from-sky-700 to-blue-600 text-white shadow-md"
@@ -176,7 +184,7 @@ export default function MembershipPlans({
             type="button"
             role="tab"
             aria-selected={billingInterval === "annual"}
-            disabled={billingTabsDisabled || redirecting}
+            disabled={redirecting}
             className={`flex h-10 min-w-0 flex-1 items-center justify-center rounded-2xl px-6 font-app-body text-base font-semibold leading-6 transition sm:px-10 ${
               billingInterval === "annual"
                 ? "bg-gradient-to-r from-sky-700 to-blue-600 text-white shadow-md"
@@ -187,15 +195,15 @@ export default function MembershipPlans({
             {t("billingAnnually")}
           </button>
         </div>
-        {billingTabsDisabled ? (
-          <p className="max-w-md text-center font-app-body text-xs text-sky-600">{t("billingTabLockedHint")}</p>
+        {hasStripeSubscription ? (
+          <p className="max-w-md text-center font-app-body text-xs text-sky-600">{t("billingTabChangeHint")}</p>
         ) : null}
       </div>
 
       <div className="grid gap-4 md:grid-cols-3 lg:gap-6">
         {planConfigs.map((plan) => {
           const styles = planStyles[plan.key];
-          const isCurrent = currentPlan === plan.key;
+          const isCurrent = currentPlan === plan.key && currentBillingInterval === billingInterval;
           const isFreePreview = plan.key === "free" && currentPlan !== "free";
           const price = planDisplayPrices[plan.key][billingInterval === "annual" ? "annual" : "monthly"];
           const periodDateLabel = membershipPeriodEndIso ? formatMembershipPeriodDate(membershipPeriodEndIso, locale) : "";
@@ -205,23 +213,29 @@ export default function MembershipPlans({
           let buttonLabel: string;
           let buttonDisabled = redirecting;
           let handleClick: () => void = () => void onPlanAction(plan.key);
+          const pendingMatches =
+            pendingPlan === plan.key && pendingBillingInterval === billingInterval && Boolean(pendingDateLabel);
 
           if (hasStripeSubscription) {
-            buttonDisabled = buttonDisabled || !portalEnabled;
             if (plan.key === "free") {
               buttonLabel = t("cancelInPortal");
+              buttonDisabled = buttonDisabled || !portalEnabled;
               handleClick = () => void onManageBilling();
             } else if (isCurrent) {
               if (isCanceledAtPeriodEnd) {
                 buttonLabel = t("resumeInPortal");
+                buttonDisabled = buttonDisabled || !portalEnabled;
                 handleClick = () => void onManageBilling();
               } else {
                 buttonLabel = t("currentPlan");
                 buttonDisabled = true;
               }
+            } else if (pendingMatches) {
+              buttonLabel = t("scheduledButton", { date: pendingDateLabel });
+              buttonDisabled = true;
             } else {
-              buttonLabel = t("switchInPortal", { plan: t(`plans.${plan.key}`) });
-              handleClick = () => void onManageBilling();
+              buttonLabel = t("switchPlan", { plan: t(`plans.${plan.key}`) });
+              handleClick = () => void onPlanAction(plan.key);
             }
           } else if (plan.key === "free" || isFreePreview) {
             buttonLabel = t("freePlan");

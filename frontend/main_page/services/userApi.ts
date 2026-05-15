@@ -441,6 +441,17 @@ export function membershipErrorKeyFromDetail(detail: string): string {
       return "stripeNotConfigured";
     case "already_has_active_subscription":
       return "alreadySubscribed";
+    case "subscription_no_change":
+      return "subscriptionNoChange";
+    case "plan_switch_need_resume":
+      return "planSwitchNeedResume";
+    case "stripe_change_failed":
+    case "subscription_missing":
+    case "subscription_not_active":
+    case "subscription_price_unknown":
+    case "subscription_item_missing":
+    case "subscription_period_missing":
+      return "stripeChangeFailed";
     case "stripe_customer_missing":
       return "portalFailed";
     case "checkout_failed":
@@ -490,11 +501,53 @@ export async function createStripeBillingPortalSession(locale: string): Promise<
   return url;
 }
 
+export async function changeStripeSubscription(params: {
+  plan: "plus" | "premium";
+  billing_interval: "monthly" | "annual";
+  locale: string;
+}): Promise<{
+  action: "updated" | "scheduled" | "payment_pending";
+  plan?: "plus" | "premium";
+  billing_interval?: "monthly" | "annual";
+  effective_at?: string;
+  hosted_invoice_url?: string | null;
+}> {
+  const res = await fetch(getApiUrl("/api/billing/change-subscription"), {
+    method: "POST",
+    headers: getAuthHeaders(),
+    body: JSON.stringify(params),
+  });
+  if (!res.ok) {
+    throw new Error(await readApiErrorDetail(res));
+  }
+  const json = (await res.json()) as {
+    data?: {
+      action?: "updated" | "scheduled" | "payment_pending";
+      plan?: "plus" | "premium";
+      billing_interval?: "monthly" | "annual";
+      effective_at?: string;
+      hosted_invoice_url?: string | null;
+    };
+  };
+  const data = json?.data;
+  if (!data?.action) throw new Error("stripe_change_failed");
+  return data as {
+    action: "updated" | "scheduled" | "payment_pending";
+    plan?: "plus" | "premium";
+    billing_interval?: "monthly" | "annual";
+    effective_at?: string;
+    hosted_invoice_url?: string | null;
+  };
+}
+
 export async function fetchBillingStatus(): Promise<{
   checkout_enabled: boolean;
   portal_enabled: boolean;
   has_stripe_subscription: boolean;
   subscription_cancel_at_period_end: boolean | null;
+  pending_plan: "plus" | "premium" | null;
+  pending_billing_interval: "monthly" | "annual" | null;
+  pending_effective_at: string | null;
 }> {
   const res = await fetch(getApiUrl("/api/billing/status"), { headers: getAuthHeaders() });
   if (!res.ok) {
@@ -503,6 +556,9 @@ export async function fetchBillingStatus(): Promise<{
       portal_enabled: false,
       has_stripe_subscription: false,
       subscription_cancel_at_period_end: null,
+      pending_plan: null,
+      pending_billing_interval: null,
+      pending_effective_at: null,
     };
   }
   const json = (await res.json()) as {
@@ -511,6 +567,9 @@ export async function fetchBillingStatus(): Promise<{
       portal_enabled?: boolean;
       has_stripe_subscription?: boolean;
       subscription_cancel_at_period_end?: boolean | null;
+      pending_plan?: string | null;
+      pending_billing_interval?: string | null;
+      pending_effective_at?: string | null;
     };
   };
   const d = json?.data ?? {};
@@ -520,6 +579,12 @@ export async function fetchBillingStatus(): Promise<{
     has_stripe_subscription: Boolean(d.has_stripe_subscription),
     subscription_cancel_at_period_end:
       typeof d.subscription_cancel_at_period_end === "boolean" ? d.subscription_cancel_at_period_end : null,
+    pending_plan: d.pending_plan === "plus" || d.pending_plan === "premium" ? d.pending_plan : null,
+    pending_billing_interval:
+      d.pending_billing_interval === "monthly" || d.pending_billing_interval === "annual"
+        ? d.pending_billing_interval
+        : null,
+    pending_effective_at: typeof d.pending_effective_at === "string" ? d.pending_effective_at : null,
   };
 }
 
@@ -527,6 +592,9 @@ export interface AuthMeMembership {
   membership_plan: string;
   membership_expires_at: string | null;
   membership_billing_interval: string | null;
+  membership_pending_plan: string | null;
+  membership_pending_billing_interval: string | null;
+  membership_pending_effective_at: string | null;
   stripe_subscription_id: string | null;
 }
 
@@ -540,6 +608,9 @@ export async function fetchAuthMeMembership(): Promise<AuthMeMembership> {
     membership_plan: (json?.membership_plan as string) ?? "free",
     membership_expires_at: (json?.membership_expires_at as string | null) ?? null,
     membership_billing_interval: (json?.membership_billing_interval as string | null) ?? null,
+    membership_pending_plan: (json?.membership_pending_plan as string | null) ?? null,
+    membership_pending_billing_interval: (json?.membership_pending_billing_interval as string | null) ?? null,
+    membership_pending_effective_at: (json?.membership_pending_effective_at as string | null) ?? null,
     stripe_subscription_id: (json?.stripe_subscription_id as string | null) ?? null,
   };
 }

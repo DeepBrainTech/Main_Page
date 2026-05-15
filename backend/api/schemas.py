@@ -55,6 +55,9 @@ class UserResponse(UserBase):
     membership_plan: str = "free"
     membership_expires_at: Optional[datetime] = None
     membership_billing_interval: Optional[str] = None
+    membership_pending_plan: Optional[str] = None
+    membership_pending_billing_interval: Optional[str] = None
+    membership_pending_effective_at: Optional[datetime] = None
     stripe_customer_id: Optional[str] = None
     stripe_subscription_id: Optional[str] = None
 
@@ -77,9 +80,10 @@ class BillingPortalBody(BaseModel):
 
 
 class BillingChangeSubscriptionBody(BaseModel):
-    """Switch paid tier or billing period on the existing Stripe subscription (prorated)."""
+    """Switch paid tier or billing period on the existing Stripe subscription."""
     plan: Literal["plus", "premium"]
     billing_interval: Literal["monthly", "annual"] = "monthly"
+    locale: str = Field(default="en", min_length=2, max_length=5)
 
 
 class CompleteProfileBody(BaseModel):
