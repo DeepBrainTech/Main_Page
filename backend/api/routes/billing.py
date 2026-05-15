@@ -488,7 +488,12 @@ async def change_subscription(
     if sub.status not in ("active", "trialing", "past_due"):
         raise HTTPException(status_code=400, detail="subscription_not_active")
     if bool(getattr(sub, "cancel_at_period_end", False)):
-        raise HTTPException(status_code=400, detail="plan_switch_need_resume")
+        try:
+            sub = stripe.Subscription.modify(sub.id, cancel_at_period_end=False)
+        except stripe.error.StripeError as e:
+            logger.warning("subscription resume before change failed: %s", e)
+            raise HTTPException(status_code=400, detail="stripe_change_failed")
+        sync_user_from_stripe_subscription(db, current_user, sub)
     _sync_pending_from_subscription_schedule(db, current_user, sub)
 
     resolved = _resolve_plan_from_subscription(sub)
