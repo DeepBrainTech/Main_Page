@@ -174,7 +174,8 @@ export default function MembershipPage() {
         setSuccessMessage(result.action === "scheduled" ? "planChangeScheduled" : "planChangeUpdated");
       } catch (e) {
         const detail = e instanceof Error ? e.message : "request_failed";
-        setLoadError(membershipErrorKeyFromDetail(detail) as MembershipErrorKey);
+        const key = membershipErrorKeyFromDetail(detail);
+        setLoadError((key === "generic" ? "stripeChangeFailed" : key) as MembershipErrorKey);
       } finally {
         setRedirecting(false);
       }

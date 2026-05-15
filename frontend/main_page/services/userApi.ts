@@ -451,6 +451,7 @@ export function membershipErrorKeyFromDetail(detail: string): string {
     case "subscription_price_unknown":
     case "subscription_item_missing":
     case "subscription_period_missing":
+    case "Internal Server Error":
       return "stripeChangeFailed";
     case "stripe_customer_missing":
       return "portalFailed";

@@ -180,6 +180,90 @@ def _release_existing_schedule(user: User) -> None:
     user.membership_pending_effective_at = None
 
 
+def _clear_pending_membership(user: User) -> None:
+    user.membership_pending_plan = None
+    user.membership_pending_billing_interval = None
+    user.membership_pending_effective_at = None
+    user.stripe_subscription_schedule_id = None
+
+
+def _stripe_obj_get(obj, key: str, default=None):
+    if obj is None:
+        return default
+    if isinstance(obj, dict):
+        return obj.get(key, default)
+    return getattr(obj, key, default)
+
+
+def _phase_price_id(phase) -> str | None:
+    raw_items = _stripe_obj_get(phase, "items") or []
+    items = getattr(raw_items, "data", raw_items)
+    try:
+        first = items[0]
+    except (IndexError, TypeError):
+        return None
+    price = _stripe_obj_get(first, "price")
+    if isinstance(price, str):
+        return price
+    return _stripe_obj_get(price, "id")
+
+
+def _sync_pending_from_subscription_schedule(db: Session, user: User, sub: stripe.Subscription) -> None:
+    schedule_ref = getattr(sub, "schedule", None)
+    schedule_id = schedule_ref if isinstance(schedule_ref, str) else getattr(schedule_ref, "id", None)
+    if not schedule_id:
+        if getattr(user, "membership_pending_plan", None) or getattr(user, "stripe_subscription_schedule_id", None):
+            _clear_pending_membership(user)
+            db.add(user)
+            db.commit()
+        return
+
+    try:
+        schedule = stripe.SubscriptionSchedule.retrieve(schedule_id)
+    except stripe.error.InvalidRequestError as e:
+        logger.warning("subscription schedule retrieve failed: %s", e)
+        _clear_pending_membership(user)
+        db.add(user)
+        db.commit()
+        return
+
+    status = _stripe_obj_get(schedule, "status")
+    if status in ("released", "canceled", "completed"):
+        _clear_pending_membership(user)
+        db.add(user)
+        db.commit()
+        return
+
+    current_end = int(getattr(sub, "current_period_end", 0) or 0)
+    raw_phases = _stripe_obj_get(schedule, "phases") or []
+    phases = list(getattr(raw_phases, "data", raw_phases))
+    target_phase = None
+    for phase in phases:
+        phase_start = int(_stripe_obj_get(phase, "start_date", 0) or 0)
+        if current_end and phase_start >= current_end:
+            target_phase = phase
+            break
+    if not target_phase and len(phases) > 1:
+        target_phase = phases[-1]
+
+    target_price_id = _phase_price_id(target_phase)
+    resolved = price_id_index().get(target_price_id or "")
+    if not target_phase or not resolved:
+        _clear_pending_membership(user)
+        db.add(user)
+        db.commit()
+        return
+
+    plan, interval = resolved
+    effective_at = datetime.utcfromtimestamp(int(_stripe_obj_get(target_phase, "start_date")))
+    user.membership_pending_plan = plan
+    user.membership_pending_billing_interval = interval
+    user.membership_pending_effective_at = effective_at
+    user.stripe_subscription_schedule_id = schedule_id
+    db.add(user)
+    db.commit()
+
+
 def _schedule_change_at_period_end(
     db: Session,
     user: User,
@@ -194,31 +278,51 @@ def _schedule_change_at_period_end(
     if not sub.current_period_end:
         raise HTTPException(status_code=400, detail="subscription_period_missing")
 
-    _release_existing_schedule(user)
-    db.add(user)
-    db.commit()
+    try:
+        _release_existing_schedule(user)
+        db.add(user)
+        db.commit()
 
-    schedule = stripe.SubscriptionSchedule.create(from_subscription=sub.id)
-    current_start = int(getattr(sub, "current_period_start", 0) or datetime.utcnow().timestamp())
-    current_end = int(sub.current_period_end)
-    current_price_id = item.price.id
-    quantity = getattr(item, "quantity", None) or 1
+        sub = stripe.Subscription.retrieve(sub.id)
+        item = _subscription_item(sub)
+        if not item:
+            raise HTTPException(status_code=400, detail="subscription_item_missing")
+        schedule = stripe.SubscriptionSchedule.create(from_subscription=sub.id)
+        current_phase = None
+        phases = getattr(schedule, "phases", None)
+        if phases:
+            try:
+                current_phase = phases[0]
+            except (IndexError, TypeError):
+                current_phase = None
 
-    updated_schedule = stripe.SubscriptionSchedule.modify(
-        schedule.id,
-        end_behavior="release",
-        phases=[
-            {
-                "start_date": current_start,
-                "end_date": current_end,
-                "items": [{"price": current_price_id, "quantity": quantity}],
-            },
-            {
-                "start_date": current_end,
-                "items": [{"price": target_price_id, "quantity": quantity}],
-            },
-        ],
-    )
+        current_start = int(
+            getattr(current_phase, "start_date", None)
+            or getattr(sub, "current_period_start", 0)
+            or datetime.utcnow().timestamp()
+        )
+        current_end = int(getattr(current_phase, "end_date", None) or sub.current_period_end)
+        current_price_id = item.price.id
+        quantity = getattr(item, "quantity", None) or 1
+
+        updated_schedule = stripe.SubscriptionSchedule.modify(
+            schedule.id,
+            end_behavior="release",
+            phases=[
+                {
+                    "start_date": current_start,
+                    "end_date": current_end,
+                    "items": [{"price": current_price_id, "quantity": quantity}],
+                },
+                {
+                    "start_date": current_end,
+                    "items": [{"price": target_price_id, "quantity": quantity}],
+                },
+            ],
+        )
+    except stripe.error.StripeError as e:
+        logger.warning("schedule subscription change failed for user %s: %s", user.id, e)
+        raise HTTPException(status_code=400, detail="stripe_change_failed")
 
     effective_at = datetime.utcfromtimestamp(current_end)
     user.membership_pending_plan = target_plan
@@ -254,7 +358,10 @@ def _resolve_user_for_subscription(db: Session, sub: stripe.Subscription) -> Use
 
 
 @router.get("/status", response_model=APIResponse)
-async def billing_status(current_user: User = Depends(get_current_active_user)):
+async def billing_status(
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+):
     checkout = is_stripe_billing_configured()
     portal = bool(checkout and getattr(current_user, "stripe_customer_id", None))
     has_sub = bool(getattr(current_user, "stripe_subscription_id", None))
@@ -265,6 +372,8 @@ async def billing_status(current_user: User = Depends(get_current_active_user)):
             sub = stripe.Subscription.retrieve(current_user.stripe_subscription_id)
             if sub.status in ("active", "trialing", "past_due"):
                 cancel_at_period_end = bool(getattr(sub, "cancel_at_period_end", False))
+                sync_user_from_stripe_subscription(db, current_user, sub)
+                _sync_pending_from_subscription_schedule(db, current_user, sub)
         except stripe.error.StripeError as e:
             logger.warning("billing status subscription retrieve failed: %s", e)
             cancel_at_period_end = None
@@ -380,9 +489,7 @@ async def change_subscription(
         raise HTTPException(status_code=400, detail="subscription_not_active")
     if bool(getattr(sub, "cancel_at_period_end", False)):
         raise HTTPException(status_code=400, detail="plan_switch_need_resume")
-    schedule_id = getattr(sub, "schedule", None)
-    if isinstance(schedule_id, str):
-        current_user.stripe_subscription_schedule_id = schedule_id
+    _sync_pending_from_subscription_schedule(db, current_user, sub)
 
     resolved = _resolve_plan_from_subscription(sub)
     if not resolved:
@@ -564,6 +671,28 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                 db.commit()
             else:
                 sync_user_from_stripe_subscription(db, user, full_sub)
+                _sync_pending_from_subscription_schedule(db, user, full_sub)
+
+        elif etype.startswith("subscription_schedule."):
+            schedule_id = obj.get("id")
+            sub_id = obj.get("subscription")
+            full_sub = stripe.Subscription.retrieve(sub_id) if sub_id else None
+            user = _resolve_user_for_subscription(db, full_sub) if full_sub else None
+            if not user and schedule_id:
+                user = db.query(User).filter(User.stripe_subscription_schedule_id == schedule_id).first()
+            if not user:
+                logger.warning("subscription schedule %s: user not resolved", schedule_id)
+                return APIResponse(success=True, message="ok", data={"received": True})
+
+            status = obj.get("status")
+            if full_sub:
+                sync_user_from_stripe_subscription(db, user, full_sub)
+            if status in ("released", "canceled", "completed"):
+                _clear_pending_membership(user)
+                db.add(user)
+                db.commit()
+            elif full_sub:
+                _sync_pending_from_subscription_schedule(db, user, full_sub)
 
     except Exception as e:
         logger.exception("stripe webhook error: %s", e)

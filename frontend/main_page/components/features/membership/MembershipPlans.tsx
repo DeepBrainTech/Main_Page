@@ -149,19 +149,6 @@ export default function MembershipPlans({
 
       {notice ? <div className="mb-5">{notice}</div> : null}
 
-      {hasStripeSubscription ? (
-        <div className="mb-6 flex justify-center px-2">
-          <button
-            type="button"
-            disabled={!portalEnabled || redirecting}
-            onClick={() => void onManageBilling()}
-            className="h-12 min-w-[min(100%,20rem)] rounded-full bg-gradient-to-r from-sky-700 to-blue-600 px-8 font-app-body text-base font-semibold text-white shadow-md transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-55"
-          >
-            {redirecting ? tCommon("loading") : t("manageBillingPrimary")}
-          </button>
-        </div>
-      ) : null}
-
       <div className="mb-8 flex flex-col items-center gap-1.5 px-2">
         <div
           className="flex h-12 w-full max-w-[489px] items-center gap-0 rounded-2xl border-[0.82px] border-slate-300/40 bg-white/55 p-1 shadow-sm backdrop-blur-sm"
