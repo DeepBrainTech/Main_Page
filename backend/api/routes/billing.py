@@ -22,7 +22,13 @@ from config.stripe_billing import (
 )
 from database import get_db
 from models import User
-from schemas import APIResponse, BillingChangeSubscriptionBody, BillingCheckoutBody, BillingPortalBody
+from schemas import (
+    APIResponse,
+    BillingChangeSubscriptionBody,
+    BillingCheckoutBody,
+    BillingPortalBody,
+    BillingUpdatePaymentMethodBody,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -220,6 +226,42 @@ def _invoice_preview_lines(invoice) -> list[dict]:
             }
         )
     return lines
+
+
+def _payment_method_summary(payment_method) -> str | None:
+    if not payment_method:
+        return None
+
+    pm_type = _stripe_obj_get(payment_method, "type")
+    if pm_type == "card":
+        card = _stripe_obj_get(payment_method, "card") or {}
+        brand = str(_stripe_obj_get(card, "brand", "card") or "card").title()
+        last4 = _stripe_obj_get(card, "last4")
+        exp_month = _stripe_obj_get(card, "exp_month")
+        exp_year = _stripe_obj_get(card, "exp_year")
+        label = f"{brand} ending in {last4}" if last4 else brand
+        if exp_month and exp_year:
+            return f"{label}, expires {int(exp_month):02d}/{exp_year}"
+        return label
+
+    if pm_type:
+        return str(pm_type).replace("_", " ").title()
+    return None
+
+
+def _subscription_payment_method_display(sub: stripe.Subscription) -> str | None:
+    pm = _stripe_obj_get(sub, "default_payment_method")
+    if not pm:
+        customer = _stripe_obj_get(sub, "customer")
+        invoice_settings = _stripe_obj_get(customer, "invoice_settings")
+        pm = _stripe_obj_get(invoice_settings, "default_payment_method")
+    if isinstance(pm, str):
+        try:
+            pm = stripe.PaymentMethod.retrieve(pm)
+        except stripe.error.StripeError as e:
+            logger.warning("payment method retrieve failed: %s", e)
+            return None
+    return _payment_method_summary(pm)
 
 
 def _create_subscription_change_preview(
@@ -531,7 +573,10 @@ async def preview_subscription_change(
         raise HTTPException(status_code=503, detail="stripe_price_not_configured")
 
     try:
-        sub = stripe.Subscription.retrieve(current_user.stripe_subscription_id)
+        sub = stripe.Subscription.retrieve(
+            current_user.stripe_subscription_id,
+            expand=["default_payment_method", "customer.invoice_settings.default_payment_method"],
+        )
     except stripe.error.InvalidRequestError:
         current_user.stripe_subscription_id = None
         db.add(current_user)
@@ -563,6 +608,7 @@ async def preview_subscription_change(
                 "amount_due": 0,
                 "currency": "usd",
                 "amount_due_display": _format_amount(0, "usd"),
+                "payment_method_display": _subscription_payment_method_display(sub),
                 "proration_date": int(datetime.utcnow().timestamp()),
                 "lines": [],
             },
@@ -586,6 +632,7 @@ async def preview_subscription_change(
             "amount_due": amount_due,
             "currency": currency,
             "amount_due_display": _format_amount(amount_due, currency),
+            "payment_method_display": _subscription_payment_method_display(sub),
             "proration_date": proration_date,
             "lines": _invoice_preview_lines(invoice),
         },
@@ -711,6 +758,90 @@ async def change_subscription(
             "plan": body.plan,
             "billing_interval": body.billing_interval,
         },
+    )
+
+
+@router.post("/payment-method-setup", response_model=APIResponse)
+async def create_payment_method_setup(
+    current_user: User = Depends(get_current_active_user),
+):
+    """Create a SetupIntent so Stripe.js can collect a new card without card data touching our server."""
+    if not is_stripe_billing_configured():
+        raise HTTPException(status_code=503, detail="stripe_not_configured")
+    if not getattr(current_user, "stripe_customer_id", None):
+        raise HTTPException(status_code=400, detail="stripe_customer_missing")
+    if not getattr(current_user, "stripe_subscription_id", None):
+        raise HTTPException(status_code=400, detail="subscription_missing")
+    _stripe_configure()
+
+    try:
+        sub = stripe.Subscription.retrieve(current_user.stripe_subscription_id)
+    except stripe.error.InvalidRequestError:
+        raise HTTPException(status_code=400, detail="subscription_missing")
+    if sub.status not in ("active", "trialing", "past_due"):
+        raise HTTPException(status_code=400, detail="subscription_not_active")
+
+    try:
+        intent = stripe.SetupIntent.create(
+            customer=current_user.stripe_customer_id,
+            usage="off_session",
+            payment_method_types=["card"],
+            metadata={
+                "user_id": str(current_user.id),
+                "subscription_id": current_user.stripe_subscription_id,
+            },
+        )
+    except stripe.error.StripeError as e:
+        logger.warning("payment method setup intent failed: %s", e)
+        raise HTTPException(status_code=400, detail="payment_method_setup_failed")
+
+    return APIResponse(
+        success=True,
+        message="ok",
+        data={"client_secret": intent.client_secret},
+    )
+
+
+@router.post("/payment-method", response_model=APIResponse)
+async def update_subscription_payment_method(
+    body: BillingUpdatePaymentMethodBody,
+    current_user: User = Depends(get_current_active_user),
+):
+    """Use a Stripe-created PaymentMethod as the default for future invoices on this subscription."""
+    if not is_stripe_billing_configured():
+        raise HTTPException(status_code=503, detail="stripe_not_configured")
+    if not getattr(current_user, "stripe_customer_id", None):
+        raise HTTPException(status_code=400, detail="stripe_customer_missing")
+    if not getattr(current_user, "stripe_subscription_id", None):
+        raise HTTPException(status_code=400, detail="subscription_missing")
+    _stripe_configure()
+
+    try:
+        payment_method = stripe.PaymentMethod.retrieve(body.payment_method_id)
+        pm_customer = _stripe_obj_get(payment_method, "customer")
+        pm_customer_id = pm_customer if isinstance(pm_customer, str) else _stripe_obj_get(pm_customer, "id")
+        if pm_customer_id != current_user.stripe_customer_id:
+            raise HTTPException(status_code=400, detail="payment_method_customer_mismatch")
+
+        stripe.Customer.modify(
+            current_user.stripe_customer_id,
+            invoice_settings={"default_payment_method": body.payment_method_id},
+        )
+        sub = stripe.Subscription.modify(
+            current_user.stripe_subscription_id,
+            default_payment_method=body.payment_method_id,
+            expand=["default_payment_method", "customer.invoice_settings.default_payment_method"],
+        )
+    except HTTPException:
+        raise
+    except stripe.error.StripeError as e:
+        logger.warning("subscription payment method update failed: %s", e)
+        raise HTTPException(status_code=400, detail="payment_method_update_failed")
+
+    return APIResponse(
+        success=True,
+        message="ok",
+        data={"payment_method_display": _subscription_payment_method_display(sub)},
     )
 
 

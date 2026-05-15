@@ -446,6 +446,9 @@ export function membershipErrorKeyFromDetail(detail: string): string {
     case "plan_switch_need_resume":
       return "planSwitchNeedResume";
     case "stripe_change_failed":
+    case "payment_method_setup_failed":
+    case "payment_method_update_failed":
+    case "payment_method_customer_mismatch":
     case "subscription_missing":
     case "subscription_not_active":
     case "subscription_price_unknown":
@@ -549,6 +552,7 @@ export interface StripeSubscriptionChangePreview {
   amount_due: number;
   currency: string;
   amount_due_display: string;
+  payment_method_display?: string | null;
   proration_date: number;
   effective_at?: string | null;
   lines: Array<{
@@ -582,9 +586,41 @@ export async function previewStripeSubscriptionChange(params: {
     amount_due: typeof data.amount_due === "number" ? data.amount_due : 0,
     currency: data.currency ?? "usd",
     amount_due_display: data.amount_due_display ?? "USD 0.00",
+    payment_method_display: data.payment_method_display ?? null,
     proration_date: typeof data.proration_date === "number" ? data.proration_date : Math.floor(Date.now() / 1000),
     effective_at: data.effective_at ?? null,
     lines: Array.isArray(data.lines) ? data.lines : [],
+  };
+}
+
+export async function createStripePaymentMethodSetup(): Promise<string> {
+  const res = await fetch(getApiUrl("/api/billing/payment-method-setup"), {
+    method: "POST",
+    headers: getAuthHeaders(),
+  });
+  if (!res.ok) {
+    throw new Error(await readApiErrorDetail(res));
+  }
+  const json = (await res.json()) as { data?: { client_secret?: string } };
+  const clientSecret = json?.data?.client_secret;
+  if (!clientSecret) throw new Error("payment_method_setup_failed");
+  return clientSecret;
+}
+
+export async function updateStripeSubscriptionPaymentMethod(paymentMethodId: string): Promise<{
+  payment_method_display: string | null;
+}> {
+  const res = await fetch(getApiUrl("/api/billing/payment-method"), {
+    method: "POST",
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ payment_method_id: paymentMethodId }),
+  });
+  if (!res.ok) {
+    throw new Error(await readApiErrorDetail(res));
+  }
+  const json = (await res.json()) as { data?: { payment_method_display?: string | null } };
+  return {
+    payment_method_display: json?.data?.payment_method_display ?? null,
   };
 }
 

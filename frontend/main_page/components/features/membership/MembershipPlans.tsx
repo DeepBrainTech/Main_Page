@@ -184,9 +184,6 @@ export default function MembershipPlans({
             {t("billingAnnually")}
           </button>
         </div>
-        {hasStripeSubscription ? (
-          <p className="max-w-md text-center font-app-body text-xs text-sky-600">{t("billingTabChangeHint")}</p>
-        ) : null}
       </div>
 
       <div className="grid gap-4 md:grid-cols-3 lg:gap-6">

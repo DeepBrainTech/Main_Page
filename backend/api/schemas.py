@@ -87,6 +87,11 @@ class BillingChangeSubscriptionBody(BaseModel):
     proration_date: Optional[int] = None
 
 
+class BillingUpdatePaymentMethodBody(BaseModel):
+    """Set a Stripe PaymentMethod from a confirmed SetupIntent as the subscription default."""
+    payment_method_id: str = Field(..., min_length=3, max_length=255)
+
+
 class CompleteProfileBody(BaseModel):
     """Google 用户补全资料：用户名、出生日期"""
     username: Optional[str] = Field(None, min_length=3, max_length=50)

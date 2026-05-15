@@ -1,6 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { CardElement, Elements, useElements, useStripe } from "@stripe/react-stripe-js";
+import { loadStripe, type Stripe } from "@stripe/stripe-js";
 import { useLocale, useTranslations } from "next-intl";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import MembershipPlans, {
@@ -11,11 +13,13 @@ import {
   changeStripeSubscription,
   createStripeBillingPortalSession,
   createStripeCheckoutSession,
+  createStripePaymentMethodSetup,
   fetchAuthMeMembership,
   fetchBillingStatus,
   membershipErrorKeyFromDetail,
   previewStripeSubscriptionChange,
   type StripeSubscriptionChangePreview,
+  updateStripeSubscriptionPaymentMethod,
 } from "@/services/userApi";
 
 type MembershipErrorKey =
@@ -31,6 +35,99 @@ type MembershipErrorKey =
   | "subscriptionNoChange"
   | "planSwitchNeedResume"
   | "generic";
+
+const stripePublishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
+const stripePromise: Promise<Stripe | null> | null = stripePublishableKey ? loadStripe(stripePublishableKey) : null;
+
+interface PaymentMethodEditorProps {
+  clientSecret: string;
+  disabled?: boolean;
+  onCancel: () => void;
+  onSaved: (paymentMethodId: string) => void | Promise<void>;
+}
+
+function PaymentMethodEditor({ clientSecret, disabled = false, onCancel, onSaved }: PaymentMethodEditorProps) {
+  const stripe = useStripe();
+  const elements = useElements();
+  const t = useTranslations("membership");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSave = async () => {
+    if (!stripe || !elements || saving || disabled) return;
+    const card = elements.getElement(CardElement);
+    if (!card) {
+      setError(t("planChangePaymentEditFailed"));
+      return;
+    }
+
+    setSaving(true);
+    setError(null);
+    const result = await stripe.confirmCardSetup(clientSecret, {
+      payment_method: { card },
+    });
+    if (result.error) {
+      setError(result.error.message || t("planChangePaymentEditFailed"));
+      setSaving(false);
+      return;
+    }
+
+    const paymentMethod = result.setupIntent.payment_method;
+    const paymentMethodId = typeof paymentMethod === "string" ? paymentMethod : paymentMethod?.id;
+    if (!paymentMethodId) {
+      setError(t("planChangePaymentEditFailed"));
+      setSaving(false);
+      return;
+    }
+
+    try {
+      await onSaved(paymentMethodId);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="mt-4 rounded-lg border border-sky-200 bg-sky-50/60 p-3 text-xs">
+      <div className="rounded-md border border-slate-200 bg-white p-3">
+        <CardElement
+          options={{
+            hidePostalCode: true,
+            style: {
+              base: {
+                color: "#0f172a",
+                fontFamily: "Arial, sans-serif",
+                fontSize: "14px",
+                "::placeholder": { color: "#94a3b8" },
+              },
+              invalid: { color: "#dc2626" },
+            },
+          }}
+        />
+      </div>
+      <p className="mt-2 leading-5 text-slate-500">{t("planChangePaymentSecurityNote")}</p>
+      {error ? <p className="mt-2 leading-5 text-red-600">{error}</p> : null}
+      <div className="mt-3 flex gap-2">
+        <button
+          type="button"
+          className="h-9 flex-1 rounded-full border border-slate-300 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+          onClick={onCancel}
+          disabled={saving || disabled}
+        >
+          {t("changeCancel")}
+        </button>
+        <button
+          type="button"
+          className="h-9 flex-1 rounded-full bg-sky-700 text-xs font-semibold text-white hover:bg-sky-800 disabled:opacity-60"
+          onClick={() => void handleSave()}
+          disabled={!stripe || saving || disabled}
+        >
+          {saving ? t("planChangeSavingPaymentMethod") : t("planChangeSavePaymentMethod")}
+        </button>
+      </div>
+    </div>
+  );
+}
 
 export default function MembershipPage() {
   const locale = useLocale();
@@ -57,6 +154,9 @@ export default function MembershipPage() {
   const [redirecting, setRedirecting] = useState(false);
   const [changePreview, setChangePreview] = useState<StripeSubscriptionChangePreview | null>(null);
   const [confirmingChange, setConfirmingChange] = useState(false);
+  const [paymentSetupClientSecret, setPaymentSetupClientSecret] = useState<string | null>(null);
+  const [updatingPaymentMethod, setUpdatingPaymentMethod] = useState(false);
+  const [paymentMethodError, setPaymentMethodError] = useState<string | null>(null);
 
   const loadAll = useCallback(async () => {
     try {
@@ -170,6 +270,8 @@ export default function MembershipPage() {
           locale,
         });
         setChangePreview(preview);
+        setPaymentSetupClientSecret(null);
+        setPaymentMethodError(null);
       } catch (e) {
         const detail = e instanceof Error ? e.message : "request_failed";
         const key = membershipErrorKeyFromDetail(detail);
@@ -213,6 +315,49 @@ export default function MembershipPage() {
       }
   };
 
+  const startEditingPaymentMethod = async () => {
+    if (!changePreview) return;
+    if (!stripePromise) {
+      setPaymentMethodError(t("planChangeStripeJsMissing"));
+      return;
+    }
+    setPaymentMethodError(null);
+    setUpdatingPaymentMethod(true);
+    try {
+      const clientSecret = await createStripePaymentMethodSetup();
+      setPaymentSetupClientSecret(clientSecret);
+    } catch (e) {
+      const detail = e instanceof Error ? e.message : "request_failed";
+      const key = membershipErrorKeyFromDetail(detail);
+      setPaymentMethodError(t(`errors.${key === "generic" ? "stripeChangeFailed" : key}`));
+    } finally {
+      setUpdatingPaymentMethod(false);
+    }
+  };
+
+  const savePaymentMethod = async (paymentMethodId: string) => {
+    if (!changePreview) return;
+    setPaymentMethodError(null);
+    setUpdatingPaymentMethod(true);
+    try {
+      await updateStripeSubscriptionPaymentMethod(paymentMethodId);
+      const preview = await previewStripeSubscriptionChange({
+        plan: changePreview.plan,
+        billing_interval: changePreview.billing_interval,
+        locale,
+      });
+      setChangePreview(preview);
+      setPaymentSetupClientSecret(null);
+    } catch (e) {
+      const detail = e instanceof Error ? e.message : "request_failed";
+      const key = membershipErrorKeyFromDetail(detail);
+      setPaymentMethodError(t(`errors.${key === "generic" ? "stripeChangeFailed" : key}`));
+      throw e;
+    } finally {
+      setUpdatingPaymentMethod(false);
+    }
+  };
+
   const hasNotice = Boolean(successMessage || loadError || (hasStripeSubscription && !portalEnabled));
   const notice = hasNotice ? (
     <div className="space-y-2">
@@ -233,6 +378,10 @@ export default function MembershipPage() {
       ) : null}
     </div>
   ) : null;
+  const changeConfirmLabel =
+    changePreview?.action === "immediate" && changePreview.amount_due > 0
+      ? t("planChangePayNow")
+      : t("changeConfirmButton");
 
   return (
     <div className="space-y-4">
@@ -278,6 +427,44 @@ export default function MembershipPage() {
               )}
             </div>
 
+            {changePreview.action === "immediate" && changePreview.amount_due > 0 ? (
+              <div className="mt-4 rounded-lg border border-slate-200 px-3 py-2 text-xs">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="text-slate-500">{t("planChangePaymentMethod")}</div>
+                    <div className="mt-1 truncate font-semibold text-slate-900">
+                      {changePreview.payment_method_display || t("planChangePaymentMethodUnknown")}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    className="shrink-0 rounded-full border border-slate-300 px-3 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+                    onClick={() => void startEditingPaymentMethod()}
+                    disabled={confirmingChange || updatingPaymentMethod}
+                  >
+                    {updatingPaymentMethod && !paymentSetupClientSecret
+                      ? t("planChangeLoadingPaymentMethod")
+                      : t("planChangeEditPaymentMethod")}
+                  </button>
+                </div>
+                <p className="mt-2 leading-5 text-slate-500">{t("planChangePaymentSecurityNote")}</p>
+                {paymentMethodError ? <p className="mt-2 leading-5 text-red-600">{paymentMethodError}</p> : null}
+                {paymentSetupClientSecret && stripePromise ? (
+                  <Elements stripe={stripePromise}>
+                    <PaymentMethodEditor
+                      clientSecret={paymentSetupClientSecret}
+                      disabled={confirmingChange || updatingPaymentMethod}
+                      onCancel={() => {
+                        setPaymentSetupClientSecret(null);
+                        setPaymentMethodError(null);
+                      }}
+                      onSaved={savePaymentMethod}
+                    />
+                  </Elements>
+                ) : null}
+              </div>
+            ) : null}
+
             {changePreview.lines.length > 0 ? (
               <div className="mt-4 max-h-40 overflow-auto rounded-lg border border-slate-200">
                 {changePreview.lines.map((line, index) => (
@@ -302,9 +489,9 @@ export default function MembershipPage() {
                 type="button"
                 className="h-11 flex-1 rounded-full bg-sky-700 text-sm font-semibold text-white hover:bg-sky-800 disabled:opacity-60"
                 onClick={() => void confirmPlanChange()}
-                disabled={confirmingChange}
+                disabled={confirmingChange || Boolean(paymentSetupClientSecret)}
               >
-                {confirmingChange ? t("changeConfirming") : t("changeConfirmButton")}
+                {confirmingChange ? t("changeConfirming") : changeConfirmLabel}
               </button>
             </div>
           </div>
