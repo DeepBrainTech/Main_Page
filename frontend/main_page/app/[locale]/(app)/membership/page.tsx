@@ -185,23 +185,29 @@ export default function MembershipPage() {
     }
   };
 
-  return (
-    <div className="space-y-4">
+  const hasNotice = Boolean(successMessage || loadError || (hasStripeSubscription && !portalEnabled));
+  const notice = hasNotice ? (
+    <div className="space-y-2">
       {successMessage ? (
-        <p className="text-center text-sm font-medium text-emerald-700" role="status">
+        <p className="mx-auto max-w-2xl rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-center text-sm font-medium text-emerald-700" role="status">
           {t(successMessage)}
         </p>
       ) : null}
       {loadError ? (
-        <p className="text-center text-sm text-red-600" role="alert">
+        <p className="mx-auto max-w-2xl rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-center text-sm text-red-600" role="alert">
           {t(`errors.${loadError}`)}
         </p>
       ) : null}
       {hasStripeSubscription && !portalEnabled ? (
-        <p className="text-center text-sm text-amber-700" role="status">
+        <p className="mx-auto max-w-2xl rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-center text-sm text-amber-700" role="status">
           {t("portalNotAvailable")}
         </p>
       ) : null}
+    </div>
+  ) : null;
+
+  return (
+    <div className="space-y-4">
       <MembershipPlans
         currentPlan={currentPlan}
         currentBillingInterval={currentBillingInterval}
@@ -219,6 +225,7 @@ export default function MembershipPage() {
         pendingPlan={pendingPlan}
         pendingBillingInterval={pendingBillingInterval}
         pendingEffectiveAtIso={pendingEffectiveAtIso}
+        notice={notice}
       />
     </div>
   );

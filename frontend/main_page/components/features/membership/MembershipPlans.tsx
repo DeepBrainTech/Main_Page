@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import type { ReactNode } from "react";
 import { useLocale, useTranslations } from "next-intl";
 
 export type MembershipPlan = "free" | "plus" | "premium";
@@ -23,6 +24,7 @@ interface MembershipPlansProps {
   pendingPlan?: "plus" | "premium" | null;
   pendingBillingInterval?: MembershipBillingInterval | null;
   pendingEffectiveAtIso?: string | null;
+  notice?: ReactNode;
 }
 
 type PlanFeature = {
@@ -126,6 +128,7 @@ export default function MembershipPlans({
   pendingPlan = null,
   pendingBillingInterval = null,
   pendingEffectiveAtIso = null,
+  notice = null,
 }: MembershipPlansProps) {
   const locale = useLocale();
   const t = useTranslations("membership");
@@ -142,10 +145,9 @@ export default function MembershipPlans({
           {t("title")}
         </h1>
         <p className="mt-2 font-app-body text-sm font-normal leading-6 text-sky-700 sm:text-lg">{t("subtitle")}</p>
-        {hasStripeSubscription ? (
-          <p className="mt-3 font-app-body text-sm text-sky-600">{t("manageBillingHint")}</p>
-        ) : null}
       </div>
+
+      {notice ? <div className="mb-5">{notice}</div> : null}
 
       {hasStripeSubscription ? (
         <div className="mb-6 flex justify-center px-2">
@@ -218,17 +220,17 @@ export default function MembershipPlans({
 
           if (hasStripeSubscription) {
             if (plan.key === "free") {
-              buttonLabel = t("cancelInPortal");
-              buttonDisabled = buttonDisabled || !portalEnabled;
-              handleClick = () => void onManageBilling();
+              buttonLabel = t("freePlan");
+              buttonDisabled = true;
             } else if (isCurrent) {
               if (isCanceledAtPeriodEnd) {
                 buttonLabel = t("resumeInPortal");
                 buttonDisabled = buttonDisabled || !portalEnabled;
                 handleClick = () => void onManageBilling();
               } else {
-                buttonLabel = t("currentPlan");
-                buttonDisabled = true;
+                buttonLabel = t("cancelInPortal");
+                buttonDisabled = buttonDisabled || !portalEnabled;
+                handleClick = () => void onManageBilling();
               }
             } else if (pendingMatches) {
               buttonLabel = t("scheduledButton", { date: pendingDateLabel });
