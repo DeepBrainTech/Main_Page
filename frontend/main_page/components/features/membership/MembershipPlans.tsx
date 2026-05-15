@@ -233,11 +233,14 @@ export default function MembershipPlans({
           const showStatusRow =
             isCurrent && (plan.key === "plus" || plan.key === "premium") && Boolean(periodDateLabel || isCanceledAtPeriodEnd);
 
-          let buttonLabel: string;
+          let buttonLabel: string | null;
           let buttonDisabled = redirecting;
           let handleClick: () => void = () => void onPlanAction(plan.key);
           const pendingMatches =
             pendingPlan === plan.key && pendingBillingInterval === billingInterval && Boolean(pendingDateLabel);
+          const isPaidPlan = plan.key === "plus" || plan.key === "premium";
+          const isAnnualSubscriptionOnMonthlyTab =
+            hasStripeSubscription && currentBillingInterval === "annual" && billingInterval === "monthly" && isPaidPlan;
 
           if (hasStripeSubscription) {
             if (plan.key === "free") {
@@ -253,18 +256,14 @@ export default function MembershipPlans({
                 buttonDisabled = buttonDisabled || !portalEnabled;
                 handleClick = () => setCancelDialogPlan(plan.key as "plus" | "premium");
               }
-            } else if (
-              (plan.key === "plus" || plan.key === "premium") &&
-              currentPlan === plan.key &&
-              currentBillingInterval !== billingInterval
-            ) {
-              buttonLabel = t("billingTabMatchSubscription");
-              buttonDisabled = true;
-            } else if (pendingMatches) {
-              buttonLabel = t("scheduledButton", { date: pendingDateLabel });
+            } else if (isAnnualSubscriptionOnMonthlyTab || pendingMatches) {
+              buttonLabel = null;
               buttonDisabled = true;
             } else {
-              buttonLabel = t("switchPlan", { plan: t(`plans.${plan.key}`) });
+              buttonLabel =
+                currentPlan === plan.key && currentBillingInterval === "monthly" && billingInterval === "annual"
+                  ? t("upgradeToAnnual")
+                  : t("switchPlan", { plan: t(`plans.${plan.key}`) });
               handleClick = () => void onPlanAction(plan.key);
             }
           } else if (plan.key === "free" || isFreePreview) {
@@ -367,20 +366,22 @@ export default function MembershipPlans({
                     {t("currentPlan")}
                   </div>
                 ) : null}
-                <button
-                  type="button"
-                  onClick={handleClick}
-                  disabled={buttonDisabled}
-                  className={`h-12 w-full rounded-full font-app-body text-base font-semibold leading-6 transition ${
-                    buttonDisabled
-                      ? plan.key === "free"
-                        ? "cursor-default bg-indigo-50 text-sky-700 opacity-95"
-                        : "cursor-default bg-white/20 text-white disabled:cursor-not-allowed disabled:opacity-55"
-                      : `${styles.button} hover:-translate-y-0.5 hover:shadow-xl`
-                  }`}
-                >
-                  {showLoadingOnButton ? tCommon("loading") : buttonLabel}
-                </button>
+                {buttonLabel ? (
+                  <button
+                    type="button"
+                    onClick={handleClick}
+                    disabled={buttonDisabled}
+                    className={`h-12 w-full rounded-full font-app-body text-base font-semibold leading-6 transition ${
+                      buttonDisabled
+                        ? plan.key === "free"
+                          ? "cursor-default bg-indigo-50 text-sky-700 opacity-95"
+                          : "cursor-default bg-white/20 text-white disabled:cursor-not-allowed disabled:opacity-55"
+                        : `${styles.button} hover:-translate-y-0.5 hover:shadow-xl`
+                    }`}
+                  >
+                    {showLoadingOnButton ? tCommon("loading") : buttonLabel}
+                  </button>
+                ) : null}
               </div>
             </article>
           );
