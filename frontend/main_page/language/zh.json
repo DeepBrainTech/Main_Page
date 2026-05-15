@@ -76,7 +76,6 @@
     "resumeSubscriptionHint": "恢复后，Stripe 会在每个计费周期结束时自动续订；届时将照常扣款，除非你之后再次取消。",
     "scheduledPlanChangeHint": "你已安排在本计费周期结束后切换套餐；可点击下方按钮取消该安排并继续当前套餐。",
     "downgradeToPlusBlockedTitle": "请先恢复订阅后再切换到 Plus",
-    "upgradeToAnnual": "升级年费",
     "upgradeToMonthly": "改为按月",
     "cancelDialog": {
       "title": "确定取消订阅？",
@@ -127,7 +126,8 @@
     "portalCancelHint": "点击下方按钮，在 Stripe 中恢复续订或取消预约。",
     "resumeInPortal": "恢复续订",
     "switchInPortal": "在 Stripe 中更换为 {plan}",
-    "switchPlan": "切换为 {plan}",
+    "switchPlan": "切换到 {plan}",
+    "switchPlanAnnual": "切换到年费 {plan}",
     "changeNow": "立即变更为 {plan}",
     "scheduleChange": "预约变更为 {plan}",
     "scheduledButton": "已预约 {date} 生效",
@@ -184,11 +184,6 @@
       "free": "Free",
       "plus": "Plus",
       "premium": "Premium"
-    },
-    "actions": {
-      "free": "切换到 Free",
-      "plus": "升级到 Plus",
-      "premium": "升级到 Premium"
     },
     "features": {
       "noDailyDiamonds": {

@@ -76,7 +76,6 @@
     "resumeSubscriptionHint": "If you resume, Stripe will keep renewing your plan each billing period. You will be charged again at renewal unless you cancel later.",
     "scheduledPlanChangeHint": "You have a plan change scheduled after this billing period. Use the button below to cancel that schedule and stay on your current plan.",
     "downgradeToPlusBlockedTitle": "Resume your subscription before switching to Plus",
-    "upgradeToAnnual": "Upgrade to annual billing",
     "upgradeToMonthly": "Switch to monthly billing",
     "cancelDialog": {
       "title": "Cancel Subscription?",
@@ -128,6 +127,7 @@
     "resumeInPortal": "Resume renewal",
     "switchInPortal": "Switch to {plan}",
     "switchPlan": "Switch to {plan}",
+    "switchPlanAnnual": "Switch to annual {plan}",
     "changeNow": "Change to {plan} now",
     "scheduleChange": "Schedule switch to {plan}",
     "scheduledButton": "Scheduled for {date}",
@@ -184,11 +184,6 @@
       "free": "Free",
       "plus": "Plus",
       "premium": "Premium"
-    },
-    "actions": {
-      "free": "Switch to Free",
-      "plus": "Upgrade to Plus",
-      "premium": "Upgrade to Premium"
     },
     "features": {
       "noDailyDiamonds": {

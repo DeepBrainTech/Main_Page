@@ -264,8 +264,8 @@ export default function MembershipPlans({
               buttonDisabled = true;
             } else {
               buttonLabel =
-                currentPlan === plan.key && currentBillingInterval === "monthly" && billingInterval === "annual"
-                  ? t("upgradeToAnnual")
+                billingInterval === "annual"
+                  ? t("switchPlanAnnual", { plan: t(`plans.${plan.key}`) })
                   : t("switchPlan", { plan: t(`plans.${plan.key}`) });
               handleClick = () => void onPlanAction(plan.key);
             }
@@ -273,7 +273,10 @@ export default function MembershipPlans({
             buttonLabel = t("freePlan");
             buttonDisabled = true;
           } else {
-            buttonLabel = t(`actions.${plan.key}`);
+            buttonLabel =
+              billingInterval === "annual"
+                ? t("switchPlanAnnual", { plan: t(`plans.${plan.key}`) })
+                : t("switchPlan", { plan: t(`plans.${plan.key}`) });
             buttonDisabled = buttonDisabled || !checkoutEnabled;
             handleClick = () => void onSubscribe(plan.key as "plus" | "premium");
           }
