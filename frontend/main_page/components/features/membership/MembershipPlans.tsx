@@ -256,7 +256,10 @@ export default function MembershipPlans({
                 buttonDisabled = buttonDisabled || !portalEnabled;
                 handleClick = () => setCancelDialogPlan(plan.key as "plus" | "premium");
               }
-            } else if (isAnnualSubscriptionOnMonthlyTab || pendingMatches) {
+            } else if (isAnnualSubscriptionOnMonthlyTab) {
+              buttonLabel = t("errors.alreadySubscribed");
+              buttonDisabled = true;
+            } else if (pendingMatches) {
               buttonLabel = null;
               buttonDisabled = true;
             } else {
