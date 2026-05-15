@@ -449,6 +449,8 @@ export function membershipErrorKeyFromDetail(detail: string): string {
       return "portalFailed";
     case "validation_error":
       return "saveFailed";
+    case "request_failed":
+      return "portalUnavailable";
     default:
       return "generic";
   }

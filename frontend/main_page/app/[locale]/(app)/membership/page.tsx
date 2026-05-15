@@ -19,6 +19,8 @@ type MembershipErrorKey =
   | "loadFailed"
   | "checkoutFailed"
   | "portalFailed"
+  | "portalUnavailable"
+  | "portalNotAvailable"
   | "stripeNotConfigured"
   | "alreadySubscribed"
   | "generic";
@@ -84,6 +86,10 @@ export default function MembershipPage() {
   }, [searchParams, loadAll, router, pathname]);
 
   const openBillingPortal = useCallback(async () => {
+    if (!portalEnabled) {
+      setLoadError("stripeNotConfigured");
+      return;
+    }
     setLoadError(null);
     setRedirecting(true);
     try {
@@ -91,33 +97,21 @@ export default function MembershipPage() {
       window.location.href = url;
     } catch (e) {
       const detail = e instanceof Error ? e.message : "request_failed";
+      if (process.env.NODE_ENV === "development") {
+        console.error("[billing portal]", detail);
+      }
       setLoadError(membershipErrorKeyFromDetail(detail) as MembershipErrorKey);
       setRedirecting(false);
     }
-  }, [locale]);
+  }, [locale, portalEnabled]);
 
-  const handlePlanAction = async (plan: MembershipPlan) => {
+  const handleSubscribe = async (plan: "plus" | "premium") => {
     setLoadError(null);
     setSuccessMessage(null);
-
-    if (hasStripeSubscription) {
-      if (!portalEnabled) {
-        setLoadError("stripeNotConfigured");
-        return;
-      }
-      await openBillingPortal();
-      return;
-    }
-
-    if (plan === "free") {
-      return;
-    }
-
     if (!checkoutEnabled) {
       setLoadError("stripeNotConfigured");
       return;
     }
-
     setRedirecting(true);
     try {
       const url = await createStripeCheckoutSession({
@@ -133,6 +127,16 @@ export default function MembershipPage() {
     }
   };
 
+  const handlePlanAction = async (plan: MembershipPlan) => {
+    if (hasStripeSubscription) {
+      await openBillingPortal();
+      return;
+    }
+    if (plan === "plus" || plan === "premium") {
+      await handleSubscribe(plan);
+    }
+  };
+
   return (
     <div className="space-y-4">
       {successMessage ? (
@@ -145,10 +149,17 @@ export default function MembershipPage() {
           {t(`errors.${loadError}`)}
         </p>
       ) : null}
+      {hasStripeSubscription && !portalEnabled ? (
+        <p className="text-center text-sm text-amber-700" role="status">
+          {t("portalNotAvailable")}
+        </p>
+      ) : null}
       <MembershipPlans
         currentPlan={currentPlan}
         billingInterval={billingInterval}
         onBillingIntervalChange={setBillingInterval}
+        onSubscribe={handleSubscribe}
+        onManageBilling={openBillingPortal}
         onPlanAction={handlePlanAction}
         hasStripeSubscription={hasStripeSubscription}
         portalEnabled={portalEnabled}

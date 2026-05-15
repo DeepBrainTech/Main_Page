@@ -10,6 +10,8 @@ interface MembershipPlansProps {
   currentPlan: MembershipPlan;
   billingInterval: MembershipBillingInterval;
   onBillingIntervalChange: (interval: MembershipBillingInterval) => void;
+  onSubscribe: (plan: "plus" | "premium") => void | Promise<void>;
+  onManageBilling: () => void | Promise<void>;
   onPlanAction: (plan: MembershipPlan) => void | Promise<void>;
   hasStripeSubscription: boolean;
   portalEnabled: boolean;
@@ -107,6 +109,8 @@ export default function MembershipPlans({
   currentPlan,
   billingInterval,
   onBillingIntervalChange,
+  onSubscribe,
+  onManageBilling,
   onPlanAction,
   hasStripeSubscription,
   portalEnabled,
@@ -121,6 +125,7 @@ export default function MembershipPlans({
   const periodKey = billingInterval === "annual" ? "perYear" : "perMonth";
 
   const billingTabsDisabled = hasStripeSubscription;
+  const isCanceledAtPeriodEnd = subscriptionCancelAtPeriodEnd === true;
 
   return (
     <section className="mx-auto w-full max-w-6xl px-1 py-6 sm:px-3 lg:py-10">
@@ -134,8 +139,25 @@ export default function MembershipPlans({
         ) : null}
       </div>
 
-      <div className="mb-8 flex justify-center px-2" role="tablist" aria-label={t("billingToggleAria")}>
-        <div className="flex h-12 w-full max-w-[489px] items-center gap-0 rounded-2xl border-[0.82px] border-slate-300/40 bg-white/55 p-1 shadow-sm backdrop-blur-sm">
+      {hasStripeSubscription ? (
+        <div className="mb-6 flex justify-center px-2">
+          <button
+            type="button"
+            disabled={!portalEnabled || redirecting}
+            onClick={() => void onManageBilling()}
+            className="h-12 min-w-[min(100%,20rem)] rounded-full bg-gradient-to-r from-sky-700 to-blue-600 px-8 font-app-body text-base font-semibold text-white shadow-md transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-55"
+          >
+            {redirecting ? tCommon("loading") : t("manageBillingPrimary")}
+          </button>
+        </div>
+      ) : null}
+
+      <div className="mb-8 flex flex-col items-center gap-1.5 px-2">
+        <div
+          className="flex h-12 w-full max-w-[489px] items-center gap-0 rounded-2xl border-[0.82px] border-slate-300/40 bg-white/55 p-1 shadow-sm backdrop-blur-sm"
+          role="tablist"
+          aria-label={t("billingToggleAria")}
+        >
           <button
             type="button"
             role="tab"
@@ -165,6 +187,9 @@ export default function MembershipPlans({
             {t("billingAnnually")}
           </button>
         </div>
+        {billingTabsDisabled ? (
+          <p className="max-w-md text-center font-app-body text-xs text-sky-600">{t("billingTabLockedHint")}</p>
+        ) : null}
       </div>
 
       <div className="grid gap-4 md:grid-cols-3 lg:gap-6">
@@ -173,35 +198,41 @@ export default function MembershipPlans({
           const isCurrent = currentPlan === plan.key;
           const isFreePreview = plan.key === "free" && currentPlan !== "free";
           const price = planDisplayPrices[plan.key][billingInterval === "annual" ? "annual" : "monthly"];
-          const isCanceledAtPeriodEnd = subscriptionCancelAtPeriodEnd === true;
           const periodDateLabel = membershipPeriodEndIso ? formatMembershipPeriodDate(membershipPeriodEndIso, locale) : "";
           const showStatusRow =
             isCurrent && (plan.key === "plus" || plan.key === "premium") && Boolean(periodDateLabel || isCanceledAtPeriodEnd);
 
           let buttonLabel: string;
           let buttonDisabled = redirecting;
+          let handleClick: () => void = () => void onPlanAction(plan.key);
 
           if (hasStripeSubscription) {
+            buttonDisabled = buttonDisabled || !portalEnabled;
             if (plan.key === "free") {
-              buttonLabel = t("manageSubscription");
-              buttonDisabled = buttonDisabled || !portalEnabled;
+              buttonLabel = t("cancelInPortal");
+              handleClick = () => void onManageBilling();
             } else if (isCurrent) {
-              buttonLabel = t("manageSubscription");
-              buttonDisabled = buttonDisabled || !portalEnabled;
+              if (isCanceledAtPeriodEnd) {
+                buttonLabel = t("resumeInPortal");
+                handleClick = () => void onManageBilling();
+              } else {
+                buttonLabel = t("currentPlan");
+                buttonDisabled = true;
+              }
             } else {
-              buttonLabel = t("manageSubscription");
-              buttonDisabled = buttonDisabled || !portalEnabled;
+              buttonLabel = t("switchInPortal", { plan: t(`plans.${plan.key}`) });
+              handleClick = () => void onManageBilling();
             }
-          } else if (plan.key === "free") {
-            buttonLabel = t("freePlan");
-            buttonDisabled = true;
-          } else if (isFreePreview) {
+          } else if (plan.key === "free" || isFreePreview) {
             buttonLabel = t("freePlan");
             buttonDisabled = true;
           } else {
             buttonLabel = t(`actions.${plan.key}`);
             buttonDisabled = buttonDisabled || !checkoutEnabled;
+            handleClick = () => void onSubscribe(plan.key as "plus" | "premium");
           }
+
+          const showLoadingOnButton = redirecting && !buttonDisabled;
 
           return (
             <article
@@ -282,7 +313,7 @@ export default function MembershipPlans({
                 ) : null}
                 <button
                   type="button"
-                  onClick={() => void onPlanAction(plan.key)}
+                  onClick={handleClick}
                   disabled={buttonDisabled}
                   className={`h-12 w-full rounded-full font-app-body text-base font-semibold leading-6 transition ${
                     buttonDisabled
@@ -292,7 +323,7 @@ export default function MembershipPlans({
                       : `${styles.button} hover:-translate-y-0.5 hover:shadow-xl`
                   }`}
                 >
-                  {redirecting ? tCommon("loading") : buttonLabel}
+                  {showLoadingOnButton ? tCommon("loading") : buttonLabel}
                 </button>
               </div>
             </article>
