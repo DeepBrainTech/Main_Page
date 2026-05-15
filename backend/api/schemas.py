@@ -84,6 +84,7 @@ class BillingChangeSubscriptionBody(BaseModel):
     plan: Literal["plus", "premium"]
     billing_interval: Literal["monthly", "annual"] = "monthly"
     locale: str = Field(default="en", min_length=2, max_length=5)
+    proration_date: Optional[int] = None
 
 
 class CompleteProfileBody(BaseModel):

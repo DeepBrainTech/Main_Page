@@ -14,6 +14,8 @@ import {
   fetchAuthMeMembership,
   fetchBillingStatus,
   membershipErrorKeyFromDetail,
+  previewStripeSubscriptionChange,
+  type StripeSubscriptionChangePreview,
 } from "@/services/userApi";
 
 type MembershipErrorKey =
@@ -53,6 +55,8 @@ export default function MembershipPage() {
   const [pendingBillingInterval, setPendingBillingInterval] = useState<MembershipBillingInterval | null>(null);
   const [pendingEffectiveAtIso, setPendingEffectiveAtIso] = useState<string | null>(null);
   const [redirecting, setRedirecting] = useState(false);
+  const [changePreview, setChangePreview] = useState<StripeSubscriptionChangePreview | null>(null);
+  const [confirmingChange, setConfirmingChange] = useState(false);
 
   const loadAll = useCallback(async () => {
     try {
@@ -160,18 +164,12 @@ export default function MembershipPage() {
       setSuccessMessage(null);
       setRedirecting(true);
       try {
-        const result = await changeStripeSubscription({
+        const preview = await previewStripeSubscriptionChange({
           plan,
           billing_interval: billingInterval,
           locale,
         });
-        if (result.action === "payment_pending" && result.hosted_invoice_url) {
-          window.location.href = result.hosted_invoice_url;
-          return;
-        }
-        await loadAll();
-        window.dispatchEvent(new Event("membership-plan-change"));
-        setSuccessMessage(result.action === "scheduled" ? "planChangeScheduled" : "planChangeUpdated");
+        setChangePreview(preview);
       } catch (e) {
         const detail = e instanceof Error ? e.message : "request_failed";
         const key = membershipErrorKeyFromDetail(detail);
@@ -184,6 +182,35 @@ export default function MembershipPage() {
     if (plan === "plus" || plan === "premium") {
       await handleSubscribe(plan);
     }
+  };
+
+  const confirmPlanChange = async () => {
+    if (!changePreview) return;
+    setLoadError(null);
+    setSuccessMessage(null);
+    setConfirmingChange(true);
+    try {
+      const result = await changeStripeSubscription({
+        plan: changePreview.plan,
+        billing_interval: changePreview.billing_interval,
+        locale,
+        proration_date: changePreview.proration_date,
+      });
+        if (result.action === "payment_pending" && result.hosted_invoice_url) {
+          window.location.href = result.hosted_invoice_url;
+          return;
+        }
+      setChangePreview(null);
+        await loadAll();
+        window.dispatchEvent(new Event("membership-plan-change"));
+        setSuccessMessage(result.action === "scheduled" ? "planChangeScheduled" : "planChangeUpdated");
+      } catch (e) {
+        const detail = e instanceof Error ? e.message : "request_failed";
+        const key = membershipErrorKeyFromDetail(detail);
+        setLoadError((key === "generic" ? "stripeChangeFailed" : key) as MembershipErrorKey);
+      } finally {
+      setConfirmingChange(false);
+      }
   };
 
   const hasNotice = Boolean(successMessage || loadError || (hasStripeSubscription && !portalEnabled));
@@ -209,6 +236,80 @@ export default function MembershipPage() {
 
   return (
     <div className="space-y-4">
+      {changePreview ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 px-4 py-6">
+          <div className="w-full max-w-md rounded-lg bg-white p-5 font-app-body shadow-2xl">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h2 className="text-xl font-semibold text-slate-950">{t("changeConfirmTitle")}</h2>
+                <p className="mt-1 text-sm text-slate-600">
+                  {t("changeConfirmTarget", {
+                    plan: t(`plans.${changePreview.plan}`),
+                    interval: t(changePreview.billing_interval === "annual" ? "billingAnnually" : "billingMonthly"),
+                  })}
+                </p>
+              </div>
+              <button
+                type="button"
+                className="rounded-md px-2 py-1 text-sm font-semibold text-slate-500 hover:bg-slate-100"
+                onClick={() => setChangePreview(null)}
+                disabled={confirmingChange}
+                aria-label={t("planChangeCloseAria")}
+              >
+                X
+              </button>
+            </div>
+
+            <div className="mt-5 rounded-lg border border-slate-200 bg-slate-50 p-4">
+              {changePreview.action === "immediate" ? (
+                <>
+                  <div className="text-sm text-slate-600">{t("changeDueToday")}</div>
+                  <div className="mt-1 text-3xl font-bold text-slate-950">{changePreview.amount_due_display}</div>
+                  <p className="mt-2 text-xs leading-5 text-slate-500">{t("changeImmediateHint")}</p>
+                </>
+              ) : (
+                <>
+                  <div className="text-sm text-slate-600">{t("changeDueToday")}</div>
+                  <div className="mt-1 text-3xl font-bold text-slate-950">{changePreview.amount_due_display}</div>
+                  <p className="mt-2 text-xs leading-5 text-slate-500">
+                    {t("changeScheduledHint", { date: changePreview.effective_at ? new Date(changePreview.effective_at).toLocaleDateString() : "" })}
+                  </p>
+                </>
+              )}
+            </div>
+
+            {changePreview.lines.length > 0 ? (
+              <div className="mt-4 max-h-40 overflow-auto rounded-lg border border-slate-200">
+                {changePreview.lines.map((line, index) => (
+                  <div key={`${line.description}-${index}`} className="flex justify-between gap-3 border-b border-slate-100 px-3 py-2 text-xs last:border-b-0">
+                    <span className="text-slate-600">{line.description || t("changeLineItem")}</span>
+                    <span className="shrink-0 font-semibold text-slate-900">{line.amount_display}</span>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+
+            <div className="mt-5 flex gap-3">
+              <button
+                type="button"
+                className="h-11 flex-1 rounded-full border border-slate-300 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+                onClick={() => setChangePreview(null)}
+                disabled={confirmingChange}
+              >
+                {t("changeCancel")}
+              </button>
+              <button
+                type="button"
+                className="h-11 flex-1 rounded-full bg-sky-700 text-sm font-semibold text-white hover:bg-sky-800 disabled:opacity-60"
+                onClick={() => void confirmPlanChange()}
+                disabled={confirmingChange}
+              >
+                {confirmingChange ? t("changeConfirming") : t("changeConfirmButton")}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
       <MembershipPlans
         currentPlan={currentPlan}
         currentBillingInterval={currentBillingInterval}

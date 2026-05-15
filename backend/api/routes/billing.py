@@ -195,6 +195,64 @@ def _stripe_obj_get(obj, key: str, default=None):
     return getattr(obj, key, default)
 
 
+def _format_amount(amount: int, currency: str | None) -> str:
+    code = (currency or "usd").upper()
+    zero_decimal = {
+        "BIF", "CLP", "DJF", "GNF", "JPY", "KMF", "KRW", "MGA", "PYG", "RWF",
+        "UGX", "VND", "VUV", "XAF", "XOF", "XPF",
+    }
+    value = amount if code in zero_decimal else amount / 100
+    return f"{code} {value:,.0f}" if code in zero_decimal else f"{code} {value:,.2f}"
+
+
+def _invoice_preview_lines(invoice) -> list[dict]:
+    raw_lines = _stripe_obj_get(_stripe_obj_get(invoice, "lines"), "data") or []
+    lines = []
+    for line in raw_lines:
+        amount = int(_stripe_obj_get(line, "amount", 0) or 0)
+        currency = _stripe_obj_get(line, "currency", "usd")
+        lines.append(
+            {
+                "description": _stripe_obj_get(line, "description", "") or "",
+                "amount": amount,
+                "currency": currency,
+                "amount_display": _format_amount(amount, currency),
+            }
+        )
+    return lines
+
+
+def _create_subscription_change_preview(
+    sub: stripe.Subscription,
+    item,
+    target_price_id: str,
+    proration_date: int,
+):
+    params = {
+        "customer": sub.customer if isinstance(sub.customer, str) else getattr(sub.customer, "id", None),
+        "subscription": sub.id,
+        "subscription_details": {
+            "items": [{"id": item.id, "price": target_price_id}],
+            "proration_behavior": "always_invoice",
+            "proration_date": proration_date,
+        },
+    }
+    try:
+        create_preview = getattr(stripe.Invoice, "create_preview", None)
+        if create_preview:
+            return create_preview(**params)
+        return stripe.Invoice.upcoming(
+            customer=params["customer"],
+            subscription=sub.id,
+            subscription_items=[{"id": item.id, "price": target_price_id}],
+            subscription_proration_behavior="always_invoice",
+            subscription_proration_date=proration_date,
+        )
+    except stripe.error.StripeError as e:
+        logger.warning("subscription change preview failed: %s", e)
+        raise HTTPException(status_code=400, detail="stripe_change_failed")
+
+
 def _phase_price_id(phase) -> str | None:
     raw_items = _stripe_obj_get(phase, "items") or []
     items = getattr(raw_items, "data", raw_items)
@@ -456,6 +514,84 @@ async def create_checkout_session(
     return APIResponse(success=True, message="ok", data={"url": session.url})
 
 
+@router.post("/change-preview", response_model=APIResponse)
+async def preview_subscription_change(
+    body: BillingChangeSubscriptionBody,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+):
+    if not is_stripe_billing_configured():
+        raise HTTPException(status_code=503, detail="stripe_not_configured")
+    if not getattr(current_user, "stripe_subscription_id", None):
+        raise HTTPException(status_code=400, detail="subscription_missing")
+    _stripe_configure()
+
+    target_price_id = get_price_id(body.plan, body.billing_interval)
+    if not target_price_id:
+        raise HTTPException(status_code=503, detail="stripe_price_not_configured")
+
+    try:
+        sub = stripe.Subscription.retrieve(current_user.stripe_subscription_id)
+    except stripe.error.InvalidRequestError:
+        current_user.stripe_subscription_id = None
+        db.add(current_user)
+        db.commit()
+        raise HTTPException(status_code=400, detail="subscription_missing")
+
+    if sub.status not in ("active", "trialing", "past_due"):
+        raise HTTPException(status_code=400, detail="subscription_not_active")
+    _sync_pending_from_subscription_schedule(db, current_user, sub)
+
+    resolved = _resolve_plan_from_subscription(sub)
+    if not resolved:
+        raise HTTPException(status_code=400, detail="subscription_price_unknown")
+    current_plan, current_interval = resolved
+    timing = _change_timing(current_plan, current_interval, body.plan, body.billing_interval)
+    if timing == "no_change":
+        raise HTTPException(status_code=400, detail="subscription_no_change")
+
+    if timing == "scheduled":
+        effective_at = datetime.utcfromtimestamp(int(sub.current_period_end)) if sub.current_period_end else None
+        return APIResponse(
+            success=True,
+            message="scheduled_preview",
+            data={
+                "action": "scheduled",
+                "plan": body.plan,
+                "billing_interval": body.billing_interval,
+                "effective_at": effective_at.isoformat() if effective_at else None,
+                "amount_due": 0,
+                "currency": "usd",
+                "amount_due_display": _format_amount(0, "usd"),
+                "proration_date": int(datetime.utcnow().timestamp()),
+                "lines": [],
+            },
+        )
+
+    item = _subscription_item(sub)
+    if not item:
+        raise HTTPException(status_code=400, detail="subscription_item_missing")
+
+    proration_date = int(body.proration_date or datetime.utcnow().timestamp())
+    invoice = _create_subscription_change_preview(sub, item, target_price_id, proration_date)
+    amount_due = int(_stripe_obj_get(invoice, "amount_due", 0) or 0)
+    currency = _stripe_obj_get(invoice, "currency", "usd")
+    return APIResponse(
+        success=True,
+        message="immediate_preview",
+        data={
+            "action": "immediate",
+            "plan": body.plan,
+            "billing_interval": body.billing_interval,
+            "amount_due": amount_due,
+            "currency": currency,
+            "amount_due_display": _format_amount(amount_due, currency),
+            "proration_date": proration_date,
+            "lines": _invoice_preview_lines(invoice),
+        },
+    )
+
+
 @router.post("/change-subscription", response_model=APIResponse)
 async def change_subscription(
     body: BillingChangeSubscriptionBody,
@@ -532,19 +668,24 @@ async def change_subscription(
     db.add(current_user)
     db.commit()
     try:
-        updated = stripe.Subscription.modify(
-            sub.id,
-            items=[{"id": item.id, "price": target_price_id}],
-            proration_behavior="always_invoice",
-            payment_behavior="pending_if_incomplete",
-            metadata={
-                **dict(getattr(sub, "metadata", None) or {}),
-                "user_id": str(current_user.id),
-                "plan": body.plan,
-                "billing_interval": body.billing_interval,
-            },
-            expand=["latest_invoice.payment_intent"],
-        )
+        sub = stripe.Subscription.retrieve(sub.id)
+    except stripe.error.StripeError as e:
+        logger.warning("subscription retrieve before immediate change failed: %s", e)
+        raise HTTPException(status_code=400, detail="stripe_change_failed")
+    item = _subscription_item(sub)
+    if not item:
+        raise HTTPException(status_code=400, detail="subscription_item_missing")
+
+    try:
+        update_params = {
+            "items": [{"id": item.id, "price": target_price_id}],
+            "proration_behavior": "always_invoice",
+            "payment_behavior": "pending_if_incomplete",
+            "expand": ["latest_invoice.payment_intent"],
+        }
+        if body.proration_date:
+            update_params["proration_date"] = body.proration_date
+        updated = stripe.Subscription.modify(sub.id, **update_params)
     except stripe.error.StripeError as e:
         logger.warning("subscription change failed: %s", e)
         raise HTTPException(status_code=400, detail="stripe_change_failed")

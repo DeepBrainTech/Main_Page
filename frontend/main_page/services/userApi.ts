@@ -506,6 +506,7 @@ export async function changeStripeSubscription(params: {
   plan: "plus" | "premium";
   billing_interval: "monthly" | "annual";
   locale: string;
+  proration_date?: number;
 }): Promise<{
   action: "updated" | "scheduled" | "payment_pending";
   plan?: "plus" | "premium";
@@ -538,6 +539,52 @@ export async function changeStripeSubscription(params: {
     billing_interval?: "monthly" | "annual";
     effective_at?: string;
     hosted_invoice_url?: string | null;
+  };
+}
+
+export interface StripeSubscriptionChangePreview {
+  action: "immediate" | "scheduled";
+  plan: "plus" | "premium";
+  billing_interval: "monthly" | "annual";
+  amount_due: number;
+  currency: string;
+  amount_due_display: string;
+  proration_date: number;
+  effective_at?: string | null;
+  lines: Array<{
+    description: string;
+    amount: number;
+    currency: string;
+    amount_display: string;
+  }>;
+}
+
+export async function previewStripeSubscriptionChange(params: {
+  plan: "plus" | "premium";
+  billing_interval: "monthly" | "annual";
+  locale: string;
+}): Promise<StripeSubscriptionChangePreview> {
+  const res = await fetch(getApiUrl("/api/billing/change-preview"), {
+    method: "POST",
+    headers: getAuthHeaders(),
+    body: JSON.stringify(params),
+  });
+  if (!res.ok) {
+    throw new Error(await readApiErrorDetail(res));
+  }
+  const json = (await res.json()) as { data?: Partial<StripeSubscriptionChangePreview> };
+  const data = json?.data;
+  if (!data?.action || !data.plan || !data.billing_interval) throw new Error("stripe_change_failed");
+  return {
+    action: data.action,
+    plan: data.plan,
+    billing_interval: data.billing_interval,
+    amount_due: typeof data.amount_due === "number" ? data.amount_due : 0,
+    currency: data.currency ?? "usd",
+    amount_due_display: data.amount_due_display ?? "USD 0.00",
+    proration_date: typeof data.proration_date === "number" ? data.proration_date : Math.floor(Date.now() / 1000),
+    effective_at: data.effective_at ?? null,
+    lines: Array.isArray(data.lines) ? data.lines : [],
   };
 }
 
