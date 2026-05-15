@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import type { ReactNode } from "react";
+import { useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 
 export type MembershipPlan = "free" | "plus" | "premium";
@@ -137,6 +138,14 @@ export default function MembershipPlans({
 
   const isCanceledAtPeriodEnd = subscriptionCancelAtPeriodEnd === true;
   const pendingDateLabel = pendingEffectiveAtIso ? formatMembershipPeriodDate(pendingEffectiveAtIso, locale) : "";
+  const [cancelDialogPlan, setCancelDialogPlan] = useState<Extract<MembershipPlan, "plus" | "premium"> | null>(null);
+
+  const cancelLoseKeys =
+    cancelDialogPlan === "premium"
+      ? (["losePremium1", "losePremium2", "losePremium3"] as const)
+      : cancelDialogPlan === "plus"
+        ? (["losePlus1", "losePlus2"] as const)
+        : ([] as const);
 
   return (
     <section className="mx-auto w-full max-w-6xl px-1 py-6 sm:px-3 lg:py-10">
@@ -214,7 +223,7 @@ export default function MembershipPlans({
               } else {
                 buttonLabel = t("cancelInPortal");
                 buttonDisabled = buttonDisabled || !portalEnabled;
-                handleClick = () => void onManageBilling();
+                handleClick = () => setCancelDialogPlan(plan.key as "plus" | "premium");
               }
             } else if (pendingMatches) {
               buttonLabel = t("scheduledButton", { date: pendingDateLabel });
@@ -330,6 +339,65 @@ export default function MembershipPlans({
           );
         })}
       </div>
+
+      {cancelDialogPlan ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 px-4 py-6" role="dialog" aria-modal="true" aria-labelledby="membership-cancel-dialog-title">
+          <div className="w-full max-w-md rounded-lg bg-white p-5 font-app-body shadow-2xl">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h2 id="membership-cancel-dialog-title" className="text-xl font-semibold text-slate-950">
+                  {t("cancelDialog.title")}
+                </h2>
+                <p className="mt-2 text-sm leading-6 text-slate-600">
+                  {t("cancelDialog.description", { plan: t(`plans.${cancelDialogPlan}`) })}
+                </p>
+              </div>
+              <button
+                type="button"
+                className="rounded-md px-2 py-1 text-sm font-semibold text-slate-500 hover:bg-slate-100 disabled:opacity-60"
+                onClick={() => setCancelDialogPlan(null)}
+                disabled={redirecting}
+                aria-label={t("cancelDialog.closeAria")}
+              >
+                X
+              </button>
+            </div>
+
+            <div className="mt-5 rounded-lg border border-slate-200 bg-slate-50 p-4">
+              <p className="text-sm font-semibold text-slate-800">{t("cancelDialog.loseHeading")}</p>
+              <ul className="mt-2 list-inside list-disc space-y-1 text-sm text-slate-600">
+                {cancelLoseKeys.map((key) => (
+                  <li key={key}>{t(`cancelDialog.${key}`)}</li>
+                ))}
+              </ul>
+            </div>
+
+            <p className="mt-3 text-xs leading-5 text-slate-500">{t("manageInPortalHint")}</p>
+
+            <div className="mt-5 flex flex-col gap-3 sm:flex-row-reverse sm:gap-3">
+              <button
+                type="button"
+                className="h-11 w-full rounded-full bg-red-600 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-60 sm:flex-1"
+                onClick={() => {
+                  void onManageBilling();
+                  setCancelDialogPlan(null);
+                }}
+                disabled={redirecting}
+              >
+                {redirecting ? tCommon("loading") : t("cancelDialog.confirmCancel")}
+              </button>
+              <button
+                type="button"
+                className="h-11 w-full rounded-full border border-slate-300 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60 sm:flex-1"
+                onClick={() => setCancelDialogPlan(null)}
+                disabled={redirecting}
+              >
+                {t("cancelDialog.keepPlan", { plan: t(`plans.${cancelDialogPlan}`) })}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </section>
   );
 }
