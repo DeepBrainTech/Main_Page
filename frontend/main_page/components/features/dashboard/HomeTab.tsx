@@ -17,6 +17,51 @@ interface HomeTabProps {
 }
 
 type HomesteadCustomizeTab = "head" | "body" | "hand" | "background";
+type WeeklyProgressDay = {
+  label: string;
+  dateKey: string;
+  signed: boolean;
+  isFuture: boolean;
+};
+
+const WEEKDAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+function formatLocalDateKey(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function toMonthDay(date: Date) {
+  return `${date.getMonth() + 1}. ${date.getDate()}`;
+}
+
+function getWeekStart(date: Date) {
+  const weekStart = new Date(date);
+  const mondayOffset = (date.getDay() + 6) % 7;
+  weekStart.setDate(date.getDate() - mondayOffset);
+  return weekStart;
+}
+
+function getCurrentWeekProgress(signedDates: string[], today = new Date()): WeeklyProgressDay[] {
+  const signedDateSet = new Set(signedDates);
+  const todayKey = formatLocalDateKey(today);
+  const weekStart = getWeekStart(today);
+
+  return Array.from({ length: 7 }, (_, index) => {
+    const date = new Date(weekStart);
+    date.setDate(weekStart.getDate() + index);
+    const dateKey = formatLocalDateKey(date);
+
+    return {
+      label: WEEKDAY_LABELS[date.getDay()],
+      dateKey,
+      signed: signedDateSet.has(dateKey),
+      isFuture: dateKey > todayKey,
+    };
+  });
+}
 
 /**
  * Dashboard home content: KPI + stage + check-in/tasks + brainpower panel
@@ -44,9 +89,17 @@ export default function HomeTab({ username = "", avatarUrl = null }: HomeTabProp
   const [activeHomesteadTab, setActiveHomesteadTab] = useState<HomesteadCustomizeTab | null>(null);
   const [isHomesteadMenuOpen, setIsHomesteadMenuOpen] = useState(false);
   const [showStreakRewardDialog, setShowStreakRewardDialog] = useState(false);
-  const [streakReward, setStreakReward] = useState({ streak: 7, coins: 200, diamonds: 0 });
+  const [streakReward, setStreakReward] = useState({
+    streak: 0,
+    coins: 0,
+    membershipBonusPlan: null as "plus" | "premium" | null,
+    membershipBonusCoins: 0,
+    membershipBonusDiamonds: 0,
+    diamonds: 0,
+    flowers: 0,
+  });
   const [streakDateRange, setStreakDateRange] = useState("");
-  const weekLabels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+  const [weeklyProgressDays, setWeeklyProgressDays] = useState<WeeklyProgressDay[]>([]);
 
   const totalPoints = coins + diamonds * 10 + flowers * 3;
   const expPerLevel = 120;
@@ -54,19 +107,28 @@ export default function HomeTab({ username = "", avatarUrl = null }: HomeTabProp
 
   const handleCheckIn = async () => {
     const result = await doCheckIn();
-    if (!result || result.coins < 200) return;
+    if (!result) return;
 
-    const end = new Date();
-    const start = new Date(end);
-    start.setDate(end.getDate() - 6);
-    const toMonthDay = (d: Date) => `${d.getMonth() + 1}. ${d.getDate()}`;
+    const today = new Date();
+    const weekStart = getWeekStart(today);
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekStart.getDate() + 6);
+    const todayKey = formatLocalDateKey(today);
+    const nextSignedDates = result.checkInDatesAfter.length
+      ? result.checkInDatesAfter
+      : Array.from(new Set([...checkIn.dates, todayKey]));
 
     setStreakReward({
-      streak: Math.max(7, result.streakAfter),
+      streak: result.streakAfter,
       coins: result.coins,
+      membershipBonusPlan: result.membershipBonusPlan,
+      membershipBonusCoins: result.membershipBonusCoins,
+      membershipBonusDiamonds: result.membershipBonusDiamonds,
       diamonds: result.diamonds,
+      flowers: result.flowers,
     });
-    setStreakDateRange(`${toMonthDay(start)} - ${toMonthDay(end)}`);
+    setStreakDateRange(`${toMonthDay(weekStart)} - ${toMonthDay(weekEnd)}`);
+    setWeeklyProgressDays(getCurrentWeekProgress(nextSignedDates, today));
     setShowStreakRewardDialog(true);
   };
 
@@ -243,10 +305,10 @@ export default function HomeTab({ username = "", avatarUrl = null }: HomeTabProp
             <div className="mb-8 flex flex-col items-center text-center">
               <Image src="/dashboard/Fire.svg" alt="streak" width={80} height={80} className="mb-4 h-20 w-20" />
               <h3 className="text-[#106FAA] text-3xl font-semibold font-app-body leading-10">
-                {streakReward.streak} Day Streak!
+                {streakReward.streak >= 7 ? `${streakReward.streak} Day Streak!` : tHome("checkInTitle")}
               </h3>
               <p className="mt-2 text-[#106FAA] text-lg font-normal font-app-body leading-7">
-                Keep it up! You&apos;re doing amazing!
+                Keep it up! You&apos;re doing amazing! 🎉
               </p>
             </div>
 
@@ -255,36 +317,90 @@ export default function HomeTab({ username = "", avatarUrl = null }: HomeTabProp
                 {streakDateRange || "Weekly Progress"}
               </div>
               <div className="grid grid-cols-7 gap-2">
-                {weekLabels.map((label) => (
-                  <div key={label} className="rounded-xl bg-blue-100 p-2">
-                    <div className="mb-2 text-center text-xs font-medium font-app-body leading-4 text-[#106FAA]">
-                      {label}
+                {weeklyProgressDays.map((day) => (
+                  <div
+                    key={day.dateKey}
+                    className={`flex flex-col items-center rounded-xl p-2 ${
+                      day.signed ? "bg-blue-100" : day.isFuture ? "bg-slate-50" : "bg-slate-100"
+                    }`}
+                  >
+                    <div
+                      className={`mb-2 w-full text-center text-xs font-medium font-app-body leading-4 ${
+                        day.isFuture && !day.signed ? "text-[#106FAA]/60" : "text-[#106FAA]"
+                      }`}
+                    >
+                      {day.label}
                     </div>
-                    <div className="mx-auto flex h-6 w-6 items-center justify-center rounded-full bg-green-500 text-sm font-normal text-white">
-                      ✓
-                    </div>
+                    {day.signed ? (
+                      <div className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#4CAF50]">
+                        <span className="inline-flex h-full w-full translate-x-[0px] translate-y-[0px] items-center justify-center font-['Inter'] text-sm font-normal leading-none text-white">
+                          ✓
+                        </span>
+                      </div>
+                    ) : (
+                      <div
+                        className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border bg-white ${
+                          day.isFuture ? "border-slate-200" : "border-slate-300"
+                        }`}
+                      />
+                    )}
                   </div>
                 ))}
               </div>
             </div>
 
-            <div className="mb-6 rounded-2xl border-2 border-amber-400/30 bg-orange-50 p-5">
-              <div className="mb-3 text-[#106FAA] text-sm font-medium font-app-body leading-5">{tHome("todaysReward")}</div>
-              <div className="flex flex-col gap-3">
-                <div className="flex items-center gap-3">
-                  <Image src="/dashboard/coin.svg" alt="coins" width={40} height={40} className="h-10 w-10" />
-                  <div className="text-amber-400 text-1xl font-semibold font-app-body leading-8">
-                    +{streakReward.coins} Coins
-                  </div>
+            <div className="mb-6 inline-flex min-h-24 w-full items-center justify-start gap-4 rounded-2xl bg-orange-50 p-5 outline outline-2 outline-offset-[-2px] outline-amber-400/30">
+              <div className="relative size-16 shrink-0 overflow-hidden">
+                <Image src="/checkin/coin.svg" alt="coins" width={64} height={64} className="h-16 w-16 object-contain" />
+              </div>
+              <div className="inline-flex min-w-0 flex-1 flex-col items-start justify-start gap-1">
+                <div className="self-stretch text-sm font-medium font-['Outfit'] leading-5 text-sky-700">
+                  {tHome("todaysReward")}
                 </div>
-                <div className="flex items-center gap-3">
-                  <Image src="/dashboard/dimond.svg" alt="diamonds" width={40} height={40} className="h-10 w-10" />
-                  <div className="text-amber-400 text-1xl font-semibold font-app-body leading-8">
-                    +{streakReward.diamonds} Diamonds
-                  </div>
+                <div className="self-stretch break-words text-xl font-semibold font-['Outfit'] leading-8 text-amber-400">
+                  {[
+                    `+${streakReward.coins} Coins`,
+                    streakReward.diamonds > 0 ? `+${streakReward.diamonds} Diamonds` : null,
+                    streakReward.flowers > 0 ? `+${streakReward.flowers} Flowers` : null,
+                  ]
+                    .filter(Boolean)
+                    .join(" ")}
                 </div>
               </div>
             </div>
+
+            {streakReward.membershipBonusPlan ? (
+              <div className="mb-6 rounded-2xl bg-gradient-to-r from-[#106FAA]/50 to-[#0075FF]/50 p-0.5">
+                <div className="inline-flex min-h-24 w-full items-center justify-start gap-4 rounded-[14px] bg-indigo-50 p-5">
+                  <div className="relative size-16 shrink-0">
+                    <Image src="/checkin/diamond.svg" alt="membership bonus" width={64} height={64} className="h-16 w-16 object-contain" />
+                  </div>
+                  <div className="inline-flex min-w-0 flex-1 flex-col items-start justify-start gap-1">
+                    <div className="self-stretch">
+                      <Image
+                        src={
+                          streakReward.membershipBonusPlan === "premium"
+                            ? "/checkin/PREMIUM_Bonus.svg"
+                            : "/checkin/PLUS_Bonus.svg"
+                        }
+                        alt={streakReward.membershipBonusPlan === "premium" ? "Premium Bonus" : "PLUS Bonus"}
+                        width={112}
+                        height={20}
+                        className="h-4-auto object-contain"
+                      />
+                    </div>
+                    <div className="self-stretch break-words text-xl font-semibold font-['Outfit'] leading-8 text-[#2478DC]">
+                      {[
+                        streakReward.membershipBonusDiamonds > 0 ? `+${streakReward.membershipBonusDiamonds} Diamonds` : null,
+                        streakReward.membershipBonusCoins > 0 ? `+${streakReward.membershipBonusCoins} Coins` : null,
+                      ]
+                        .filter(Boolean)
+                        .join(" ")}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : null}
 
             <button
               type="button"

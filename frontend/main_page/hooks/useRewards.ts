@@ -14,9 +14,13 @@ export interface CheckInState {
 
 export interface CheckInResult {
   coins: number;
+  membershipBonusPlan: "plus" | "premium" | null;
+  membershipBonusCoins: number;
+  membershipBonusDiamonds: number;
   diamonds: number;
   flowers: number;
   streakAfter: number;
+  checkInDatesAfter: string[];
 }
 
 /**
@@ -98,8 +102,14 @@ export function useRewards() {
       const refreshed = await load({ background: true });
       notifyRewardsUpdated(instanceIdRef.current);
       return {
-        ...award,
+        coins: award.coins,
+        membershipBonusPlan: award.membership_bonus_plan,
+        membershipBonusCoins: award.membership_bonus_coins,
+        membershipBonusDiamonds: award.membership_bonus_diamonds,
+        diamonds: award.diamonds,
+        flowers: award.flowers,
         streakAfter: refreshed?.current_streak ?? 0,
+        checkInDatesAfter: refreshed?.check_in_dates ?? [],
       };
     } catch (e) {
       setError(e instanceof Error ? e.message : "check_in_failed");

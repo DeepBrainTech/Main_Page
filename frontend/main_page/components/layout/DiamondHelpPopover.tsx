@@ -13,7 +13,7 @@ export default function DiamondHelpPopover() {
       rewardIconAlt="Diamonds"
       rows={[
         { label: tNav("diamondHelpAllDailyTasks"), value: 2 },
-        { label: tNav("diamondHelpSevenDayStreak"), value: 5 },
+        { label: tNav("diamondHelpSevenDayStreak"), value: 1 },
         { label: tNav("diamondHelpGameBadges") },
         { label: tNav("diamondHelpBuyInShop") },
       ]}

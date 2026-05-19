@@ -221,14 +221,30 @@ export async function postGamePlayedRecord(gameKey: string): Promise<{
 }
 
 /** 签到 */
-export async function postCheckIn(): Promise<{ coins: number; diamonds: number; flowers: number }> {
+export async function postCheckIn(): Promise<{
+  coins: number;
+  membership_bonus_plan: "plus" | "premium" | null;
+  membership_bonus_coins: number;
+  membership_bonus_diamonds: number;
+  diamonds: number;
+  flowers: number;
+}> {
   const res = await fetch(getApiUrl("/api/user/check-in"), {
     method: "POST",
     headers: getAuthHeaders(),
   });
   if (!res.ok) throw new Error("check_in_failed");
   const json = await res.json();
-  return json?.data ?? { coins: 0, diamonds: 0, flowers: 0 };
+  return (
+    json?.data ?? {
+      coins: 0,
+      membership_bonus_plan: null,
+      membership_bonus_coins: 0,
+      membership_bonus_diamonds: 0,
+      diamonds: 0,
+      flowers: 0,
+    }
+  );
 }
 
 /** 获取六维认知分数 */

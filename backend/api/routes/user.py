@@ -47,8 +47,11 @@ from utils.r2_storage import generate_object_read_url
 router = APIRouter(prefix="/api/user", tags=["用户"])
 
 CHECK_IN_COINS = 50
+PLUS_CHECK_IN_BONUS_DIAMONDS = 5
+PREMIUM_CHECK_IN_BONUS_COINS = 50
+PREMIUM_CHECK_IN_BONUS_DIAMONDS = 10
 STREAK_TOTAL_COINS = 200
-STREAK_DIAMONDS = 5
+STREAK_DIAMONDS = 1
 STREAK_DAYS = 7
 DAILY_TASK_COINS = 10
 MONTHLY_TASK_DIAMONDS = 10
@@ -527,6 +530,16 @@ def _current_streak(db: Session, user_id: int, sorted_dates: list[str], today_is
     return streak
 
 
+def _active_membership_bonus_plan(user: User) -> str | None:
+    plan = getattr(user, "membership_plan", None) or "free"
+    if plan not in {"plus", "premium"}:
+        return None
+    expires_at = getattr(user, "membership_expires_at", None)
+    if expires_at is not None and expires_at <= datetime.utcnow():
+        return None
+    return plan
+
+
 def _daily_progress_from_games(db: Session, user_id: int, today_iso: str) -> dict:
     """从按日表读取当日点开次数，作为每日任务进度。task_id: daily-1 -> chessmater, daily-2 -> chess-tourmaster"""
     out = {}
@@ -984,13 +997,35 @@ async def do_check_in(
         UserCheckIn.user_id == current_user.id, UserCheckIn.check_in_date == today
     ).first()
     if existing:
-        return APIResponse(success=True, message="already_checked_in", data={"coins": 0, "diamonds": 0, "flowers": 0})
+        return APIResponse(
+            success=True,
+            message="already_checked_in",
+            data={
+                "coins": 0,
+                "membership_bonus_plan": None,
+                "membership_bonus_coins": 0,
+                "membership_bonus_diamonds": 0,
+                "diamonds": 0,
+                "flowers": 0,
+            },
+        )
 
     db.add(UserCheckIn(user_id=current_user.id, check_in_date=today))
     rewards = _get_or_create_rewards(db, current_user.id)
     rewards.coins += CHECK_IN_COINS
     coins_awarded = CHECK_IN_COINS
     diamonds_awarded = 0
+    membership_bonus_plan = _active_membership_bonus_plan(current_user)
+    membership_bonus_coins = 0
+    membership_bonus_diamonds = 0
+    if membership_bonus_plan == "plus":
+        rewards.diamonds += PLUS_CHECK_IN_BONUS_DIAMONDS
+        membership_bonus_diamonds = PLUS_CHECK_IN_BONUS_DIAMONDS
+    elif membership_bonus_plan == "premium":
+        rewards.coins += PREMIUM_CHECK_IN_BONUS_COINS
+        rewards.diamonds += PREMIUM_CHECK_IN_BONUS_DIAMONDS
+        membership_bonus_coins = PREMIUM_CHECK_IN_BONUS_COINS
+        membership_bonus_diamonds = PREMIUM_CHECK_IN_BONUS_DIAMONDS
     # Session is configured with autoflush=False, so persist pending check-in
     # before querying streak dates; otherwise "today" is missing from all_dates.
     db.flush()
@@ -1016,7 +1051,14 @@ async def do_check_in(
     return APIResponse(
         success=True,
         message="ok",
-        data={"coins": coins_awarded, "diamonds": diamonds_awarded, "flowers": 0},
+        data={
+            "coins": coins_awarded,
+            "membership_bonus_plan": membership_bonus_plan,
+            "membership_bonus_coins": membership_bonus_coins,
+            "membership_bonus_diamonds": membership_bonus_diamonds,
+            "diamonds": diamonds_awarded,
+            "flowers": 0,
+        },
     )
 
 
