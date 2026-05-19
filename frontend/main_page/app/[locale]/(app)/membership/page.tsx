@@ -10,6 +10,7 @@ import MembershipPlans, {
   type MembershipPlan,
 } from "@/components/features/membership/MembershipPlans";
 import {
+  cancelScheduledStripeSubscriptionChange,
   changeStripeSubscription,
   createStripeBillingPortalSession,
   createStripeCheckoutSession,
@@ -141,7 +142,7 @@ export default function MembershipPage() {
   const [billingInterval, setBillingInterval] = useState<MembershipBillingInterval>("monthly");
   const [loadError, setLoadError] = useState<MembershipErrorKey | null>(null);
   const [successMessage, setSuccessMessage] = useState<
-    "checkoutSuccess" | "portalReturn" | "planChangeUpdated" | "planChangeScheduled" | null
+    "checkoutSuccess" | "portalReturn" | "planChangeUpdated" | "planChangeScheduled" | "planChangeScheduleCanceled" | null
   >(null);
   const [checkoutEnabled, setCheckoutEnabled] = useState(false);
   const [portalEnabled, setPortalEnabled] = useState(false);
@@ -284,6 +285,24 @@ export default function MembershipPage() {
     }
     if (plan === "plus" || plan === "premium") {
       await handleSubscribe(plan);
+    }
+  };
+
+  const handleCancelScheduledPlanChange = async () => {
+    setLoadError(null);
+    setSuccessMessage(null);
+    setRedirecting(true);
+    try {
+      await cancelScheduledStripeSubscriptionChange();
+      await loadAll();
+      window.dispatchEvent(new Event("membership-plan-change"));
+      setSuccessMessage("planChangeScheduleCanceled");
+    } catch (e) {
+      const detail = e instanceof Error ? e.message : "request_failed";
+      const key = membershipErrorKeyFromDetail(detail);
+      setLoadError((key === "generic" ? "stripeChangeFailed" : key) as MembershipErrorKey);
+    } finally {
+      setRedirecting(false);
     }
   };
 
@@ -506,6 +525,7 @@ export default function MembershipPage() {
         onSubscribe={handleSubscribe}
         onManageBilling={openBillingPortal}
         onPlanAction={handlePlanAction}
+        onCancelScheduledPlanChange={handleCancelScheduledPlanChange}
         hasStripeSubscription={hasStripeSubscription}
         portalEnabled={portalEnabled}
         checkoutEnabled={checkoutEnabled}

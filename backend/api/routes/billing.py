@@ -153,21 +153,16 @@ def _change_timing(
     if (current_plan, current_interval) == (target_plan, target_interval):
         return "no_change"
 
-    if current_interval == "monthly" and current_plan == "plus":
+    plan_rank = {"plus": 1, "premium": 2}
+    is_plan_downgrade = plan_rank.get(target_plan, 0) < plan_rank.get(current_plan, 0)
+    is_interval_downgrade = current_interval == "annual" and target_interval == "monthly"
+    if is_plan_downgrade or is_interval_downgrade:
+        return "scheduled"
+
+    is_plan_upgrade = plan_rank.get(target_plan, 0) > plan_rank.get(current_plan, 0)
+    is_interval_upgrade = current_interval == "monthly" and target_interval == "annual"
+    if is_plan_upgrade or is_interval_upgrade:
         return "immediate"
-
-    if current_interval == "monthly" and current_plan == "premium":
-        if target_interval == "annual":
-            return "immediate"
-        return "scheduled"
-
-    if current_interval == "annual" and current_plan == "plus":
-        if target_interval == "annual" and target_plan == "premium":
-            return "immediate"
-        return "scheduled"
-
-    if current_interval == "annual" and current_plan == "premium":
-        return "scheduled"
 
     return "scheduled"
 
@@ -495,6 +490,38 @@ async def billing_status(
             ),
         },
     )
+
+
+@router.post("/cancel-scheduled-change", response_model=APIResponse)
+async def cancel_scheduled_change(
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+):
+    if not is_stripe_billing_configured():
+        raise HTTPException(status_code=503, detail="stripe_not_configured")
+    if not getattr(current_user, "stripe_subscription_id", None):
+        raise HTTPException(status_code=400, detail="subscription_missing")
+    _stripe_configure()
+
+    try:
+        sub = stripe.Subscription.retrieve(current_user.stripe_subscription_id)
+        if sub.status in ("active", "trialing", "past_due"):
+            _sync_pending_from_subscription_schedule(db, current_user, sub)
+    except stripe.error.InvalidRequestError:
+        current_user.stripe_subscription_id = None
+        db.add(current_user)
+        db.commit()
+        raise HTTPException(status_code=400, detail="subscription_missing")
+    except stripe.error.StripeError as e:
+        logger.warning("subscription retrieve before schedule cancel failed: %s", e)
+        raise HTTPException(status_code=400, detail="stripe_change_failed")
+
+    _release_existing_schedule(current_user)
+    _clear_pending_membership(current_user)
+    db.add(current_user)
+    db.commit()
+
+    return APIResponse(success=True, message="scheduled_change_canceled", data={})
 
 
 @router.post("/checkout-session", response_model=APIResponse)

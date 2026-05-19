@@ -16,6 +16,7 @@ interface MembershipPlansProps {
   onSubscribe: (plan: "plus" | "premium") => void | Promise<void>;
   onManageBilling: () => void | Promise<void>;
   onPlanAction: (plan: MembershipPlan) => void | Promise<void>;
+  onCancelScheduledPlanChange: () => void | Promise<void>;
   hasStripeSubscription: boolean;
   portalEnabled: boolean;
   checkoutEnabled: boolean;
@@ -74,6 +75,32 @@ const planDisplayPrices: Record<MembershipPlan, { monthly: string; annual: strin
   plus: { monthly: "$4.99", annual: "$49.99" },
   premium: { monthly: "$6.99", annual: "$69.99" },
 };
+
+const planRanks: Record<MembershipPlan, number> = {
+  free: 0,
+  plus: 1,
+  premium: 2,
+};
+
+function getPaidPlanChangeTiming(
+  currentPlan: MembershipPlan,
+  currentInterval: MembershipBillingInterval | null,
+  targetPlan: MembershipPlan,
+  targetInterval: MembershipBillingInterval,
+): "no_change" | "immediate" | "scheduled" {
+  if (!currentInterval || currentPlan === "free" || targetPlan === "free") return "scheduled";
+  if (currentPlan === targetPlan && currentInterval === targetInterval) return "no_change";
+
+  const isPlanDowngrade = planRanks[targetPlan] < planRanks[currentPlan];
+  const isIntervalDowngrade = currentInterval === "annual" && targetInterval === "monthly";
+  if (isPlanDowngrade || isIntervalDowngrade) return "scheduled";
+
+  const isPlanUpgrade = planRanks[targetPlan] > planRanks[currentPlan];
+  const isIntervalUpgrade = currentInterval === "monthly" && targetInterval === "annual";
+  if (isPlanUpgrade || isIntervalUpgrade) return "immediate";
+
+  return "scheduled";
+}
 
 const planStyles = {
   free: {
@@ -146,6 +173,7 @@ export default function MembershipPlans({
   onSubscribe,
   onManageBilling,
   onPlanAction,
+  onCancelScheduledPlanChange,
   hasStripeSubscription,
   portalEnabled,
   checkoutEnabled,
@@ -164,6 +192,7 @@ export default function MembershipPlans({
 
   const isCanceledAtPeriodEnd = subscriptionCancelAtPeriodEnd === true;
   const pendingDateLabel = pendingEffectiveAtIso ? formatMembershipPeriodDate(pendingEffectiveAtIso, locale) : "";
+  const hasScheduledPlanChange = Boolean(pendingPlan && pendingBillingInterval && pendingDateLabel);
   const [cancelDialogPlan, setCancelDialogPlan] = useState<Extract<MembershipPlan, "plus" | "premium"> | null>(null);
 
   const cancelLoseKeys =
@@ -230,17 +259,21 @@ export default function MembershipPlans({
           const isFreePreview = plan.key === "free" && currentPlan !== "free";
           const price = planDisplayPrices[plan.key][billingInterval === "annual" ? "annual" : "monthly"];
           const periodDateLabel = membershipPeriodEndIso ? formatMembershipPeriodDate(membershipPeriodEndIso, locale) : "";
-          const showStatusRow =
-            isCurrent && (plan.key === "plus" || plan.key === "premium") && Boolean(periodDateLabel || isCanceledAtPeriodEnd);
-
           let buttonLabel: string | null;
           let buttonDisabled = redirecting;
           let handleClick: () => void = () => void onPlanAction(plan.key);
           const pendingMatches =
             pendingPlan === plan.key && pendingBillingInterval === billingInterval && Boolean(pendingDateLabel);
+          const showCurrentStatusRow =
+            isCurrent &&
+            (plan.key === "plus" || plan.key === "premium") &&
+            Boolean(periodDateLabel || isCanceledAtPeriodEnd || hasScheduledPlanChange);
+          const showPendingStatusRow = pendingMatches;
+          const showStatusRow = showCurrentStatusRow || showPendingStatusRow;
           const isPaidPlan = plan.key === "plus" || plan.key === "premium";
-          const isAnnualSubscriptionOnMonthlyTab =
-            hasStripeSubscription && currentBillingInterval === "annual" && billingInterval === "monthly" && isPaidPlan;
+          const paidPlanChangeTiming = isPaidPlan
+            ? getPaidPlanChangeTiming(currentPlan, currentBillingInterval, plan.key, billingInterval)
+            : "scheduled";
 
           if (hasStripeSubscription) {
             if (plan.key === "free") {
@@ -252,21 +285,17 @@ export default function MembershipPlans({
                 buttonDisabled = buttonDisabled || !portalEnabled;
                 handleClick = () => void onManageBilling();
               } else {
-                buttonLabel = t("cancelInPortal");
+                buttonLabel = hasScheduledPlanChange ? t("cancelAllRenewal") : t("cancelInPortal");
                 buttonDisabled = buttonDisabled || !portalEnabled;
                 handleClick = () => setCancelDialogPlan(plan.key as "plus" | "premium");
               }
-            } else if (isAnnualSubscriptionOnMonthlyTab) {
-              buttonLabel = t("errors.alreadySubscribed");
-              buttonDisabled = true;
             } else if (pendingMatches) {
-              buttonLabel = null;
-              buttonDisabled = true;
+              buttonLabel = t("cancelScheduledPlanChange");
+              handleClick = () => void onCancelScheduledPlanChange();
             } else {
-              buttonLabel =
-                billingInterval === "annual"
-                  ? t("switchPlanAnnual", { plan: t(`plans.${plan.key}`) })
-                  : t("switchPlan", { plan: t(`plans.${plan.key}`) });
+              buttonLabel = t(paidPlanChangeTiming === "immediate" ? "changeNow" : "scheduleChange", {
+                plan: t(`plans.${plan.key}`),
+              });
               handleClick = () => void onPlanAction(plan.key);
             }
           } else if (plan.key === "free" || isFreePreview) {
@@ -346,8 +375,10 @@ export default function MembershipPlans({
               >
                 {showStatusRow ? (
                   <div className="text-center font-['Outfit'] text-base font-normal leading-6 text-amber-300">
-                    {periodDateLabel ? (
-                      isCanceledAtPeriodEnd ? (
+                    {showPendingStatusRow ? (
+                      <span>{t("planStartsOn", { date: pendingDateLabel })}</span>
+                    ) : periodDateLabel ? (
+                      isCanceledAtPeriodEnd || hasScheduledPlanChange ? (
                         <span>{t("planExpiresOn", { date: periodDateLabel })}</span>
                       ) : (
                         <span>{t("planRenewOn", { date: periodDateLabel })}</span>

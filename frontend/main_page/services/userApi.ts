@@ -561,6 +561,16 @@ export async function changeStripeSubscription(params: {
   };
 }
 
+export async function cancelScheduledStripeSubscriptionChange(): Promise<void> {
+  const res = await fetch(getApiUrl("/api/billing/cancel-scheduled-change"), {
+    method: "POST",
+    headers: getAuthHeaders(),
+  });
+  if (!res.ok) {
+    throw new Error(await readApiErrorDetail(res));
+  }
+}
+
 export interface StripeSubscriptionChangePreview {
   action: "immediate" | "scheduled";
   plan: "plus" | "premium";
