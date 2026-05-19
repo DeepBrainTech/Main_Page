@@ -203,8 +203,8 @@
         "description": "登录即可领取奖励"
       },
       "premiumRewards": {
-        "title": "5 钻石 +",
-        "coins": "10 金币"
+        "title": "10 钻石 +",
+        "coins": "50 金币"
       },
       "catchUp": {
         "title": "补签功能",

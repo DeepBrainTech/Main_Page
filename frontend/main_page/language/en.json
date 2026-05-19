@@ -203,8 +203,8 @@
         "description": "Login to claim rewards"
       },
       "premiumRewards": {
-        "title": "5 Diamonds +",
-        "coins": "20 Coins"
+        "title": "10 Diamonds +",
+        "coins": "50 Coins"
       },
 
       "catchUp": {
