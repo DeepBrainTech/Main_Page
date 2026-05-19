@@ -13,19 +13,23 @@ from sqlalchemy.orm import Session
 
 from auth import get_current_active_user
 from config.stripe_billing import (
+    DIAMOND_BUNDLES,
     get_price_id,
     get_public_app_url,
+    get_diamond_bundle_price_id,
     get_stripe_secret_key,
     get_stripe_webhook_secret,
     is_stripe_billing_configured,
+    is_stripe_shop_configured,
     price_id_index,
 )
 from database import get_db
-from models import User
+from models import StripeCheckoutFulfillment, User, UserRewards
 from schemas import (
     APIResponse,
     BillingChangeSubscriptionBody,
     BillingCheckoutBody,
+    BillingDiamondCheckoutBody,
     BillingPortalBody,
     BillingUpdatePaymentMethodBody,
 )
@@ -57,6 +61,10 @@ def _stripe_ui_locale(site_locale: str) -> str:
 
 def _membership_path(locale: str) -> str:
     return f"/{locale}/membership"
+
+
+def _shop_path(locale: str) -> str:
+    return f"/{locale}/shop"
 
 
 def _clear_paid_membership(user: User) -> None:
@@ -452,6 +460,63 @@ def _resolve_user_for_subscription(db: Session, sub: stripe.Subscription) -> Use
     return None
 
 
+def _get_or_create_rewards(db: Session, user_id: int) -> UserRewards:
+    rewards = db.query(UserRewards).filter(UserRewards.user_id == user_id).first()
+    if rewards:
+        return rewards
+    rewards = UserRewards(user_id=user_id)
+    db.add(rewards)
+    db.flush()
+    return rewards
+
+
+def _fulfill_diamond_checkout_session(db: Session, sess) -> None:
+    session_id = sess.get("id")
+    if not session_id:
+        logger.warning("diamond checkout session missing id")
+        return
+    existing = (
+        db.query(StripeCheckoutFulfillment)
+        .filter(StripeCheckoutFulfillment.stripe_session_id == session_id)
+        .first()
+    )
+    if existing:
+        return
+
+    meta = sess.get("metadata") or {}
+    if meta.get("kind") != "diamond_bundle":
+        return
+    uid = meta.get("user_id") or sess.get("client_reference_id")
+    bundle_id = meta.get("bundle_id")
+    diamonds = DIAMOND_BUNDLES.get(bundle_id)
+    if not uid or not diamonds:
+        logger.warning("diamond checkout session %s missing user or bundle metadata", session_id)
+        return
+
+    user = db.query(User).filter(User.id == int(uid)).first()
+    if not user:
+        logger.warning("diamond checkout session user %s not found", uid)
+        return
+
+    customer_id = sess.get("customer")
+    if customer_id and not user.stripe_customer_id:
+        user.stripe_customer_id = str(customer_id)
+
+    rewards = _get_or_create_rewards(db, user.id)
+    rewards.diamonds += diamonds
+    db.add(rewards)
+    db.add(user)
+    db.add(
+        StripeCheckoutFulfillment(
+            stripe_session_id=session_id,
+            user_id=user.id,
+            kind="diamond_bundle",
+            amount=diamonds,
+        )
+    )
+    db.commit()
+
+
 @router.get("/status", response_model=APIResponse)
 async def billing_status(
     current_user: User = Depends(get_current_active_user),
@@ -577,6 +642,57 @@ async def create_checkout_session(
         cancel_url=cancel_url,
         metadata=meta,
         subscription_data={"metadata": meta},
+        locale=_stripe_ui_locale(lo),
+    )
+
+    return APIResponse(success=True, message="ok", data={"url": session.url})
+
+
+@router.post("/diamond-checkout-session", response_model=APIResponse)
+async def create_diamond_checkout_session(
+    body: BillingDiamondCheckoutBody,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+):
+    """Create a one-time Stripe Checkout session for diamond bundles."""
+    if not is_stripe_shop_configured():
+        raise HTTPException(status_code=503, detail="stripe_not_configured")
+    _stripe_configure()
+
+    price_id = get_diamond_bundle_price_id(body.bundle_id)
+    if not price_id:
+        raise HTTPException(status_code=503, detail="stripe_price_not_configured")
+
+    lo = _allowed_locale(body.locale)
+    base = get_public_app_url()
+    success_url = f"{base}{_shop_path(lo)}?checkout=success"
+    cancel_url = f"{base}{_shop_path(lo)}?checkout=canceled"
+
+    if not current_user.stripe_customer_id:
+        customer = stripe.Customer.create(
+            email=current_user.email,
+            metadata={"user_id": str(current_user.id)},
+        )
+        current_user.stripe_customer_id = customer.id
+        db.add(current_user)
+        db.commit()
+
+    diamonds = DIAMOND_BUNDLES[body.bundle_id]
+    meta = {
+        "kind": "diamond_bundle",
+        "user_id": str(current_user.id),
+        "bundle_id": body.bundle_id,
+        "diamonds": str(diamonds),
+    }
+    session = stripe.checkout.Session.create(
+        mode="payment",
+        customer=current_user.stripe_customer_id,
+        client_reference_id=str(current_user.id),
+        line_items=[{"price": price_id, "quantity": 1}],
+        success_url=success_url,
+        cancel_url=cancel_url,
+        metadata=meta,
+        payment_intent_data={"metadata": meta},
         locale=_stripe_ui_locale(lo),
     )
 
@@ -923,6 +1039,9 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
     try:
         if etype == "checkout.session.completed":
             sess = obj
+            if sess.get("mode") == "payment":
+                _fulfill_diamond_checkout_session(db, sess)
+                return APIResponse(success=True, message="ok", data={"received": True})
             if sess.get("mode") != "subscription":
                 return APIResponse(success=True, message="ok", data={"received": True})
             uid = (sess.get("metadata") or {}).get("user_id") or sess.get("client_reference_id")

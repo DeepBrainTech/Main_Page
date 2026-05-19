@@ -119,3 +119,20 @@ def ensure_users_table_compatibility():
                 "ON users (stripe_subscription_id) WHERE stripe_subscription_id IS NOT NULL"
             )
         )
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS stripe_checkout_fulfillments (
+                id SERIAL PRIMARY KEY,
+                stripe_session_id VARCHAR(255) NOT NULL UNIQUE,
+                user_id INTEGER NOT NULL REFERENCES users(id),
+                kind VARCHAR(50) NOT NULL,
+                amount INTEGER NOT NULL DEFAULT 0,
+                created_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT NOW()
+            )
+        """))
+        conn.execute(
+            text(
+                "CREATE UNIQUE INDEX IF NOT EXISTS ix_stripe_checkout_fulfillments_session "
+                "ON stripe_checkout_fulfillments (stripe_session_id)"
+            )
+        )
+        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_stripe_checkout_fulfillments_user_id ON stripe_checkout_fulfillments (user_id)"))

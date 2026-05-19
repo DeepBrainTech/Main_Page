@@ -36,7 +36,42 @@
     "diamondHelpSevenDayStreak": "Achieve 7-Day Streak:",
     "diamondHelpGameBadges": "Game badges rewards",
     "diamondHelpBuyInShop": "Buy in Shop",
-    "settings": "Settings"
+    "settings": "Settings",
+    "shop": "Shop"
+  },
+  "shop": {
+    "checkoutSuccess": "Payment completed. Diamonds may take a moment to appear.",
+    "checkoutCanceled": "Checkout canceled.",
+    "errors": {
+      "checkoutFailed": "Could not start checkout. Try again later.",
+      "stripeNotConfigured": "Online checkout is not configured yet.",
+      "generic": "Something went wrong. Please try again."
+    },
+    "badges": {
+      "bestValue": "Best Value"
+    },
+    "products": {
+      "diamonds10": {
+        "title": "10 Diamonds",
+        "price": "$ 0.99"
+      },
+      "diamonds25": {
+        "title": "25 Diamonds",
+        "price": "$ 1.99"
+      },
+      "diamonds70": {
+        "title": "70 Diamonds",
+        "price": "$ 5.99"
+      },
+      "diamonds200": {
+        "title": "200 Diamonds",
+        "price": "$ 15.99"
+      },
+      "diamonds300": {
+        "title": "300 Diamonds",
+        "price": "$ 20.99"
+      }
+    }
   },
   "settings": {
     "title": "Settings",

@@ -13,6 +13,7 @@ const SEGMENT_TO_TAB: Record<string, AppTab> = {
   leaderboard: "leaderboard",
   test: "test",
   learning: "learning",
+  shop: "dashboard",
 };
 
 /**

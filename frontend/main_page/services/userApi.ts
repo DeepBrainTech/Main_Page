@@ -506,6 +506,24 @@ export async function createStripeCheckoutSession(params: {
   return url;
 }
 
+export async function createDiamondCheckoutSession(params: {
+  bundle_id: "diamonds10" | "diamonds25" | "diamonds70" | "diamonds200" | "diamonds300";
+  locale: string;
+}): Promise<string> {
+  const res = await fetch(getApiUrl("/api/billing/diamond-checkout-session"), {
+    method: "POST",
+    headers: getAuthHeaders(),
+    body: JSON.stringify(params),
+  });
+  if (!res.ok) {
+    throw new Error(await readApiErrorDetail(res));
+  }
+  const json = (await res.json()) as { data?: { url?: string } };
+  const url = json?.data?.url;
+  if (!url) throw new Error("checkout_failed");
+  return url;
+}
+
 export async function createStripeBillingPortalSession(locale: string): Promise<string> {
   const res = await fetch(getApiUrl("/api/billing/portal-session"), {
     method: "POST",

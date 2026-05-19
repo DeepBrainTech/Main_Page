@@ -7,6 +7,15 @@ from typing import Literal, Optional
 
 MembershipPaidPlan = Literal["plus", "premium"]
 BillingInterval = Literal["monthly", "annual"]
+DiamondBundleId = Literal["diamonds10", "diamonds25", "diamonds70", "diamonds200", "diamonds300"]
+
+DIAMOND_BUNDLES: dict[DiamondBundleId, int] = {
+    "diamonds10": 10,
+    "diamonds25": 25,
+    "diamonds70": 70,
+    "diamonds200": 200,
+    "diamonds300": 300,
+}
 
 
 def get_stripe_secret_key() -> Optional[str]:
@@ -36,6 +45,18 @@ def get_price_id(plan: MembershipPaidPlan, interval: BillingInterval) -> Optiona
     return val or None
 
 
+def get_diamond_bundle_price_id(bundle_id: DiamondBundleId) -> Optional[str]:
+    env_map = {
+        "diamonds10": "STRIPE_PRICE_DIAMONDS_10",
+        "diamonds25": "STRIPE_PRICE_DIAMONDS_25",
+        "diamonds70": "STRIPE_PRICE_DIAMONDS_70",
+        "diamonds200": "STRIPE_PRICE_DIAMONDS_200",
+        "diamonds300": "STRIPE_PRICE_DIAMONDS_300",
+    }
+    val = (os.getenv(env_map[bundle_id]) or "").strip()
+    return val or None
+
+
 def price_id_index() -> dict[str, tuple[MembershipPaidPlan, BillingInterval]]:
     """Reverse lookup for webhook: price_id -> (plan, interval)."""
     out: dict[str, tuple[MembershipPaidPlan, BillingInterval]] = {}
@@ -55,3 +76,9 @@ def is_stripe_billing_configured() -> bool:
             if get_price_id(plan, interval):
                 return True
     return False
+
+
+def is_stripe_shop_configured() -> bool:
+    if not get_stripe_secret_key():
+        return False
+    return any(get_diamond_bundle_price_id(bundle_id) for bundle_id in DIAMOND_BUNDLES)

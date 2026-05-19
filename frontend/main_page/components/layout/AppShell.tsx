@@ -155,6 +155,18 @@ export default function AppShell({
               />
             </div>
 
+            <Link
+              href="/shop"
+              onClick={() => {
+                setProfileOpen(false);
+                setSettingsOpen(false);
+              }}
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-xl text-sky-700 hover:bg-indigo-100 sm:h-10 sm:w-10 sm:text-2xl md:h-11 md:w-11"
+              aria-label={tNav("shop")}
+            >
+              <img src="/dashboard/shop.svg" alt="" width={20} height={20} className="h-5 w-5" />
+            </Link>
+
             <button
               type="button"
               onClick={() => {

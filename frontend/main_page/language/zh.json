@@ -36,7 +36,42 @@
     "diamondHelpSevenDayStreak": "达成 7 日连续签到：",
     "diamondHelpGameBadges": "游戏徽章奖励",
     "diamondHelpBuyInShop": "商店购买",
-    "settings": "设置"
+    "settings": "设置",
+    "shop": "商店"
+  },
+  "shop": {
+    "checkoutSuccess": "支付已完成，钻石可能需要稍等片刻后到账。",
+    "checkoutCanceled": "已取消支付。",
+    "errors": {
+      "checkoutFailed": "无法打开支付页面，请稍后重试。",
+      "stripeNotConfigured": "尚未配置在线支付（Stripe）。",
+      "generic": "出错了，请稍后重试。"
+    },
+    "badges": {
+      "bestValue": "Best Value"
+    },
+    "products": {
+      "diamonds10": {
+        "title": "10 Diamonds",
+        "price": "$ 0.99"
+      },
+      "diamonds25": {
+        "title": "25 Diamonds",
+        "price": "$ 1.99"
+      },
+      "diamonds70": {
+        "title": "70 Diamonds",
+        "price": "$ 5.99"
+      },
+      "diamonds200": {
+        "title": "200 Diamonds",
+        "price": "$ 15.99"
+      },
+      "diamonds300": {
+        "title": "300 Diamonds",
+        "price": "$ 20.99"
+      }
+    }
   },
   "settings": {
     "title": "设置",

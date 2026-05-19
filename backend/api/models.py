@@ -176,6 +176,18 @@ class UserRewards(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
+class StripeCheckoutFulfillment(Base):
+    """Idempotency record for completed one-time Stripe Checkout sessions."""
+    __tablename__ = "stripe_checkout_fulfillments"
+
+    id = Column(Integer, primary_key=True, index=True)
+    stripe_session_id = Column(String(255), unique=True, nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    kind = Column(String(50), nullable=False)
+    amount = Column(Integer, default=0, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+
 class UserCheckIn(Base):
     """用户签到记录（按日）"""
     __tablename__ = "user_check_ins"
