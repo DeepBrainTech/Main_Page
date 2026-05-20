@@ -33,6 +33,7 @@ from schemas import (
     BillingPortalBody,
     BillingUpdatePaymentMethodBody,
 )
+from utils.notifications import create_user_notification
 
 logger = logging.getLogger(__name__)
 
@@ -212,6 +213,18 @@ def _format_amount(amount: int, currency: str | None) -> str:
     }
     value = amount if code in zero_decimal else amount / 100
     return f"{code} {value:,.0f}" if code in zero_decimal else f"{code} {value:,.2f}"
+
+
+def _plan_label(plan: str | None) -> str:
+    if plan == "premium":
+        return "Premium"
+    if plan == "plus":
+        return "Plus"
+    return "Membership"
+
+
+def _source_event(event_id: str | None, suffix: str) -> str | None:
+    return f"{event_id}:{suffix}" if event_id else None
 
 
 def _invoice_preview_lines(invoice) -> list[dict]:
@@ -460,6 +473,26 @@ def _resolve_user_for_subscription(db: Session, sub: stripe.Subscription) -> Use
     return None
 
 
+def _resolve_user_for_invoice(db: Session, invoice) -> User | None:
+    sub_id = _stripe_obj_get(invoice, "subscription")
+    if sub_id:
+        user = _user_by_subscription_id(db, str(sub_id))
+        if user:
+            return user
+        try:
+            sub = stripe.Subscription.retrieve(str(sub_id))
+            user = _resolve_user_for_subscription(db, sub)
+            if user:
+                return user
+        except stripe.error.StripeError as e:
+            logger.warning("invoice subscription retrieve failed: %s", e)
+
+    cust_id = _stripe_obj_get(invoice, "customer")
+    if cust_id:
+        return _user_by_stripe_customer(db, str(cust_id))
+    return None
+
+
 def _get_or_create_rewards(db: Session, user_id: int) -> UserRewards:
     rewards = db.query(UserRewards).filter(UserRewards.user_id == user_id).first()
     if rewards:
@@ -470,7 +503,7 @@ def _get_or_create_rewards(db: Session, user_id: int) -> UserRewards:
     return rewards
 
 
-def _fulfill_diamond_checkout_session(db: Session, sess) -> None:
+def _fulfill_diamond_checkout_session(db: Session, sess, event_id: str | None = None) -> None:
     session_id = sess.get("id")
     if not session_id:
         logger.warning("diamond checkout session missing id")
@@ -515,6 +548,17 @@ def _fulfill_diamond_checkout_session(db: Session, sess) -> None:
         )
     )
     db.commit()
+    create_user_notification(
+        db,
+        user_id=user.id,
+        notification_type="purchase",
+        title="Purchase Successful",
+        message=f"{diamonds} Diamonds have been added to your bag.",
+        icon="purchase",
+        source="stripe",
+        source_event_id=_source_event(event_id or session_id, "purchase"),
+        metadata={"bundle_id": bundle_id, "diamonds": diamonds, "stripe_session_id": session_id},
+    )
 
 
 @router.get("/status", response_model=APIResponse)
@@ -1033,14 +1077,16 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="invalid_signature")
 
     _stripe_configure()
+    event_id = event.get("id")
     etype = event["type"]
     obj = event["data"]["object"]
+    previous_attributes = event["data"].get("previous_attributes") or {}
 
     try:
         if etype == "checkout.session.completed":
             sess = obj
             if sess.get("mode") == "payment":
-                _fulfill_diamond_checkout_session(db, sess)
+                _fulfill_diamond_checkout_session(db, sess, event_id)
                 return APIResponse(success=True, message="ok", data={"received": True})
             if sess.get("mode") != "subscription":
                 return APIResponse(success=True, message="ok", data={"received": True})
@@ -1062,6 +1108,19 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                 db.commit()
                 full_sub = stripe.Subscription.retrieve(sub_id)
                 sync_user_from_stripe_subscription(db, user, full_sub)
+                plan = (sess.get("metadata") or {}).get("plan") or getattr(user, "membership_plan", None)
+                interval = (sess.get("metadata") or {}).get("billing_interval")
+                create_user_notification(
+                    db,
+                    user_id=user.id,
+                    notification_type="subscription",
+                    title="Subscription Activated",
+                    message=f"Your {_plan_label(plan)} membership is now active.",
+                    icon="subscription",
+                    source="stripe",
+                    source_event_id=_source_event(event_id, "subscription-activated"),
+                    metadata={"plan": plan, "billing_interval": interval, "stripe_subscription_id": sub_id},
+                )
 
         elif etype == "customer.subscription.deleted":
             sub_id = obj.get("id")
@@ -1078,6 +1137,17 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                 _clear_paid_membership(user)
                 db.add(user)
                 db.commit()
+                create_user_notification(
+                    db,
+                    user_id=user.id,
+                    notification_type="subscription",
+                    title="Subscription Canceled",
+                    message="Your subscription has been canceled.",
+                    icon="subscription",
+                    source="stripe",
+                    source_event_id=_source_event(event_id, "subscription-canceled"),
+                    metadata={"stripe_subscription_id": sub_id},
+                )
 
         elif etype in ("customer.subscription.created", "customer.subscription.updated"):
             sub_id = obj.get("id")
@@ -1095,6 +1165,53 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
             else:
                 sync_user_from_stripe_subscription(db, user, full_sub)
                 _sync_pending_from_subscription_schedule(db, user, full_sub)
+                if etype == "customer.subscription.updated" and (
+                    "items" in previous_attributes
+                    or "plan" in previous_attributes
+                    or "cancel_at_period_end" in previous_attributes
+                ):
+                    resolved = _resolve_plan_from_subscription(full_sub)
+                    plan = resolved[0] if resolved else getattr(user, "membership_plan", None)
+                    create_user_notification(
+                        db,
+                        user_id=user.id,
+                        notification_type="subscription",
+                        title="Subscription Updated",
+                        message=f"Your {_plan_label(plan)} membership has been updated.",
+                        icon="subscription",
+                        source="stripe",
+                        source_event_id=_source_event(event_id, "subscription-updated"),
+                        metadata={
+                            "plan": plan,
+                            "stripe_subscription_id": sub_id,
+                            "previous_attributes": list(previous_attributes.keys()),
+                        },
+                    )
+
+        elif etype == "invoice.paid":
+            user = _resolve_user_for_invoice(db, obj)
+            if not user:
+                logger.warning("invoice.paid: user not resolved")
+                return APIResponse(success=True, message="ok", data={"received": True})
+            billing_reason = _stripe_obj_get(obj, "billing_reason")
+            if billing_reason == "subscription_create":
+                return APIResponse(success=True, message="ok", data={"received": True})
+            plan = getattr(user, "membership_plan", None)
+            create_user_notification(
+                db,
+                user_id=user.id,
+                notification_type="subscription",
+                title="Subscription Renewed",
+                message=f"Your {_plan_label(plan)} membership is renewed.",
+                icon="subscription",
+                source="stripe",
+                source_event_id=_source_event(event_id, "subscription-renewed"),
+                metadata={
+                    "plan": plan,
+                    "stripe_invoice_id": _stripe_obj_get(obj, "id"),
+                    "billing_reason": billing_reason,
+                },
+            )
 
         elif etype.startswith("subscription_schedule."):
             schedule_id = obj.get("id")

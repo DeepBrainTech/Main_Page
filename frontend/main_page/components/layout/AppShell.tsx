@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Link } from "@/lib/i18n-navigation";
 import Image from "next/image";
@@ -11,9 +11,80 @@ import BalanceBadge from "@/components/layout/BalanceBadge";
 import CoinHelpPopover from "@/components/layout/CoinHelpPopover";
 import DiamondHelpPopover from "@/components/layout/DiamondHelpPopover";
 import { useRewards } from "@/hooks/useRewards";
-import { fetchAuthMeMembership } from "@/services/userApi";
+import {
+  fetchAuthMeMembership,
+  fetchNotifications,
+  markAllNotificationsRead,
+  type UserNotificationData,
+} from "@/services/userApi";
 
 export type AppTab = "dashboard" | "learning" | "test" | "brainGames" | "leaderboard";
+
+type NotificationItem = {
+  id: number;
+  type: string;
+  title: string;
+  message: string;
+  icon: string;
+  time: string;
+  iconSrc: string;
+  iconAlt: string;
+  unread: boolean;
+};
+
+function notificationIcon(icon: string): { src: string; alt: string } {
+  if (icon === "purchase") {
+    return { src: "/notification/purchase.svg", alt: "Purchase successful" };
+  }
+  return { src: "/notification/subscription.svg", alt: "Subscription" };
+}
+
+function formatNotificationTime(value: string | null): string {
+  if (!value) {
+    return "";
+  }
+
+  const createdAt = new Date(value);
+  const elapsedMs = Date.now() - createdAt.getTime();
+  if (!Number.isFinite(elapsedMs)) {
+    return "";
+  }
+
+  const minute = 60 * 1000;
+  const hour = 60 * minute;
+  const day = 24 * hour;
+  if (elapsedMs < minute) {
+    return "Just now";
+  }
+  if (elapsedMs < hour) {
+    const minutes = Math.max(1, Math.floor(elapsedMs / minute));
+    return `${minutes} minute${minutes === 1 ? "" : "s"} ago`;
+  }
+  if (elapsedMs < day) {
+    const hours = Math.floor(elapsedMs / hour);
+    return `${hours} hour${hours === 1 ? "" : "s"} ago`;
+  }
+  if (elapsedMs < 2 * day) {
+    return "Yesterday";
+  }
+  const days = Math.floor(elapsedMs / day);
+  return `${days} days ago`;
+}
+
+function mapNotification(notification: UserNotificationData): NotificationItem {
+  const icon = notificationIcon(notification.icon);
+  return {
+    id: notification.id,
+    type: notification.type,
+    title: notification.title,
+    message: notification.message,
+    icon: notification.icon,
+    iconSrc: icon.src,
+    iconAlt: icon.alt,
+    time: formatNotificationTime(notification.created_at),
+    unread: !notification.is_read,
+  };
+}
 
 interface AppShellProps {
   activeTab: AppTab | null;
@@ -52,10 +123,15 @@ export default function AppShell({
   const tMembership = useTranslations("membership");
   const [profileOpen, setProfileOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const [notificationsLoading, setNotificationsLoading] = useState(false);
   const [membershipPlan, setMembershipPlan] = useState<MembershipPlan>("free");
   const [avatarFailed, setAvatarFailed] = useState(false);
+  const notificationsRef = useRef<HTMLDivElement | null>(null);
   const { loading: rewardsLoading, coins, diamonds, flowers } = useRewards();
   const resolvedAvatarSrc = !avatarFailed && avatarUrl ? avatarUrl : "/dashboard/default.png";
+  const hasUnreadNotifications = notifications.some((notification) => notification.unread);
 
   useEffect(() => {
     const syncMembershipPlan = () => {
@@ -77,6 +153,46 @@ export default function AppShell({
   useEffect(() => {
     setAvatarFailed(false);
   }, [avatarUrl]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setNotificationsLoading(true);
+    fetchNotifications()
+      .then(({ notifications: rows }) => {
+        if (!cancelled) {
+          setNotifications(rows.map(mapNotification));
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setNotifications([]);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setNotificationsLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!notificationsOpen) {
+      return;
+    }
+
+    const closeOnOutsideClick = (event: MouseEvent) => {
+      if (!notificationsRef.current?.contains(event.target as Node)) {
+        setNotificationsOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", closeOnOutsideClick);
+    return () => document.removeEventListener("mousedown", closeOnOutsideClick);
+  }, [notificationsOpen]);
 
   const tabs: { key: AppTab; label: string; iconSrc: string; iconAlt: string }[] = [
     { key: "dashboard", label: tHome("dashboardTab"), iconSrc: "/dashboard/dashboard.svg", iconAlt: "Dashboard" },
@@ -160,6 +276,7 @@ export default function AppShell({
               onClick={() => {
                 setProfileOpen(false);
                 setSettingsOpen(false);
+                setNotificationsOpen(false);
               }}
               className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-xl text-sky-700 hover:bg-indigo-100 sm:h-10 sm:w-10 sm:text-2xl md:h-11 md:w-11"
               aria-label={tNav("shop")}
@@ -167,10 +284,109 @@ export default function AppShell({
               <img src="/dashboard/shop.svg" alt="" width={20} height={20} className="h-5 w-5" />
             </Link>
 
+            <div ref={notificationsRef} className="relative shrink-0">
+              <button
+                type="button"
+                onClick={() => {
+                  setProfileOpen(false);
+                  setSettingsOpen(false);
+                  setNotificationsOpen((open) => !open);
+                }}
+                className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-sky-700 hover:bg-indigo-100 sm:h-10 sm:w-10 md:h-11 md:w-11"
+                aria-label="Notifications"
+                aria-expanded={notificationsOpen}
+              >
+                <img src="/notification/mail.svg" alt="" width={20} height={20} className="h-5 w-5" />
+                {hasUnreadNotifications ? (
+                  <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-[#F44F44]" aria-hidden="true" />
+                ) : null}
+              </button>
+
+              {notificationsOpen ? (
+                <div className="absolute right-[-130px] top-full z-50 mt-2 w-[465px] max-w-[calc(100vw-2rem)] pt-1.5 font-app-body">
+                  <div className="absolute right-[148px] top-[1px] z-10">
+                    <div className="h-3 w-3 -rotate-45 rounded-[2px] border-r border-t border-[#b9cfe5] bg-white" />
+                  </div>
+
+                  <div className="overflow-hidden rounded-2xl border border-[#b9cfe5] bg-white shadow-2xl shadow-slate-900/15">
+                    <div className="flex h-20 items-center justify-between border-b border-zinc-800/10 px-6">
+                      <h2 className="font-app-heading text-xl font-bold leading-8 text-sky-700">Notifications</h2>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setNotifications((current) =>
+                            current.map((notification) => ({ ...notification, unread: false })),
+                          );
+                          markAllNotificationsRead().catch(() => {});
+                        }}
+                        className="text-sm font-medium leading-8 text-zinc-800/50 hover:text-zinc-800"
+                      >
+                        Mark all as read
+                      </button>
+                    </div>
+
+                    <div
+                      className="max-h-[495px] overscroll-contain overflow-y-auto px-3 py-3"
+                      onWheel={(event) => event.stopPropagation()}
+                    >
+                      <div className="space-y-3">
+                        {notificationsLoading ? (
+                          <div className="flex w-96 max-w-full items-center justify-center rounded-[10px] px-4 py-10 text-sm text-slate-400">
+                            Loading notifications...
+                          </div>
+                        ) : null}
+                        {!notificationsLoading && notifications.length === 0 ? (
+                          <div className="flex w-96 max-w-full items-center justify-center rounded-[10px] px-4 py-10 text-sm text-slate-400">
+                            No notifications yet.
+                          </div>
+                        ) : null}
+                        {!notificationsLoading && notifications.map((notification) => (
+                          <div
+                            key={notification.id}
+                            className={`flex w-96 max-w-full items-start gap-3 rounded-[10px] px-4 py-4 ${
+                              notification.unread ? "bg-[#EFF6FF]" : "bg-white"
+                            }`}
+                          >
+                            <img
+                              src={notification.iconSrc}
+                              alt={notification.iconAlt}
+                              width={40}
+                              height={40}
+                              className="h-10 w-10 shrink-0"
+                            />
+
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center justify-between gap-3">
+                                <h3 className="truncate text-base font-semibold text-zinc-800">
+                                  {notification.title}
+                                </h3>
+                                {notification.unread ? (
+                                  <img
+                                    src="/notification/unread.svg"
+                                    alt="Unread"
+                                    width={10}
+                                    height={10}
+                                    className="h-2.5 w-2.5 shrink-0"
+                                  />
+                                ) : null}
+                              </div>
+                              <p className="mt-2 text-sm font-normal leading-5 text-sky-700">{notification.message}</p>
+                              <p className="mt-2 text-xs font-normal leading-4 text-slate-400">{notification.time}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+            </div>
+
             <button
               type="button"
               onClick={() => {
                 setProfileOpen(false);
+                setNotificationsOpen(false);
                 setSettingsOpen(true);
               }}
               className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-xl text-sky-700 hover:bg-indigo-100 sm:h-10 sm:w-10 sm:text-2xl md:h-11 md:w-11"
@@ -197,6 +413,7 @@ export default function AppShell({
               type="button"
               onClick={() => {
                 setSettingsOpen(false);
+                setNotificationsOpen(false);
                 setProfileOpen(true);
               }}
               className="h-9 w-9 shrink-0 overflow-hidden rounded-full border border-slate-200 bg-white sm:h-10 sm:w-10 md:h-11 md:w-11"

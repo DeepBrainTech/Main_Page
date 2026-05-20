@@ -45,6 +45,28 @@ class User(Base):
     game_rewards = relationship("UserGameReward", back_populates="user")
     game_likes = relationship("GameLike", back_populates="user")
     games_played = relationship("UserGamePlayed", back_populates="user")
+    notifications = relationship("UserNotification", back_populates="user")
+
+
+class UserNotification(Base):
+    """Per-user notification feed for billing and purchase events."""
+
+    __tablename__ = "user_notifications"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    type = Column(String(50), nullable=False, index=True)
+    title = Column(String(120), nullable=False)
+    message = Column(Text, nullable=False)
+    icon = Column(String(50), nullable=False)
+    is_read = Column(Boolean, default=False, nullable=False, index=True)
+    source = Column(String(50), nullable=True)
+    source_event_id = Column(String(255), unique=True, nullable=True, index=True)
+    notification_metadata = Column(JSON, default=dict)
+    read_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+
+    user = relationship("User", back_populates="notifications")
 
 
 class GameConfig(Base):

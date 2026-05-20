@@ -196,6 +196,42 @@ export interface LearningSubjectProgressData {
 }
 
 /** 获取奖励与签到、任务状态 */
+export interface UserNotificationData {
+  id: number;
+  type: "subscription" | "purchase" | string;
+  title: string;
+  message: string;
+  icon: "subscription" | "purchase" | string;
+  is_read: boolean;
+  created_at: string | null;
+  read_at: string | null;
+  metadata: Record<string, unknown>;
+}
+
+export async function fetchNotifications(limit = 20): Promise<{
+  notifications: UserNotificationData[];
+  unread_count: number;
+}> {
+  const safeLimit = Math.max(1, Math.min(100, limit));
+  const res = await fetch(getApiUrl(`/api/notifications?limit=${safeLimit}`), {
+    headers: getAuthHeaders(),
+  });
+  if (!res.ok) throw new Error("fetch_notifications_failed");
+  const json = await res.json();
+  return {
+    notifications: (json?.data?.notifications ?? []) as UserNotificationData[],
+    unread_count: Number(json?.data?.unread_count ?? 0),
+  };
+}
+
+export async function markAllNotificationsRead(): Promise<void> {
+  const res = await fetch(getApiUrl("/api/notifications/mark-all-read"), {
+    method: "PATCH",
+    headers: getAuthHeaders(),
+  });
+  if (!res.ok) throw new Error("mark_notifications_read_failed");
+}
+
 export async function fetchRewards(): Promise<RewardsData> {
   const res = await fetch(getApiUrl("/api/user/rewards"), { headers: getAuthHeaders() });
   if (!res.ok) throw new Error("fetch_rewards_failed");

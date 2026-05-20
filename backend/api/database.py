@@ -136,3 +136,29 @@ def ensure_users_table_compatibility():
             )
         )
         conn.execute(text("CREATE INDEX IF NOT EXISTS ix_stripe_checkout_fulfillments_user_id ON stripe_checkout_fulfillments (user_id)"))
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS user_notifications (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER NOT NULL REFERENCES users(id),
+                type VARCHAR(50) NOT NULL,
+                title VARCHAR(120) NOT NULL,
+                message TEXT NOT NULL,
+                icon VARCHAR(50) NOT NULL,
+                is_read BOOLEAN NOT NULL DEFAULT FALSE,
+                source VARCHAR(50),
+                source_event_id VARCHAR(255) UNIQUE,
+                notification_metadata JSON,
+                read_at TIMESTAMP WITHOUT TIME ZONE,
+                created_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT NOW()
+            )
+        """))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_user_notifications_user_id ON user_notifications (user_id)"))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_user_notifications_type ON user_notifications (type)"))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_user_notifications_is_read ON user_notifications (is_read)"))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_user_notifications_created_at ON user_notifications (created_at)"))
+        conn.execute(
+            text(
+                "CREATE UNIQUE INDEX IF NOT EXISTS ix_user_notifications_source_event_id "
+                "ON user_notifications (source_event_id) WHERE source_event_id IS NOT NULL"
+            )
+        )
