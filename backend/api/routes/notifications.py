@@ -72,3 +72,27 @@ async def mark_all_notifications_read(
     )
     db.commit()
     return APIResponse(success=True, message="ok", data={"read_at": now.isoformat()})
+
+
+@router.patch("/{notification_id}/read", response_model=APIResponse)
+async def mark_notification_read(
+    notification_id: int,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+):
+    now = datetime.utcnow()
+    row = (
+        db.query(UserNotification)
+        .filter(
+            UserNotification.id == notification_id,
+            UserNotification.user_id == current_user.id,
+        )
+        .first()
+    )
+    if row is None:
+      return APIResponse(success=True, message="ok", data={})
+    row.is_read = True
+    row.read_at = now
+    db.add(row)
+    db.commit()
+    return APIResponse(success=True, message="ok", data={"read_at": now.isoformat()})

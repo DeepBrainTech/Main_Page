@@ -232,6 +232,14 @@ export async function markAllNotificationsRead(): Promise<void> {
   if (!res.ok) throw new Error("mark_notifications_read_failed");
 }
 
+export async function markNotificationRead(notificationId: number): Promise<void> {
+  const res = await fetch(getApiUrl(`/api/notifications/${notificationId}/read`), {
+    method: "PATCH",
+    headers: getAuthHeaders(),
+  });
+  if (!res.ok) throw new Error("mark_notification_read_failed");
+}
+
 export async function fetchRewards(): Promise<RewardsData> {
   const res = await fetch(getApiUrl("/api/user/rewards"), { headers: getAuthHeaders() });
   if (!res.ok) throw new Error("fetch_rewards_failed");

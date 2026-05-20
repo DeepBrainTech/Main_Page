@@ -15,6 +15,7 @@ import {
   fetchAuthMeMembership,
   fetchNotifications,
   markAllNotificationsRead,
+  markNotificationRead,
   type UserNotificationData,
 } from "@/services/userApi";
 
@@ -132,6 +133,25 @@ export default function AppShell({
   const { loading: rewardsLoading, coins, diamonds, flowers } = useRewards();
   const resolvedAvatarSrc = !avatarFailed && avatarUrl ? avatarUrl : "/dashboard/default.png";
   const hasUnreadNotifications = notifications.some((notification) => notification.unread);
+
+  const markNotificationAsRead = (notificationId: number) => {
+    const target = notifications.find((notification) => notification.id === notificationId);
+    if (!target?.unread) {
+      return;
+    }
+    setNotifications((current) =>
+      current.map((notification) =>
+        notification.id === notificationId ? { ...notification, unread: false } : notification,
+      ),
+    );
+    markNotificationRead(notificationId).catch(() => {
+      setNotifications((current) =>
+        current.map((notification) =>
+          notification.id === notificationId ? { ...notification, unread: true } : notification,
+        ),
+      );
+    });
+  };
 
   useEffect(() => {
     const syncMembershipPlan = () => {
@@ -303,8 +323,8 @@ export default function AppShell({
               </button>
 
               {notificationsOpen ? (
-                <div className="absolute right-[-130px] top-full z-50 mt-2 w-[465px] max-w-[calc(100vw-2rem)] pt-1.5 font-app-body">
-                  <div className="absolute right-[148px] top-[1px] z-10">
+                <div className="absolute right-[-175px] top-full z-50 mt-2 w-[560px] max-w-[calc(100vw-2rem)] pt-1.5 font-app-body">
+                  <div className="absolute right-[193px] top-[1px] z-10">
                     <div className="h-3 w-3 -rotate-45 rounded-[2px] border-r border-t border-[#b9cfe5] bg-white" />
                   </div>
 
@@ -331,21 +351,30 @@ export default function AppShell({
                     >
                       <div className="space-y-3">
                         {notificationsLoading ? (
-                          <div className="flex w-96 max-w-full items-center justify-center rounded-[10px] px-4 py-10 text-sm text-slate-400">
+                          <div className="flex w-[481px] max-w-full items-center justify-center rounded-[10px] px-4 py-10 text-sm text-slate-400">
                             Loading notifications...
                           </div>
                         ) : null}
                         {!notificationsLoading && notifications.length === 0 ? (
-                          <div className="flex w-96 max-w-full items-center justify-center rounded-[10px] px-4 py-10 text-sm text-slate-400">
+                          <div className="flex w-[481px] max-w-full items-center justify-center rounded-[10px] px-4 py-10 text-sm text-slate-400">
                             No notifications yet.
                           </div>
                         ) : null}
                         {!notificationsLoading && notifications.map((notification) => (
                           <div
                             key={notification.id}
-                            className={`flex w-96 max-w-full items-start gap-3 rounded-[10px] px-4 py-4 ${
+                            role={notification.unread ? "button" : undefined}
+                            tabIndex={notification.unread ? 0 : undefined}
+                            onClick={() => markNotificationAsRead(notification.id)}
+                            onKeyDown={(event) => {
+                              if (event.key === "Enter" || event.key === " ") {
+                                event.preventDefault();
+                                markNotificationAsRead(notification.id);
+                              }
+                            }}
+                            className={`flex w-[481px] max-w-full items-start gap-3 rounded-[10px] px-6 py-5 ${
                               notification.unread ? "bg-[#EFF6FF]" : "bg-white"
-                            }`}
+                            } ${notification.unread ? "cursor-pointer" : ""}`}
                           >
                             <img
                               src={notification.iconSrc}
