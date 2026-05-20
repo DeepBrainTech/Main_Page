@@ -2,6 +2,13 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
+import {
+  TestIntroLayout,
+  TestActiveLayout,
+  TestDualChoiceButtons,
+  formatTimerMmSs,
+  useReportTestChrome,
+} from "../test-ui";
 
 interface ChangeDetectionProps {
   onComplete: (score: number) => void;
@@ -243,6 +250,23 @@ export default function ChangeDetection({ onComplete, dateOfBirth }: ChangeDetec
   });
 
   const currentTrial = phase === "practice" ? practiceTrial : formalTrials[Math.min(formalIndex, formalTrials.length - 1)];
+  const isPractice = phase === "practice";
+  const progressCurrent = isPractice ? 1 : formalIndex + 1;
+  const progressTotal = isPractice ? 1 : formalTrials.length;
+
+  useReportTestChrome(
+    phase === "intro"
+      ? { screen: "intro" }
+      : {
+          screen: "active",
+          questionCurrent: progressCurrent,
+          questionTotal: progressTotal,
+          timerLabel:
+            stage === "sample" && (isPractice || isFormalRunning)
+              ? formatTimerMmSs(sampleRemainMs)
+              : undefined,
+        }
+  );
 
   const resetAggregator = () => {
     aggRef.current = {
@@ -432,17 +456,12 @@ export default function ChangeDetection({ onComplete, dateOfBirth }: ChangeDetec
 
   if (phase === "intro") {
     return (
-      <div className="rounded-xl bg-white p-6 shadow-md">
-        <h4 className="mb-2 font-semibold text-gray-800">{t("cdTitle")}</h4>
-        <p className="mb-4 text-sm text-gray-600">{t("cdIntro")}</p>
-        <button
-          type="button"
-          onClick={startPractice}
-          className="rounded-lg bg-[#5E81AC] px-4 py-2 text-sm font-medium text-white hover:bg-[#4E719C]"
-        >
-          {t("startPractice")}
-        </button>
-      </div>
+      <TestIntroLayout
+        title={t("cdTitle")}
+        description={t("cdIntro")}
+        onStartPractice={startPractice}
+        onStartTest={startFormal}
+      />
     );
   }
 

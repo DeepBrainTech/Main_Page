@@ -308,6 +308,13 @@
     "selectDimension": "Select a dimension",
     "freeUserLimit": "Free users can try one dimension (1–3 tests, about 15 minutes).",
     "startTest": "Start Test",
+    "startPractice": "Start Practice",
+    "startTestCta": "Start Test",
+    "breadcrumbRoot": "Cognitive Test",
+    "sessionTab": "Session {n}",
+    "testHistory": "Test History",
+    "skipSession": "Skip Session",
+    "questionProgress": "Question {current} / {total}",
     "dimensionCard": {
       "memory": "Test your memory abilities",
       "logic": "Test your logic abilities",

@@ -2,6 +2,7 @@
 
 import { useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
+import { TestIntroLayout, testIntroRulesClass, useReportTestChrome } from "../test-ui";
 
 type Phase = "intro" | "practice" | "formal";
 type AgeBandId = "children" | "teens" | "youngAdults" | "middleAged" | "seniors";
@@ -274,26 +275,25 @@ export default function HanoiPlanning({
   const currentMoves = phase === "practice" ? practiceMoves : formalMoves;
   const currentViolations = phase === "practice" ? practiceViolations : formalViolations;
 
+  useReportTestChrome(phase === "intro" ? { screen: "intro" } : { screen: "active" });
+
   if (phase === "intro") {
     return (
-      <div className="rounded-xl bg-white p-6 shadow-md">
-        <h4 className="mb-2 font-semibold text-gray-800">{t("hanoiTitle")}</h4>
-        <p className="mb-3 text-sm text-gray-600">{t("hanoiDesc")}</p>
-        <ul className="mb-4 list-disc space-y-1 pl-5 text-sm text-gray-600">
-          <li>{t("ruleOneDisk")}</li>
-          <li>{t("ruleNoLargeOnSmall")}</li>
-          <li>{t("rulePractice")}</li>
-          <li>{t("ruleFormal")}</li>
-          <li>{t("ruleAgeScoring")}</li>
-        </ul>
-        <button
-          type="button"
-          onClick={startPractice}
-          className="rounded-lg bg-[#5E81AC] px-4 py-2 text-white"
-        >
-          {t("startPractice")}
-        </button>
-      </div>
+      <TestIntroLayout
+        title={t("hanoiTitle")}
+        description={t("hanoiDesc")}
+        onStartPractice={startPractice}
+        onStartTest={startFormal}
+        extra={
+          <ul className={testIntroRulesClass}>
+            <li>{t("ruleOneDisk")}</li>
+            <li>{t("ruleNoLargeOnSmall")}</li>
+            <li>{t("rulePractice")}</li>
+            <li>{t("ruleFormal")}</li>
+            <li>{t("ruleAgeScoring")}</li>
+          </ul>
+        }
+      />
     );
   }
 

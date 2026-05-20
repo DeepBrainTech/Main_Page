@@ -2,6 +2,15 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
+import {
+  TestIntroLayout,
+  TestPhasePanel,
+  testAnswerBtnIdle,
+  testAnswerBtnSelected,
+  testActionBtnAccent,
+  testFeedbackClass,
+  useReportTestChrome,
+} from "../test-ui";
 
 type Direction = "left" | "right";
 type TrialType = "congruent" | "incongruent" | "neutral";
@@ -45,32 +54,58 @@ const FORMAL_BASE_TRIALS: Trial[] = [
     type: "incongruent" as TrialType,
     center: "right" as Direction,
   })),
-  ...Array.from({ length: 15 }, (_, i) => ({
-    id: `n-l-${i + 1}`,
-    type: "neutral" as TrialType,
-    center: "left" as Direction,
-  })),
-  ...Array.from({ length: 15 }, (_, i) => ({
-    id: `n-r-${i + 1}`,
-    type: "neutral" as TrialType,
-    center: "right" as Direction,
-  })),
 ];
 
-const FORMAL_COUNT = 48;
+const FORMAL_COUNT = 60;
+
 const AGE_NORMS: Record<AgeBandId, AgeNormRange> = {
-  children: { accMin: 75, accMax: 90, rtMin: 700, rtMax: 1000, intMin: 120, intMax: 250 }, // 6-9
-  preteens: { accMin: 85, accMax: 95, rtMin: 600, rtMax: 900, intMin: 100, intMax: 200 }, // 10-12
-  teens: { accMin: 90, accMax: 97, rtMin: 500, rtMax: 750, intMin: 80, intMax: 150 }, // 13-18
-  youngAdults: { accMin: 95, accMax: 99, rtMin: 400, rtMax: 650, intMin: 50, intMax: 120 }, // 19-29
-  middleAged: { accMin: 90, accMax: 97, rtMin: 450, rtMax: 750, intMin: 70, intMax: 150 }, // 30-59
-  seniors: { accMin: 80, accMax: 92, rtMin: 600, rtMax: 1000, intMin: 120, intMax: 250 }, // 60+
+  children: { accMin: 70, accMax: 95, rtMin: 450, rtMax: 900, intMin: 50, intMax: 200 },
+  preteens: { accMin: 75, accMax: 96, rtMin: 400, rtMax: 800, intMin: 40, intMax: 180 },
+  teens: { accMin: 80, accMax: 97, rtMin: 350, rtMax: 700, intMin: 30, intMax: 150 },
+  youngAdults: { accMin: 85, accMax: 98, rtMin: 300, rtMax: 600, intMin: 20, intMax: 120 },
+  middleAged: { accMin: 80, accMax: 96, rtMin: 350, rtMax: 700, intMin: 30, intMax: 150 },
+  seniors: { accMin: 70, accMax: 92, rtMin: 450, rtMax: 900, intMin: 50, intMax: 200 },
 };
 
-function clamp(value: number, min: number, max: number) {
+interface FlankerTaskProps {
+  onComplete: (score: number) => void;
+  dateOfBirth?: string | null;
+}
+
+function parseAge(dateOfBirth?: string | null) {
+  if (!dateOfBirth) return null;
+  const dob = new Date(dateOfBirth);
+  if (Number.isNaN(dob.getTime())) return null;
+  const now = new Date();
+  let age = now.getFullYear() - dob.getFullYear();
+  const m = now.getMonth() - dob.getMonth();
+  if (m < 0 || (m === 0 && now.getDate() < dob.getDate())) age -= 1;
+  return age;
+}
+
+function resolveAgeBand(age: number | null): AgeBandId {
+  if (age == null) return "youngAdults";
+  if (age < 10) return "children";
+  if (age < 13) return "preteens";
+  if (age < 18) return "teens";
+  if (age < 45) return "youngAdults";
+  if (age < 65) return "middleAged";
+  return "seniors";
+}
+
+function clampScore(value: number, min: number, max: number) {
   if (value < min) return min;
   if (value > max) return max;
   return value;
+}
+
+function normalizeLinear(value: number, min: number, max: number) {
+  if (max <= min) return 50;
+  return clampScore(((value - min) / (max - min)) * 100, 0, 100);
+}
+
+function normalizeReverse(value: number, min: number, max: number) {
+  return 100 - normalizeLinear(value, min, max);
 }
 
 function median(values: number[]) {
@@ -80,49 +115,18 @@ function median(values: number[]) {
   return sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid];
 }
 
-function parseAge(dateOfBirth?: string | null) {
-  if (!dateOfBirth) return null;
-  const [yearStr, monthStr, dayStr] = dateOfBirth.split("-");
-  const year = Number(yearStr);
-  const month = Number(monthStr);
-  const day = Number(dayStr);
-  if (!year || !month || !day) return null;
-  const now = new Date();
-  let age = now.getFullYear() - year;
-  const monthDiff = now.getMonth() + 1 - month;
-  const dayDiff = now.getDate() - day;
-  if (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0)) age -= 1;
-  return age >= 0 ? age : null;
-}
-
-function resolveAgeBand(age: number | null): AgeBandId | null {
-  if (age == null) return null;
-  if (age >= 6 && age <= 9) return "children";
-  if (age >= 10 && age <= 12) return "preteens";
-  if (age >= 13 && age <= 18) return "teens";
-  if (age >= 19 && age <= 29) return "youngAdults";
-  // 60 按 Seniors 归组，避免 30-60 与 60+ 重叠。
-  if (age >= 60) return "seniors";
-  if (age >= 30 && age <= 59) return "middleAged";
-  return null;
-}
-
-function shuffleTrials<T>(trials: T[]) {
-  const arr = [...trials];
-  for (let i = arr.length - 1; i > 0; i -= 1) {
+function shuffleTrials(trials: Trial[]) {
+  const out = [...trials];
+  for (let i = out.length - 1; i > 0; i -= 1) {
     const j = Math.floor(Math.random() * (i + 1));
-    const tmp = arr[i];
-    arr[i] = arr[j];
-    arr[j] = tmp;
+    [out[i], out[j]] = [out[j], out[i]];
   }
-  return arr;
+  return out;
 }
 
 function buildStimulus(type: TrialType, center: Direction) {
   const arrow = center === "left" ? "←" : "→";
-  if (type === "congruent") return [arrow, arrow, arrow, arrow, arrow];
-  if (type === "neutral") return ["—", "—", arrow, "—", "—"];
-  const flank = center === "left" ? "→" : "←";
+  const flank = type === "neutral" ? "·" : arrow;
   return [flank, flank, arrow, flank, flank];
 }
 
@@ -130,38 +134,25 @@ function computeAgeNormScore(
   accuracyPct: number,
   medianRtMs: number | null,
   interferenceMs: number | null,
-  ageBand: AgeBandId | null,
-  totalAnswered: number
+  ageBand: AgeBandId,
+  trialCount: number
 ) {
-  if (ageBand == null) {
-    return Math.round(clamp(accuracyPct, 0, 100));
-  }
   const norm = AGE_NORMS[ageBand];
-  const accNorm = clamp((accuracyPct - norm.accMin) / (norm.accMax - norm.accMin), 0, 1);
-  const rtNorm = medianRtMs == null ? 0.5 : clamp((norm.rtMax - medianRtMs) / (norm.rtMax - norm.rtMin), 0, 1);
-  const intNorm =
-    interferenceMs == null
-      ? 0.5
-      : clamp((norm.intMax - interferenceMs) / (norm.intMax - norm.intMin), 0, 1);
-
-  let score = Math.round(100 * (accNorm * 0.5 + rtNorm * 0.3 + intNorm * 0.2));
-  if (totalAnswered < 30) score = Math.round(score * 0.9);
-  if (accuracyPct < 60) score = Math.min(score, 45);
-  return clamp(score, 0, 100);
+  const accScore = normalizeLinear(accuracyPct, norm.accMin, norm.accMax);
+  const rtScore = medianRtMs == null ? 50 : normalizeReverse(medianRtMs, norm.rtMin, norm.rtMax);
+  const intScore =
+    interferenceMs == null ? 50 : normalizeReverse(interferenceMs, norm.intMin, norm.intMax);
+  const base = accScore * 0.5 + rtScore * 0.3 + intScore * 0.2;
+  const coverage = clampScore((trialCount / FORMAL_COUNT) * 100, 0, 100);
+  return Math.round(base * 0.85 + coverage * 0.15);
 }
 
-export default function FlankerTask({
-  onComplete,
-  dateOfBirth,
-}: {
-  onComplete: (score: number) => void;
-  dateOfBirth?: string | null;
-}) {
+export default function FlankerTask({ onComplete, dateOfBirth }: FlankerTaskProps) {
   const t = useTranslations("test.focus");
   const [phase, setPhase] = useState<"intro" | "practice" | "formal">("intro");
   const [practiceIndex, setPracticeIndex] = useState(0);
-  const [selected, setSelected] = useState<Direction | null>(null);
   const [practiceCorrect, setPracticeCorrect] = useState<boolean | null>(null);
+  const [selected, setSelected] = useState<Direction | null>(null);
   const [formalTrials, setFormalTrials] = useState<Trial[]>([]);
   const [formalIndex, setFormalIndex] = useState(0);
   const [formalCorrectCount, setFormalCorrectCount] = useState(0);
@@ -173,6 +164,16 @@ export default function FlankerTask({
 
   const currentTrial =
     phase === "formal" ? formalTrials[formalIndex] : phase === "practice" ? PRACTICE_TRIALS[practiceIndex] : null;
+
+  useReportTestChrome(
+    phase === "intro"
+      ? { screen: "intro" }
+      : {
+          screen: "active",
+          questionCurrent: phase === "formal" ? formalIndex + 1 : practiceIndex + 1,
+          questionTotal: phase === "formal" ? formalTrials.length : PRACTICE_TRIALS.length,
+        }
+  );
 
   useEffect(() => {
     if (phase === "practice" || phase === "formal") {
@@ -223,7 +224,6 @@ export default function FlankerTask({
 
     if (phase === "practice") {
       setPracticeCorrect(isCorrect);
-      // 练习阶段固定同一道题，可重复作答。
       setSelected(null);
       return;
     }
@@ -263,101 +263,84 @@ export default function FlankerTask({
 
   if (phase === "intro") {
     return (
-      <div className="rounded-xl bg-white p-6 shadow-md">
-        <h4 className="mb-2 font-semibold text-gray-800">{t("flankerTitle")}</h4>
-        <p className="mb-4 text-sm text-gray-600">{t("flankerDesc")}</p>
-        <button
-          type="button"
-          onClick={startPractice}
-          className="rounded-lg bg-[#5E81AC] px-4 py-2 text-white"
-        >
-          {t("startPractice")}
-        </button>
-      </div>
+      <TestIntroLayout
+        title={t("flankerTitle")}
+        description={t("flankerDesc")}
+        onStartPractice={startPractice}
+        onStartTest={startFormal}
+      />
     );
   }
 
   if (!currentTrial) {
     return (
-      <div className="rounded-xl bg-white p-6 shadow-md">
-        <h4 className="mb-2 font-semibold text-gray-800">{t("flankerTitle")}</h4>
-        <p className="text-sm text-gray-500">{t("loading")}</p>
-      </div>
+      <TestPhasePanel title={t("flankerTitle")}>
+        <p>{t("loading")}</p>
+      </TestPhasePanel>
     );
   }
 
   const symbols = buildStimulus(currentTrial.type, currentTrial.center);
 
   return (
-    <div className="rounded-xl bg-white p-6 shadow-md">
-      <h4 className="mb-2 font-semibold text-gray-800">
-        {phase === "practice" ? t("flankerPracticeTitle") : t("flankerTitle")}
-      </h4>
-      <span className="mb-3 inline-flex rounded-full bg-gray-100 px-2 py-1 text-xs text-gray-600">
-        {phase === "practice" ? t("practiceBadge") : t("formalBadge")}
-      </span>
+    <TestPhasePanel
+      title={phase === "practice" ? t("flankerPracticeTitle") : t("flankerTitle")}
+      badge={phase === "practice" ? t("practiceBadge") : t("formalBadge")}
+      meta={
+        phase === "formal"
+          ? t("formalProgress", { current: formalIndex + 1, total: formalTrials.length })
+          : undefined
+      }
+      footer={
+        phase === "practice" ? (
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+            <p
+              className={`${testFeedbackClass} ${
+                practiceCorrect ? "text-emerald-600" : practiceCorrect === false ? "text-red-600" : ""
+              }`}
+            >
+              {practiceCorrect === null
+                ? t("practiceNoAnswer")
+                : practiceCorrect
+                  ? t("practiceFeedbackCorrect")
+                  : t("practiceFeedbackWrong")}
+            </p>
+            <button type="button" onClick={startFormal} className={testActionBtnAccent}>
+              {t("startFormal")}
+            </button>
+          </div>
+        ) : undefined
+      }
+    >
+      {phase === "practice" && <p>{t("flankerDesc")}</p>}
 
-      {phase === "practice" && <p className="mb-3 text-sm text-gray-600">{t("flankerDesc")}</p>}
-      {phase === "formal" && (
-        <p className="mb-2 text-xs text-gray-500">
-          {t("formalProgress", { current: formalIndex + 1, total: formalTrials.length })}
-        </p>
-      )}
-
-      <div className="mb-4 flex items-center justify-center gap-3 rounded-lg border border-gray-200 bg-gray-50 p-4">
+      <div className="flex items-center justify-center gap-3 rounded-2xl border border-[#045e96]/15 bg-[#edf4fc]/50 p-6">
         {symbols.map((s, idx) => (
-          <span
-            key={`${currentTrial.id}-${idx}`}
-            className="font-mono text-5xl font-bold text-[#1f5fae]"
-          >
+          <span key={`${currentTrial.id}-${idx}`} className="font-mono text-5xl font-bold text-[#045e96]">
             {s}
           </span>
         ))}
       </div>
 
-      <p className="mb-3 text-sm text-gray-600">{t("flankerInstruction")}</p>
-      {phase === "practice" && (
-        <p className="mb-3 text-xs text-gray-500">{t("flankerShortcutHint")}</p>
-      )}
-      <div className="flex flex-wrap justify-center gap-2">
+      <p>{t("flankerInstruction")}</p>
+      {phase === "practice" && <p className="text-[#045e96]/70">{t("flankerShortcutHint")}</p>}
+
+      <div className="flex flex-wrap justify-center gap-3">
         <button
           type="button"
           onClick={() => setSelected("left")}
-          className={`rounded-lg border-2 px-4 py-2 ${
-            selected === "left" ? "border-[#5E81AC] bg-[#5E81AC] text-white" : "border-gray-300"
-          }`}
+          className={selected === "left" ? testAnswerBtnSelected : testAnswerBtnIdle}
         >
           {t("flankerLeft")}
         </button>
         <button
           type="button"
           onClick={() => setSelected("right")}
-          className={`rounded-lg border-2 px-4 py-2 ${
-            selected === "right" ? "border-[#5E81AC] bg-[#5E81AC] text-white" : "border-gray-300"
-          }`}
+          className={selected === "right" ? testAnswerBtnSelected : testAnswerBtnIdle}
         >
           {t("flankerRight")}
         </button>
       </div>
-
-      {phase === "practice" && (
-        <div className="mt-4 flex items-center justify-between gap-3">
-          <p className={`text-sm font-semibold ${practiceCorrect ? "text-emerald-600" : "text-red-600"}`}>
-            {practiceCorrect === null
-              ? t("practiceNoAnswer")
-              : practiceCorrect
-                ? t("practiceFeedbackCorrect")
-                : t("practiceFeedbackWrong")}
-          </p>
-          <button
-            type="button"
-            onClick={startFormal}
-            className="rounded-lg bg-emerald-500 px-4 py-2 text-white hover:bg-emerald-600"
-          >
-            {t("startFormal")}
-          </button>
-        </div>
-      )}
-    </div>
+    </TestPhasePanel>
   );
 }

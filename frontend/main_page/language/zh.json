@@ -307,6 +307,13 @@
     "selectDimension": "选择测试维度",
     "freeUserLimit": "免费用户仅可免费体验一个维度（约 1–3 个环节，约 15 分钟内）",
     "startTest": "开始测试",
+    "startPractice": "开始练习",
+    "startTestCta": "开始测试",
+    "breadcrumbRoot": "认知测试",
+    "sessionTab": "第 {n} 部分",
+    "testHistory": "测试历史",
+    "skipSession": "跳过本节",
+    "questionProgress": "第 {current} / {total} 题",
     "dimensionCard": {
       "memory": "测试你的记忆能力",
       "logic": "测试你的逻辑推理能力",

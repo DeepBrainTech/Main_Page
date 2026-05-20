@@ -2,6 +2,7 @@
 
 import { useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
+import { TestIntroLayout, testIntroMetaClass, testIntroRulesClass, useReportTestChrome } from "../test-ui";
 
 type Phase = "intro" | "practice" | "formal";
 type Ball = "R" | "G" | "B" | "Y";
@@ -390,42 +391,43 @@ export default function LondonPlanning({
     </div>
   );
 
+  useReportTestChrome(phase === "intro" ? { screen: "intro" } : { screen: "active" });
+
   if (phase === "intro") {
     return (
-      <div className="rounded-xl bg-white p-6 shadow-md">
-        <h4 className="mb-2 font-semibold text-gray-800">{t("londonTitle")}</h4>
-        <p className="mb-3 text-sm text-gray-600">{t("londonDesc")}</p>
-        <ul className="mb-4 list-disc space-y-1 pl-5 text-sm text-gray-600">
-          <li>{t("londonRuleMoveOne")}</li>
-          <li>{t("londonRuleCapacity")}</li>
-          <li>{t("londonRulePlanFirst")}</li>
-          <li>{t("londonRulePractice")}</li>
-          <li>{t("londonRuleFormal")}</li>
-          <li>{t("londonRuleAgeScoring")}</li>
-        </ul>
-        <div className="mb-4 grid grid-cols-1 gap-4 lg:grid-cols-[1fr_auto_1fr] lg:items-start">
+      <TestIntroLayout
+        title={t("londonTitle")}
+        description={t("londonDesc")}
+        onStartPractice={startPractice}
+        onStartTest={startFormal}
+        extra={
+          <>
+            <ul className={testIntroRulesClass}>
+              <li>{t("londonRuleMoveOne")}</li>
+              <li>{t("londonRuleCapacity")}</li>
+              <li>{t("londonRulePlanFirst")}</li>
+              <li>{t("londonRulePractice")}</li>
+              <li>{t("londonRuleFormal")}</li>
+              <li>{t("londonRuleAgeScoring")}</li>
+            </ul>
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_auto_1fr] lg:items-start">
           <div>
-            <p className="mb-3 text-center text-sm font-semibold uppercase tracking-wide text-gray-700">
+            <p className={`mb-3 text-center font-semibold uppercase tracking-wide ${testIntroMetaClass}`}>
               {t("londonCurrentState")}
             </p>
             {renderBoard(practicePuzzle.start, false)}
           </div>
-          <div className="hidden pt-24 text-3xl text-gray-500 lg:block">→</div>
+          <div className={`hidden pt-24 lg:block ${testIntroMetaClass}`}>→</div>
           <div>
-            <p className="mb-3 text-center text-sm font-semibold uppercase tracking-wide text-gray-700">
+            <p className={`mb-3 text-center font-semibold uppercase tracking-wide ${testIntroMetaClass}`}>
               {t("londonGoalState")}
             </p>
             {renderBoard(practicePuzzle.goal, false)}
           </div>
         </div>
-        <button
-          type="button"
-          onClick={startPractice}
-          className="rounded-lg bg-[#5E81AC] px-4 py-2 text-white"
-        >
-          {t("startPractice")}
-        </button>
-      </div>
+          </>
+        }
+      />
     );
   }
 

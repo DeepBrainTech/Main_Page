@@ -2,6 +2,13 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
+import {
+  TestIntroLayout,
+  TestActiveLayout,
+  TestDualChoiceButtons,
+  formatTimerMmSs,
+  useReportTestChrome,
+} from "../test-ui";
 
 type SetSize = 3 | 5 | 7;
 
@@ -28,18 +35,17 @@ interface AggregateStats {
 type AgeBandId = "children" | "teens" | "youngAdults" | "middleAged" | "seniors";
 
 const SYMBOL_POOL = ["A", "B", "C", "D", "E", "F", "G", "H", "I"];
-const FORMAL_COUNTS: Record<SetSize, number> = {
-  3: 8,
-  5: 8,
-  7: 8,
-};
+const FORMAL_COUNTS: Record<SetSize, number> = { 3: 8, 5: 8, 7: 8 };
 const MEMORIZE_MS = 4000;
 const DELAY_MS = 800;
 const FEEDBACK_MS = 700;
 const PRACTICE_SEED = 20260319;
 const FORMAL_SEED = 20260320;
 
-const AGE_NORMS_STERNBERG: Record<AgeBandId, { slopeMsPerItem: [number, number]; interceptMs: [number, number] }> = {
+const AGE_NORMS_STERNBERG: Record<
+  AgeBandId,
+  { slopeMsPerItem: [number, number]; interceptMs: [number, number] }
+> = {
   children: { slopeMsPerItem: [35, 65], interceptMs: [600, 800] },
   teens: { slopeMsPerItem: [35, 45], interceptMs: [450, 550] },
   youngAdults: { slopeMsPerItem: [30, 40], interceptMs: [350, 450] },
@@ -53,7 +59,6 @@ function clampScore(value: number, min: number, max: number) {
   return value;
 }
 
-// 固定 seed 的伪随机，保证题目可复现。
 function mulberry32(seed: number) {
   let t = seed >>> 0;
   return () => {
@@ -85,16 +90,13 @@ function buildTrial(rand: () => number, setSize: SetSize, isTarget: boolean): Tr
 }
 
 function buildPracticeTrials(seed: number): Trial[] {
-  const rand = mulberry32(seed);
-  // 练习阶段只保留 1 题（最简单负荷）。
-  return [buildTrial(rand, 3, true)];
+  return [buildTrial(mulberry32(seed), 3, true)];
 }
 
 function buildFormalTrials(seed: number): Trial[] {
   const rand = mulberry32(seed);
   const sizes: SetSize[] = [3, 5, 7];
   const trials: Trial[] = [];
-
   sizes.forEach((size) => {
     const block: Trial[] = [];
     const total = FORMAL_COUNTS[size];
@@ -103,7 +105,6 @@ function buildFormalTrials(seed: number): Trial[] {
     }
     trials.push(...shuffle(block, rand));
   });
-
   return trials;
 }
 
@@ -167,13 +168,10 @@ export default function SternbergMemoryScanning({ onComplete, dateOfBirth }: Ste
   const practiceTrials = useMemo(() => buildPracticeTrials(PRACTICE_SEED), []);
   const formalTrials = useMemo(() => buildFormalTrials(FORMAL_SEED), []);
 
-  const [phase, setPhase] = useState<
-    "intro" | "practice" | "formal"
-  >("intro");
+  const [phase, setPhase] = useState<"intro" | "practice" | "formal">("intro");
   const [stage, setStage] = useState<"memorize" | "delay" | "probe" | "feedback">("memorize");
   const [practiceIndex, setPracticeIndex] = useState(0);
   const [formalIndex, setFormalIndex] = useState(0);
-  const [isFormalRunning, setIsFormalRunning] = useState(false);
   const [practiceCorrect, setPracticeCorrect] = useState<boolean | null>(null);
   const [selectedAnswer, setSelectedAnswer] = useState<boolean | null>(null);
   const [memorizeRemainMs, setMemorizeRemainMs] = useState(MEMORIZE_MS);
@@ -189,18 +187,29 @@ export default function SternbergMemoryScanning({ onComplete, dateOfBirth }: Ste
     correctRtPairs: [],
   });
 
-  const currentPracticeTrial = practiceTrials[Math.min(practiceIndex, practiceTrials.length - 1)];
-  const currentFormalTrial = formalTrials[Math.min(formalIndex, formalTrials.length - 1)];
-  const currentTrial = phase === "practice" ? currentPracticeTrial : currentFormalTrial;
+  const isPractice = phase === "practice";
+  const isFormal = phase === "formal";
+  const currentTrial = isPractice
+    ? practiceTrials[Math.min(practiceIndex, practiceTrials.length - 1)]
+    : formalTrials[Math.min(formalIndex, formalTrials.length - 1)];
+
+  const progressCurrent = isPractice ? practiceIndex + 1 : formalIndex + 1;
+  const progressTotal = isPractice ? practiceTrials.length : formalTrials.length;
+
+  useReportTestChrome(
+    phase === "intro"
+      ? { screen: "intro" }
+      : {
+          screen: "active",
+          questionCurrent: isFormal ? formalIndex + 1 : progressCurrent,
+          questionTotal: isFormal ? formalTrials.length : progressTotal,
+          timerLabel:
+            stage === "memorize" ? formatTimerMmSs(memorizeRemainMs) : stage === "probe" ? "00:00" : undefined,
+        }
+  );
 
   const resetAggregator = () => {
-    aggRef.current = {
-      correct: 0,
-      total: 0,
-      rtSum: 0,
-      rtCount: 0,
-      correctRtPairs: [],
-    };
+    aggRef.current = { correct: 0, total: 0, rtSum: 0, rtCount: 0, correctRtPairs: [] };
   };
 
   const startPractice = () => {
@@ -214,21 +223,12 @@ export default function SternbergMemoryScanning({ onComplete, dateOfBirth }: Ste
 
   const startFormal = () => {
     setFormalIndex(0);
-    setIsFormalRunning(false);
     setPracticeCorrect(null);
     setSelectedAnswer(null);
     setMemorizeRemainMs(MEMORIZE_MS);
     setStage("memorize");
     resetAggregator();
     setPhase("formal");
-  };
-
-  const beginFormalRun = () => {
-    setSelectedAnswer(null);
-    setPracticeCorrect(null);
-    setMemorizeRemainMs(MEMORIZE_MS);
-    setStage("memorize");
-    setIsFormalRunning(true);
   };
 
   const finalizeFormal = () => {
@@ -270,18 +270,17 @@ export default function SternbergMemoryScanning({ onComplete, dateOfBirth }: Ste
     );
 
     onComplete(computedDisplay);
-    setIsFormalRunning(false);
   };
 
   const recordFormalAnswer = (answer: boolean | null, rtMs: number | null) => {
-    const isCorrect = answer !== null && answer === currentFormalTrial.isTarget;
+    const isCorrect = answer !== null && answer === currentTrial.isTarget;
     aggRef.current.total += 1;
     if (isCorrect) aggRef.current.correct += 1;
     if (rtMs !== null) {
       aggRef.current.rtSum += rtMs;
       aggRef.current.rtCount += 1;
       if (isCorrect && rtMs >= 150 && rtMs <= 3000) {
-        aggRef.current.correctRtPairs.push({ setSize: currentFormalTrial.setSize, rtMs });
+        aggRef.current.correctRtPairs.push({ setSize: currentTrial.setSize, rtMs });
       }
     }
   };
@@ -307,8 +306,8 @@ export default function SternbergMemoryScanning({ onComplete, dateOfBirth }: Ste
     const rtMs = Math.max(0, performance.now() - probeStartRef.current);
     setSelectedAnswer(answerInSet);
 
-    if (phase === "practice") {
-      movePracticeNext(answerInSet === currentPracticeTrial.isTarget);
+    if (isPractice) {
+      movePracticeNext(answerInSet === currentTrial.isTarget);
       return;
     }
 
@@ -318,40 +317,22 @@ export default function SternbergMemoryScanning({ onComplete, dateOfBirth }: Ste
 
   useEffect(() => {
     if (phase !== "practice" && phase !== "formal") {
-      if (timerRef.current) {
-        clearTimeout(timerRef.current);
-        timerRef.current = null;
-      }
-      if (countdownRef.current) {
-        clearInterval(countdownRef.current);
-        countdownRef.current = null;
-      }
+      if (timerRef.current) clearTimeout(timerRef.current);
+      if (countdownRef.current) clearInterval(countdownRef.current);
       return;
     }
 
-    if (phase === "formal" && !isFormalRunning) return;
-
-    if (timerRef.current) {
-      clearTimeout(timerRef.current);
-      timerRef.current = null;
-    }
-    if (countdownRef.current) {
-      clearInterval(countdownRef.current);
-      countdownRef.current = null;
-    }
+    if (timerRef.current) clearTimeout(timerRef.current);
+    if (countdownRef.current) clearInterval(countdownRef.current);
 
     if (stage === "memorize") {
       const endAt = Date.now() + MEMORIZE_MS;
       setMemorizeRemainMs(MEMORIZE_MS);
       countdownRef.current = setInterval(() => {
-        const remain = Math.max(0, endAt - Date.now());
-        setMemorizeRemainMs(remain);
+        setMemorizeRemainMs(Math.max(0, endAt - Date.now()));
       }, 100);
       timerRef.current = setTimeout(() => {
-        if (countdownRef.current) {
-          clearInterval(countdownRef.current);
-          countdownRef.current = null;
-        }
+        if (countdownRef.current) clearInterval(countdownRef.current);
         setMemorizeRemainMs(0);
         setStage("delay");
       }, MEMORIZE_MS);
@@ -360,9 +341,8 @@ export default function SternbergMemoryScanning({ onComplete, dateOfBirth }: Ste
         probeStartRef.current = performance.now();
         setStage("probe");
       }, DELAY_MS);
-    } else if (stage === "feedback" && phase === "practice") {
+    } else if (stage === "feedback" && isPractice) {
       timerRef.current = setTimeout(() => {
-        // 练习模式固定循环当前题：显示反馈后重开同一题。
         setSelectedAnswer(null);
         setPracticeCorrect(null);
         setMemorizeRemainMs(MEMORIZE_MS);
@@ -371,23 +351,17 @@ export default function SternbergMemoryScanning({ onComplete, dateOfBirth }: Ste
     }
 
     return () => {
-      if (timerRef.current) {
-        clearTimeout(timerRef.current);
-        timerRef.current = null;
-      }
-      if (countdownRef.current) {
-        clearInterval(countdownRef.current);
-        countdownRef.current = null;
-      }
+      if (timerRef.current) clearTimeout(timerRef.current);
+      if (countdownRef.current) clearInterval(countdownRef.current);
     };
-  }, [phase, stage, isFormalRunning, practiceIndex, practiceTrials.length]);
+  }, [phase, stage, isPractice]);
 
   const renderMemorySet = (items: string[]) => (
-    <div className="flex flex-wrap justify-center gap-2">
+    <div className="flex flex-wrap justify-center gap-3">
       {items.map((item, idx) => (
         <div
           key={`${item}-${idx}`}
-          className="flex h-12 w-12 items-center justify-center rounded-lg border border-[#5E81AC] bg-white text-lg font-semibold text-[#5E81AC]"
+          className="flex h-16 w-16 items-center justify-center rounded-[20px] border-[3px] border-[#045e96] bg-white text-3xl font-medium text-[#045e96] sm:h-20 sm:w-20 sm:text-[40px]"
         >
           {item}
         </div>
@@ -397,138 +371,80 @@ export default function SternbergMemoryScanning({ onComplete, dateOfBirth }: Ste
 
   if (phase === "intro") {
     return (
-      <div className="rounded-xl bg-white p-6 shadow-md">
-        <h4 className="mb-2 font-semibold text-gray-800">{t("sternbergTitle")}</h4>
-        <p className="mb-4 text-sm text-gray-600">{t("sternbergIntro")}</p>
-        <button
-          type="button"
-          onClick={startPractice}
-          className="rounded-lg bg-[#5E81AC] px-4 py-2 text-sm font-medium text-white hover:bg-[#4E719C]"
-        >
-          {t("startPractice")}
-        </button>
-      </div>
+      <TestIntroLayout
+        title={t("sternbergTitle")}
+        description={t("sternbergIntro")}
+        onStartPractice={startPractice}
+        onStartTest={startFormal}
+      />
     );
   }
 
-  if (phase === "practice" || phase === "formal") {
-    const isPractice = phase === "practice";
-    const progressCurrent = isPractice ? practiceIndex + 1 : formalIndex + 1;
-    const progressTotal = isPractice ? practiceTrials.length : formalTrials.length;
+  const prompt =
+    stage === "memorize"
+      ? t("sternbergMemorizeLabel")
+      : stage === "delay"
+        ? t("sternbergDelayLabel")
+        : t("sternbergProbeQuestion");
 
-    return (
-      <div className="rounded-xl bg-white p-6 shadow-md">
-        <h4 className="mb-2 font-semibold text-gray-800">
-          {isPractice ? t("sternbergPracticeTitle") : t("sternbergTitle")}
-        </h4>
-        <p className="mb-1 text-xs font-medium uppercase tracking-wide text-[#5E81AC]">
-          {isPractice ? t("nBackPracticeBadge") : t("sternbergFormalBadge")}
-        </p>
-        <div className="mb-2 flex items-center justify-center gap-2 text-xs font-semibold text-gray-700">
-          <span>{t("sternbergProgress", { current: progressCurrent, total: progressTotal })}</span>
-          <span className="rounded-full bg-gray-100 px-2 py-0.5">
-            {t("sternbergSetSize", { size: currentTrial.setSize })}
-          </span>
-          <span className="rounded-full bg-gray-100 px-2 py-0.5">
-            {Math.max(0, memorizeRemainMs / 1000).toFixed(1)}s
-          </span>
-        </div>
-        {isPractice && stage === "feedback" && (
-          <div
-            className={`mb-2 text-center text-xs font-semibold ${
-              practiceCorrect ? "text-emerald-600" : "text-red-600"
-            }`}
-          >
-            {practiceCorrect ? t("practiceFeedbackCorrect") : t("practiceFeedbackWrong")}
-          </div>
-        )}
-        <div className="mb-4 min-h-[180px] rounded-xl bg-gray-50 p-4">
-          {stage === "memorize" && (
-            <div className="space-y-3">
-              <p className="text-center text-xs font-medium text-gray-600">{t("sternbergMemorizeLabel")}</p>
-              {renderMemorySet(currentTrial.memorySet)}
-            </div>
-          )}
-          {stage === "delay" && (
-            <div className="flex h-[120px] items-center justify-center">
-              <p className="text-sm text-gray-500">{t("sternbergDelayLabel")}</p>
-            </div>
-          )}
+  const timerLabel =
+    stage === "memorize"
+      ? formatTimerMmSs(memorizeRemainMs)
+      : stage === "probe"
+        ? "00:00"
+        : undefined;
+
+  const dualSelected =
+    selectedAnswer === true ? "left" : selectedAnswer === false ? "right" : null;
+
+  return (
+    <TestActiveLayout
+      title={t("sternbergTitle")}
+      prompt={prompt}
+      timerLabel={timerLabel}
+      footer={
+        <div className="mx-auto flex w-full max-w-xl flex-col items-center gap-4">
           {stage === "probe" && (
-            <div className="space-y-4">
-              <p className="text-center text-sm font-medium text-gray-700">{t("sternbergProbeQuestion")}</p>
-              <div className="flex justify-center">
-                <div className="flex h-16 w-16 items-center justify-center rounded-xl border-2 border-[#5E81AC] bg-white text-2xl font-bold text-[#5E81AC]">
-                  {currentTrial.probe}
-                </div>
-              </div>
-            </div>
+            <TestDualChoiceButtons
+              leftLabel={t("sternbergAnswerYes")}
+              rightLabel={t("sternbergAnswerNo")}
+              selected={dualSelected}
+              onLeft={() => handleAnswer(true)}
+              onRight={() => handleAnswer(false)}
+            />
           )}
-          {stage === "feedback" && (
-            <div className="space-y-4">
-              <p className="text-center text-sm font-medium text-gray-700">{t("sternbergProbeQuestion")}</p>
-              <div className="flex justify-center">
-                <div className="flex h-16 w-16 items-center justify-center rounded-xl border-2 border-[#5E81AC] bg-white text-2xl font-bold text-[#5E81AC]">
-                  {currentTrial.probe}
-                </div>
-              </div>
+          {isPractice && (
+            <div className="flex w-full flex-wrap items-center justify-between gap-3">
+              {stage === "feedback" && (
+                <p
+                  className={`text-xl font-semibold ${
+                    practiceCorrect ? "text-emerald-600" : "text-red-600"
+                  }`}
+                >
+                  {practiceCorrect ? t("practiceFeedbackCorrect") : t("practiceFeedbackWrong")}
+                </p>
+              )}
+              <button
+                type="button"
+                onClick={startFormal}
+                className="ml-auto rounded-2xl bg-[#EE664A] px-5 py-2.5 text-base font-bold text-white hover:bg-[#e0553a]"
+              >
+                {t("startFormal")}
+              </button>
             </div>
           )}
         </div>
-
-        {!isPractice && !isFormalRunning && (
-          <div className="mb-4 flex justify-center">
-            <button
-              type="button"
-              onClick={beginFormalRun}
-              className="rounded-lg bg-[#5E81AC] px-5 py-2 text-sm font-medium text-white hover:bg-[#4E719C]"
-            >
-              {t("startNow")}
-            </button>
-          </div>
-        )}
-
-        {stage === "probe" && (isPractice || isFormalRunning) && (
-          <div className="flex flex-wrap justify-center gap-3">
-            <button
-              type="button"
-              onClick={() => handleAnswer(true)}
-              className={`rounded-lg px-4 py-2 text-sm font-medium ${
-                selectedAnswer === true
-                  ? "bg-[#5E81AC] text-white"
-                  : "border border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
-              }`}
-            >
-              {t("sternbergAnswerYes")}
-            </button>
-            <button
-              type="button"
-              onClick={() => handleAnswer(false)}
-              className={`rounded-lg px-4 py-2 text-sm font-medium ${
-                selectedAnswer === false
-                  ? "bg-[#5E81AC] text-white"
-                  : "border border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
-              }`}
-            >
-              {t("sternbergAnswerNo")}
-            </button>
-          </div>
-        )}
-
-        {isPractice && (
-          <div className="mt-4 flex justify-end">
-            <button
-              type="button"
-              onClick={startFormal}
-              className="rounded-lg bg-emerald-500 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-600"
-            >
-              {t("startFormal")}
-            </button>
-          </div>
-        )}
-      </div>
-    );
-  }
-
-  return null;
+      }
+    >
+      {stage === "memorize" && renderMemorySet(currentTrial.memorySet)}
+      {stage === "delay" && (
+        <p className="text-xl font-medium text-[#045e96]/70">{t("sternbergDelayLabel")}</p>
+      )}
+      {(stage === "probe" || stage === "feedback") && (
+        <div className="flex h-16 w-16 items-center justify-center rounded-xl border-2 border-[#003366] bg-white text-2xl font-bold text-[#003366] sm:h-20 sm:w-20 sm:text-3xl">
+          {currentTrial.probe}
+        </div>
+      )}
+    </TestActiveLayout>
+  );
 }
