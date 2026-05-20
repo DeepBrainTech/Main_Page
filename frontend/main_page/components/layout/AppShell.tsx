@@ -323,12 +323,12 @@ export default function AppShell({
               </button>
 
               {notificationsOpen ? (
-                <div className="absolute right-[-175px] top-full z-50 mt-2 w-[560px] max-w-[calc(100vw-2rem)] pt-1.5 font-app-body">
-                  <div className="absolute right-[193px] top-[1px] z-10">
+                <div className="absolute right-[-130px] top-full z-50 mt-2 w-[465px] max-w-[calc(100vw-2rem)] pt-1.5 font-app-body">
+                  <div className="absolute right-[148px] top-[1px] z-10">
                     <div className="h-3 w-3 -rotate-45 rounded-[2px] border-r border-t border-[#b9cfe5] bg-white" />
                   </div>
 
-                  <div className="overflow-hidden rounded-2xl border border-[#b9cfe5] bg-white shadow-2xl shadow-slate-900/15">
+                  <div className="h-[588px] overflow-hidden rounded-3xl bg-white shadow-[0px_20px_30px_0px_rgba(0,0,0,0.15)] outline outline-[1.2px] outline-offset-[-1.2px] outline-slate-300">
                     <div className="flex h-20 items-center justify-between border-b border-zinc-800/10 px-6">
                       <h2 className="font-app-heading text-xl font-bold leading-8 text-sky-700">Notifications</h2>
                       <button
@@ -351,12 +351,12 @@ export default function AppShell({
                     >
                       <div className="space-y-3">
                         {notificationsLoading ? (
-                          <div className="flex w-[481px] max-w-full items-center justify-center rounded-[10px] px-4 py-10 text-sm text-slate-400">
+                          <div className="flex w-96 max-w-full items-center justify-center rounded-[10px] px-4 py-10 text-sm text-slate-400">
                             Loading notifications...
                           </div>
                         ) : null}
                         {!notificationsLoading && notifications.length === 0 ? (
-                          <div className="flex w-[481px] max-w-full items-center justify-center rounded-[10px] px-4 py-10 text-sm text-slate-400">
+                          <div className="flex w-96 max-w-full items-center justify-center rounded-[10px] px-4 py-10 text-sm text-slate-400">
                             No notifications yet.
                           </div>
                         ) : null}
@@ -372,7 +372,7 @@ export default function AppShell({
                                 markNotificationAsRead(notification.id);
                               }
                             }}
-                            className={`flex w-[481px] max-w-full items-start gap-3 rounded-[10px] px-6 py-5 ${
+                            className={`flex w-96 max-w-full items-start gap-3 rounded-[10px] px-4 py-4 ${
                               notification.unread ? "bg-[#EFF6FF]" : "bg-white"
                             } ${notification.unread ? "cursor-pointer" : ""}`}
                           >
