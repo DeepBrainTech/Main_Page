@@ -54,7 +54,34 @@
     "timeMinutesAgo": "{count, plural, other {# 分钟前}}",
     "timeHoursAgo": "{count, plural, other {# 小时前}}",
     "timeYesterday": "昨天",
-    "timeDaysAgo": "{count, plural, other {# 天前}}"
+    "timeDaysAgo": "{count, plural, other {# 天前}}",
+    "plans": {
+      "plus": "Plus 会员",
+      "premium": "高级会员",
+      "membership": "会员"
+    },
+    "events": {
+      "purchase": {
+        "title": "购买成功",
+        "message": "{diamonds} 颗钻石已添加到您的账户。"
+      },
+      "subscriptionActivated": {
+        "title": "订阅已开通",
+        "message": "您的 {plan} 会员现已生效。"
+      },
+      "subscriptionCanceled": {
+        "title": "订阅已取消",
+        "message": "您的订阅已取消。"
+      },
+      "subscriptionUpdated": {
+        "title": "订阅已更新",
+        "message": "您的 {plan} 会员已更新。"
+      },
+      "subscriptionRenewed": {
+        "title": "订阅已续费",
+        "message": "您的 {plan} 会员已续费成功。"
+      }
+    }
   },
   "shop": {
     "checkoutSuccess": "支付已完成，钻石可能需要稍等片刻后到账。",

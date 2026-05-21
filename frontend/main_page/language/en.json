@@ -54,7 +54,34 @@
     "timeMinutesAgo": "{count, plural, one {# minute ago} other {# minutes ago}}",
     "timeHoursAgo": "{count, plural, one {# hour ago} other {# hours ago}}",
     "timeYesterday": "Yesterday",
-    "timeDaysAgo": "{count, plural, one {# day ago} other {# days ago}}"
+    "timeDaysAgo": "{count, plural, one {# day ago} other {# days ago}}",
+    "plans": {
+      "plus": "Plus",
+      "premium": "Premium",
+      "membership": "Membership"
+    },
+    "events": {
+      "purchase": {
+        "title": "Purchase Successful",
+        "message": "{diamonds} Diamonds have been added to your bag."
+      },
+      "subscriptionActivated": {
+        "title": "Subscription Activated",
+        "message": "Your {plan} membership is now active."
+      },
+      "subscriptionCanceled": {
+        "title": "Subscription Canceled",
+        "message": "Your subscription has been canceled."
+      },
+      "subscriptionUpdated": {
+        "title": "Subscription Updated",
+        "message": "Your {plan} membership has been updated."
+      },
+      "subscriptionRenewed": {
+        "title": "Subscription Renewed",
+        "message": "Your {plan} membership is renewed."
+      }
+    }
   },
   "shop": {
     "checkoutSuccess": "Payment completed. Diamonds may take a moment to appear.",

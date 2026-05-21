@@ -82,6 +82,119 @@ export function parseMessageParts(metadata: Record<string, unknown>): Notificati
   return null;
 }
 
+const PURCHASE_TITLE = "Purchase Successful";
+const SUBSCRIPTION_ACTIVATED_TITLE = "Subscription Activated";
+const SUBSCRIPTION_CANCELED_TITLE = "Subscription Canceled";
+const SUBSCRIPTION_UPDATED_TITLE = "Subscription Updated";
+const SUBSCRIPTION_RENEWED_TITLE = "Subscription Renewed";
+
+function planLabelFromMetadata(
+  metadata: Record<string, unknown>,
+  t: NotificationTranslateFn,
+): string {
+  const plan = metadata.plan;
+  if (plan === "plus") return t("plans.plus");
+  if (plan === "premium") return t("plans.premium");
+  return t("plans.membership");
+}
+
+function localizeNotificationContent(
+  notification: UserNotificationData,
+  t: NotificationTranslateFn,
+): { title: string; message: string; messageParts: NotificationMessageParts | null } {
+  const metadata = notification.metadata ?? {};
+  const diamonds =
+    typeof metadata.diamonds === "number"
+      ? metadata.diamonds
+      : typeof metadata.diamonds === "string"
+        ? Number(metadata.diamonds)
+        : undefined;
+  const plan = planLabelFromMetadata(metadata, t);
+
+  switch (notification.title) {
+    case PURCHASE_TITLE:
+      return {
+        title: t("events.purchase.title"),
+        message: t("events.purchase.message", {
+          diamonds: Number.isFinite(diamonds) ? diamonds! : 0,
+        }),
+        messageParts: null,
+      };
+    case SUBSCRIPTION_ACTIVATED_TITLE:
+      return {
+        title: t("events.subscriptionActivated.title"),
+        message: t("events.subscriptionActivated.message", { plan }),
+        messageParts: null,
+      };
+    case SUBSCRIPTION_CANCELED_TITLE:
+      return {
+        title: t("events.subscriptionCanceled.title"),
+        message: t("events.subscriptionCanceled.message"),
+        messageParts: null,
+      };
+    case SUBSCRIPTION_UPDATED_TITLE:
+      return {
+        title: t("events.subscriptionUpdated.title"),
+        message: t("events.subscriptionUpdated.message", { plan }),
+        messageParts: null,
+      };
+    case SUBSCRIPTION_RENEWED_TITLE:
+      return {
+        title: t("events.subscriptionRenewed.title"),
+        message: t("events.subscriptionRenewed.message", { plan }),
+        messageParts: null,
+      };
+    default:
+      break;
+  }
+
+  if (notification.type === "purchase" && Number.isFinite(diamonds)) {
+    return {
+      title: t("events.purchase.title"),
+      message: t("events.purchase.message", { diamonds: diamonds! }),
+      messageParts: null,
+    };
+  }
+
+  if (notification.type === "subscription") {
+    const msg = notification.message.toLowerCase();
+    if (msg.includes("canceled")) {
+      return {
+        title: t("events.subscriptionCanceled.title"),
+        message: t("events.subscriptionCanceled.message"),
+        messageParts: null,
+      };
+    }
+    if (msg.includes("active")) {
+      return {
+        title: t("events.subscriptionActivated.title"),
+        message: t("events.subscriptionActivated.message", { plan }),
+        messageParts: null,
+      };
+    }
+    if (msg.includes("updated")) {
+      return {
+        title: t("events.subscriptionUpdated.title"),
+        message: t("events.subscriptionUpdated.message", { plan }),
+        messageParts: null,
+      };
+    }
+    if (msg.includes("renewed")) {
+      return {
+        title: t("events.subscriptionRenewed.title"),
+        message: t("events.subscriptionRenewed.message", { plan }),
+        messageParts: null,
+      };
+    }
+  }
+
+  return {
+    title: notification.title,
+    message: notification.message,
+    messageParts: parseMessageParts(metadata),
+  };
+}
+
 export function formatNotificationTime(value: string | null, t: NotificationTranslateFn): string {
   if (!value) {
     return "";
@@ -119,12 +232,13 @@ export function mapNotification(
   t: NotificationTranslateFn,
 ): NotificationItem {
   const icon = notificationIcon(notification.icon, t);
+  const { title, message, messageParts } = localizeNotificationContent(notification, t);
   return {
     id: notification.id,
     type: notification.type,
-    title: notification.title,
-    message: notification.message,
-    messageParts: parseMessageParts(notification.metadata ?? {}),
+    title,
+    message,
+    messageParts,
     icon: notification.icon,
     iconSrc: icon.src,
     iconAlt: icon.alt,
