@@ -310,6 +310,8 @@
     "welcomeBack": "Welcome back, {username}! 👋",
     "dashboardTab": "Dashboard",
     "todaysReward": "Today's Reward",
+    "friends": "Friends",
+    "friendStatus": "Playing Fog of War",
     "weekdaySun": "Sun",
     "weekdayMon": "Mon",
     "weekdayTue": "Tue",
