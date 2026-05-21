@@ -6,6 +6,7 @@ import type { CognitiveDimensionKey } from "@/types/cognitive";
 import { DEFAULT_RADAR_SCORES } from "@/config/dimensions";
 import { updateCognitiveScores } from "@/services/userApi";
 import RadarChart from "@/components/features/dashboard/RadarChart";
+import { TestChromeProvider, TestRunnerShell } from "./test-ui";
 import MemoryNBack from "./memory/MemoryNBack";
 import ChangeDetection from "./memory/ChangeDetection";
 import SternbergMemoryScanning from "./memory/SternbergMemoryScanning";
@@ -35,20 +36,20 @@ interface CompletedRecord {
   score: number;
 }
 
-// 使用与 next-intl useTranslations 兼容的 formatter 类型（仅传 string/number 插值）
-function formatTopPercent(percentile: number, formatter: (key: string, values?: Record<string, string | number>) => string) {
+function formatTopPercent(
+  percentile: number,
+  formatter: (key: string, values?: Record<string, string | number>) => string
+) {
   const p = Math.round(Math.max(0, Math.min(100, percentile)));
   const top = Math.max(0, 100 - p);
   if (top <= 0) return formatter("statsTopPercentBest");
   return formatter("statsTopPercentFormat", { value: top });
 }
 
-/**
- * 运行当前维度的多个测试，完成后写雷达分数并显示结果
- */
 export default function TestRunner({ dimension, onBack, dateOfBirth }: TestRunnerProps) {
   const t = useTranslations("test");
   const tCommon = useTranslations("common");
+  const tDim = useTranslations("dimensions");
   const [testIndex, setTestIndex] = useState(0);
   const [records, setRecords] = useState<CompletedRecord[]>([]);
   const [done, setDone] = useState(false);
@@ -62,8 +63,8 @@ export default function TestRunner({ dimension, onBack, dateOfBirth }: TestRunne
         ? [t("logic.patternTitle"), t("logic.syllogismTitle"), t("logic.analogyTitle")]
         : dimension === "focus"
           ? [t("focus.flankerTitle"), t("focus.stroopTitle"), t("focus.schulteTitle")]
-            : dimension === "reaction"
-              ? [t("reaction.title"), t("reaction.arrowTitle"), t("reaction.pvtTitle")]
+          : dimension === "reaction"
+            ? [t("reaction.title"), t("reaction.arrowTitle"), t("reaction.pvtTitle")]
             : dimension === "strategy"
               ? [t("strategy.hanoiTitle"), t("strategy.londonTitle"), t("strategy.routeTitle")]
               : dimension === "spatial"
@@ -71,18 +72,14 @@ export default function TestRunner({ dimension, onBack, dateOfBirth }: TestRunne
                 : [];
 
   const testCount =
-    dimension === "memory"
-      ? 3
-        : dimension === "logic"
+    dimension === "spatial"
+      ? 2
+      : dimension === "memory" ||
+          dimension === "logic" ||
+          dimension === "focus" ||
+          dimension === "reaction" ||
+          dimension === "strategy"
         ? 3
-        : dimension === "focus"
-        ? 3
-        : dimension === "reaction"
-        ? 3
-        : dimension === "strategy"
-        ? 3
-        : dimension === "spatial"
-        ? 2
         : 1;
 
   const finishWithRecords = useCallback(
@@ -122,7 +119,7 @@ export default function TestRunner({ dimension, onBack, dateOfBirth }: TestRunne
     [finishWithRecords, records, testIndex, testCount]
   );
 
-  const handleSkip = useCallback(async () => {
+  const handleSkipSession = useCallback(async () => {
     if (testIndex + 1 >= testCount) {
       await finishWithRecords(records);
     } else {
@@ -137,35 +134,39 @@ export default function TestRunner({ dimension, onBack, dateOfBirth }: TestRunne
         ? () => <ChangeDetection onComplete={handleComplete} dateOfBirth={dateOfBirth} />
         : dimension === "memory" && testIndex === 2
           ? () => <MemoryNBack onComplete={handleComplete} dateOfBirth={dateOfBirth} />
-        : dimension === "logic" && testIndex === 0
-          ? () => <TransitiveInference onComplete={handleComplete} dateOfBirth={dateOfBirth} />
-        : dimension === "logic" && testIndex === 1
-            ? () => <SyllogisticReasoning onComplete={handleComplete} dateOfBirth={dateOfBirth} />
-            : dimension === "logic" && testIndex === 2
-              ? () => <AnalogicalReasoning onComplete={handleComplete} />
-            : dimension === "focus" && testIndex === 0
-              ? () => <FlankerTask onComplete={handleComplete} dateOfBirth={dateOfBirth} />
-            : dimension === "focus" && testIndex === 1
-                ? () => <StroopColor onComplete={handleComplete} dateOfBirth={dateOfBirth} />
-                : dimension === "focus" && testIndex === 2
-                  ? () => <SchulteGrid onComplete={handleComplete} />
-                : dimension === "reaction" && testIndex === 0
-                  ? () => <ReactionClick onComplete={handleComplete} dateOfBirth={dateOfBirth} />
-                : dimension === "reaction" && testIndex === 1
-                    ? () => <ReactionArrowKey onComplete={handleComplete} dateOfBirth={dateOfBirth} />
-                  : dimension === "reaction" && testIndex === 2
-                    ? () => <ReactionPVT onComplete={handleComplete} dateOfBirth={dateOfBirth} />
-                  : dimension === "strategy"
-                    ? testIndex === 0
-                      ? () => <HanoiPlanning onComplete={handleComplete} dateOfBirth={dateOfBirth} />
-                      : testIndex === 1
-                        ? () => <LondonPlanning onComplete={handleComplete} dateOfBirth={dateOfBirth} />
-                        : () => <RoutePlanning onComplete={handleComplete} dateOfBirth={dateOfBirth} />
-                    : dimension === "spatial"
-                      ? testIndex === 0
-                        ? () => <ShapeRotation onComplete={handleComplete} />
-                        : () => <PaperFold onComplete={handleComplete} />
-                      : () => <div />;
+          : dimension === "logic" && testIndex === 0
+            ? () => <TransitiveInference onComplete={handleComplete} dateOfBirth={dateOfBirth} />
+            : dimension === "logic" && testIndex === 1
+              ? () => <SyllogisticReasoning onComplete={handleComplete} dateOfBirth={dateOfBirth} />
+              : dimension === "logic" && testIndex === 2
+                ? () => <AnalogicalReasoning onComplete={handleComplete} />
+                : dimension === "focus" && testIndex === 0
+                  ? () => <FlankerTask onComplete={handleComplete} dateOfBirth={dateOfBirth} />
+                  : dimension === "focus" && testIndex === 1
+                    ? () => <StroopColor onComplete={handleComplete} dateOfBirth={dateOfBirth} />
+                    : dimension === "focus" && testIndex === 2
+                      ? () => <SchulteGrid onComplete={handleComplete} />
+                      : dimension === "reaction" && testIndex === 0
+                        ? () => <ReactionClick onComplete={handleComplete} dateOfBirth={dateOfBirth} />
+                        : dimension === "reaction" && testIndex === 1
+                          ? () => (
+                              <ReactionArrowKey onComplete={handleComplete} dateOfBirth={dateOfBirth} />
+                            )
+                          : dimension === "reaction" && testIndex === 2
+                            ? () => <ReactionPVT onComplete={handleComplete} dateOfBirth={dateOfBirth} />
+                            : dimension === "strategy"
+                              ? testIndex === 0
+                                ? () => <HanoiPlanning onComplete={handleComplete} dateOfBirth={dateOfBirth} />
+                                : testIndex === 1
+                                  ? () => (
+                                      <LondonPlanning onComplete={handleComplete} dateOfBirth={dateOfBirth} />
+                                    )
+                                  : () => <RoutePlanning onComplete={handleComplete} dateOfBirth={dateOfBirth} />
+                              : dimension === "spatial"
+                                ? testIndex === 0
+                                  ? () => <ShapeRotation onComplete={handleComplete} />
+                                  : () => <PaperFold onComplete={handleComplete} />
+                                : () => null;
 
   if (done) {
     const avg =
@@ -174,21 +175,21 @@ export default function TestRunner({ dimension, onBack, dateOfBirth }: TestRunne
         : 0;
 
     return (
-      <div className="space-y-6">
+      <div className="w-full min-w-0 space-y-6 font-app-body">
         <button
           type="button"
           onClick={onBack}
-          className="text-sm text-[#5E81AC] hover:underline"
+          className="text-sm font-medium text-[#1565C0] hover:underline"
         >
-          {tCommon("back")}
+          ← {tCommon("back")}
         </button>
         <RadarChart scores={radarScores} />
-        <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-          <h4 className="mb-3 text-sm font-semibold text-gray-800">{t("dimensionStatsTitle")}</h4>
+        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-md">
+          <h4 className="mb-3 text-sm font-semibold text-[#003366]">{t("dimensionStatsTitle")}</h4>
           <div className="overflow-x-auto">
             <table className="min-w-full text-sm">
               <thead>
-                <tr className="border-b border-gray-200 text-left text-gray-500">
+                <tr className="border-b border-slate-200 text-left text-slate-500">
                   <th className="py-2 pr-3 font-medium">{t("statsColIndex")}</th>
                   <th className="py-2 pr-3 font-medium">{t("statsColTest")}</th>
                   <th className="py-2 pr-3 font-medium">{t("statsColScore")}</th>
@@ -199,7 +200,7 @@ export default function TestRunner({ dimension, onBack, dateOfBirth }: TestRunne
                         <button
                           type="button"
                           onClick={() => setShowAgePercentile(true)}
-                          className="rounded border border-gray-300 px-1.5 py-0.5 text-xs font-medium text-gray-600 hover:bg-gray-50"
+                          className="rounded border border-slate-300 px-1.5 py-0.5 text-xs font-medium text-slate-600 hover:bg-slate-50"
                         >
                           {t("statsViewAction")}
                         </button>
@@ -210,22 +211,25 @@ export default function TestRunner({ dimension, onBack, dateOfBirth }: TestRunne
               </thead>
               <tbody>
                 {records.map((item, idx) => (
-                  <tr key={`${idx}-${item.testIndex}-${item.score}`} className="border-b border-gray-100 last:border-b-0">
-                    <td className="py-2 pr-3 text-gray-600">{idx + 1}</td>
-                    <td className="py-2 pr-3 text-gray-700">
+                  <tr
+                    key={`${idx}-${item.testIndex}-${item.score}`}
+                    className="border-b border-slate-100 last:border-b-0"
+                  >
+                    <td className="py-2 pr-3 text-slate-600">{idx + 1}</td>
+                    <td className="py-2 pr-3 text-slate-700">
                       {testLabels[item.testIndex] ?? `${t("statsColTest")} ${item.testIndex + 1}`}
                     </td>
-                    <td className="py-2 pr-3 font-medium text-gray-800">{item.score}</td>
-                    <td className="py-2 text-gray-800">
+                    <td className="py-2 pr-3 font-medium text-slate-800">{item.score}</td>
+                    <td className="py-2 text-slate-800">
                       {showAgePercentile ? formatTopPercent(item.score, t) : "***"}
                     </td>
                   </tr>
                 ))}
-                <tr className="bg-gray-50">
-                  <td className="py-2 pr-3 text-gray-600">-</td>
-                  <td className="py-2 pr-3 font-medium text-gray-700">{t("statsAverageRow")}</td>
-                  <td className="py-2 pr-3 font-semibold text-[#5E81AC]">{avg}</td>
-                  <td className="py-2 font-semibold text-[#5E81AC]">
+                <tr className="bg-slate-50">
+                  <td className="py-2 pr-3 text-slate-600">-</td>
+                  <td className="py-2 pr-3 font-medium text-slate-700">{t("statsAverageRow")}</td>
+                  <td className="py-2 pr-3 font-semibold text-[#1565C0]">{avg}</td>
+                  <td className="py-2 font-semibold text-[#1565C0]">
                     {showAgePercentile ? formatTopPercent(avg, t) : "***"}
                   </td>
                 </tr>
@@ -238,27 +242,25 @@ export default function TestRunner({ dimension, onBack, dateOfBirth }: TestRunne
   }
 
   return (
-    <div className="space-y-4">
-      <button
-        type="button"
-        onClick={onBack}
-        className="text-sm text-[#5E81AC] hover:underline"
-      >
-        {tCommon("back")}
-      </button>
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-gray-500">
-          {t("testProgress", { current: testIndex + 1, total: testCount })}
-        </p>
+    <TestChromeProvider
+      dimension={dimension}
+      sessionIndex={testIndex}
+      sessionTotal={testCount}
+      sessionLabels={testLabels}
+      onSkipSession={handleSkipSession}
+    >
+      <div className="font-app-body">
         <button
           type="button"
-          onClick={handleSkip}
-          className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50"
+          onClick={onBack}
+          className="mb-4 text-sm font-medium text-[#1565C0] hover:underline"
         >
-          {t("skipTest")}
+          ← {tCommon("back")}
         </button>
+        <TestRunnerShell dimensionLabel={tDim(dimension)}>
+          <TestRender />
+        </TestRunnerShell>
       </div>
-      <TestRender />
-    </div>
+    </TestChromeProvider>
   );
 }

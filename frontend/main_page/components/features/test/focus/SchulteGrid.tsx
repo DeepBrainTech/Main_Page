@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
+import { TestIntroLayout, useReportTestChrome } from "../test-ui";
 
 interface StageConfig {
   id: string;

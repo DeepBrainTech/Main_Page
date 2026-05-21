@@ -2,6 +2,7 @@
 
 import { useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
+import { TestIntroLayout, testIntroRulesClass, useReportTestChrome } from "../test-ui";
 
 type Phase = "intro" | "practice" | "formal";
 type PuzzleKind = "grid" | "graph";
@@ -870,26 +871,25 @@ export default function RoutePlanning({
     );
   };
 
+  useReportTestChrome(phase === "intro" ? { screen: "intro" } : { screen: "active" });
+
   if (phase === "intro") {
     return (
-      <div className="rounded-xl bg-white p-6 shadow-md">
-        <h4 className="mb-2 font-semibold text-gray-800">{t("routeTitle")}</h4>
-        <p className="mb-3 text-sm text-gray-600">{t("routeDesc")}</p>
-        <ul className="mb-4 list-disc space-y-1 pl-5 text-sm text-gray-600">
-          <li>{t("routeRuleMove")}</li>
-          <li>{t("routeRuleConstraint")}</li>
-          <li>{t("routeRuleScoring")}</li>
-          <li>{t("routeRulePractice")}</li>
-          <li>{t("routeRuleFormal")}</li>
-        </ul>
-        <button
-          type="button"
-          onClick={startPractice}
-          className="rounded-lg bg-[#5E81AC] px-4 py-2 text-white"
-        >
-          {t("startPractice")}
-        </button>
-      </div>
+      <TestIntroLayout
+        title={t("routeTitle")}
+        description={t("routeDesc")}
+        onStartPractice={startPractice}
+        onStartTest={startFormal}
+        extra={
+          <ul className={testIntroRulesClass}>
+            <li>{t("routeRuleMove")}</li>
+            <li>{t("routeRuleConstraint")}</li>
+            <li>{t("routeRuleScoring")}</li>
+            <li>{t("routeRulePractice")}</li>
+            <li>{t("routeRuleFormal")}</li>
+          </ul>
+        }
+      />
     );
   }
 

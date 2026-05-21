@@ -54,6 +54,75 @@ body {
     font-family: var(--font-outfit), ui-sans-serif, system-ui, sans-serif;
   }
 
+  /**
+   * Cognitive test runner typography (six dimensions)
+   * Session/meta 18px · Title 24px · Body 20px · CTA 16px
+   */
+  .test-typography {
+    font-family: var(--font-outfit), ui-sans-serif, system-ui, sans-serif;
+    font-size: 20px;
+    line-height: 2rem;
+    color: #045e96;
+  }
+
+  .test-typography :is(h1, h2, h3, h4, h5, h6) {
+    font-size: 24px;
+    line-height: normal;
+    font-weight: 700;
+    color: #045e96;
+  }
+
+  .test-typography p:not(.test-intro-body):not([class*="test-intro"]),
+  .test-typography label,
+  .test-typography td,
+  .test-typography th {
+    font-size: 20px;
+    line-height: 2rem;
+  }
+
+  .test-typography .test-intro-body {
+    font-size: 20px;
+    line-height: 2rem;
+  }
+
+  .test-typography .test-intro-rules,
+  .test-typography .test-intro-rules li {
+    font-size: 20px;
+    line-height: 1.75rem;
+  }
+
+  .test-typography .text-xs,
+  .test-typography .text-sm,
+  .test-typography [class*="text-[18px]"] {
+    font-size: 18px !important;
+    line-height: 1.25rem !important;
+  }
+
+  .test-typography button:not(.test-answer-btn),
+  .test-typography [role="button"]:not(.test-answer-btn) {
+    font-size: 16px;
+    line-height: 1.5rem;
+  }
+
+  .test-typography .test-answer-btn,
+  .test-typography button.rounded-lg.border-2,
+  .test-typography button.rounded-\[14px\].border-2 {
+    font-size: 20px !important;
+    line-height: 2rem !important;
+  }
+
+  .test-typography .text-xl,
+  .test-typography .text-lg,
+  .test-typography .text-base {
+    font-size: 20px;
+    line-height: 2rem;
+  }
+
+  .test-typography .text-2xl {
+    font-size: 24px;
+    line-height: normal;
+  }
+
   .glass-panel {
     @apply bg-white/70 border border-white/50 shadow-sm backdrop-blur-md;
   }

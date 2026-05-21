@@ -2,6 +2,15 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
+import {
+  TestIntroLayout,
+  TestPhasePanel,
+  testActionBtnAccent,
+  testAnswerBtnIdle,
+  testAnswerBtnSelected,
+  testFeedbackClass,
+  useReportTestChrome,
+} from "../test-ui";
 
 type ColorKey = "red" | "green" | "blue";
 type TrialType = "congruent" | "incongruent";
@@ -153,6 +162,16 @@ export default function StroopColor({
 
   const currentTrial = phase === "formal" ? formalTrials[formalIndex] : phase === "practice" ? PRACTICE_TRIAL : null;
 
+  useReportTestChrome(
+    phase === "intro"
+      ? { screen: "intro" }
+      : {
+          screen: "active",
+          questionCurrent: phase === "formal" ? formalIndex + 1 : 1,
+          questionTotal: phase === "formal" ? formalTrials.length : 1,
+        }
+  );
+
   useEffect(() => {
     if (phase === "practice" || phase === "formal") {
       questionStartTsRef.current = performance.now();
@@ -234,17 +253,12 @@ export default function StroopColor({
 
   if (phase === "intro") {
     return (
-      <div className="rounded-xl bg-white p-6 shadow-md">
-        <h4 className="mb-2 font-semibold text-gray-800">{t("stroopTitle")}</h4>
-        <p className="mb-4 text-sm text-gray-600">{t("stroopDesc")}</p>
-        <button
-          type="button"
-          onClick={startPractice}
-          className="rounded-lg bg-[#5E81AC] px-4 py-2 text-white"
-        >
-          {t("startPractice")}
-        </button>
-      </div>
+      <TestIntroLayout
+        title={t("stroopTitle")}
+        description={t("stroopDesc")}
+        onStartPractice={startPractice}
+        onStartTest={startFormal}
+      />
     );
   }
 
@@ -275,7 +289,7 @@ export default function StroopColor({
 
       <p className="mb-2 text-sm text-gray-600">{t("stroopInstruction")}</p>
 
-      <div className="mb-4 rounded-lg border border-gray-200 bg-gray-50 p-6 text-center">
+      <div className="rounded-2xl border border-[#045e96]/15 bg-[#edf4fc]/50 p-6 text-center">
         <span className={`text-5xl font-bold uppercase tracking-wide ${colorClass(currentTrial.ink)}`}>
           {t(`stroopWord.${currentTrial.word}`)}
         </span>
@@ -287,9 +301,7 @@ export default function StroopColor({
             key={key}
             type="button"
             onClick={() => setSelected(key)}
-            className={`rounded-lg border-2 px-5 py-3 font-semibold ${
-              selected === key ? "border-[#5E81AC] bg-[#5E81AC] text-white" : "border-gray-300"
-            }`}
+            className={selected === key ? testAnswerBtnSelected : testAnswerBtnIdle}
           >
             {t(`stroopOption.${key}`)}
           </button>

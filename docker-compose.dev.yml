@@ -72,9 +72,10 @@ services:
     image: node:20-alpine
     container_name: main-page-frontend-dev
     working_dir: /app
-    # Load frontend/main_page/.env into the container process (Compose does not read this path for ${VAR} substitution).
+    # Optional local overrides (copy from frontend/main_page/.env.example). Omit if file missing.
     env_file:
-      - ./frontend/main_page/.env
+      - path: ./frontend/main_page/.env
+        required: false
     command: sh -c "npm install --legacy-peer-deps && npm run dev"
     ports:
       - "3000:3000"
