@@ -37,7 +37,24 @@
     "diamondHelpGameBadges": "游戏徽章奖励",
     "diamondHelpBuyInShop": "商店购买",
     "settings": "设置",
-    "shop": "商店"
+    "shop": "商店",
+    "notifications": "通知"
+  },
+  "notifications": {
+    "title": "通知",
+    "markAllRead": "全部标为已读",
+    "loading": "正在加载通知...",
+    "empty": "暂无通知",
+    "unreadBadge": "未读",
+    "iconAchievement": "成就",
+    "iconCourseExpire": "课程即将到期",
+    "iconPurchase": "购买成功",
+    "iconSubscription": "订阅",
+    "timeJustNow": "刚刚",
+    "timeMinutesAgo": "{count, plural, other {# 分钟前}}",
+    "timeHoursAgo": "{count, plural, other {# 小时前}}",
+    "timeYesterday": "昨天",
+    "timeDaysAgo": "{count, plural, other {# 天前}}"
   },
   "shop": {
     "checkoutSuccess": "支付已完成，钻石可能需要稍等片刻后到账。",
@@ -48,27 +65,27 @@
       "generic": "出错了，请稍后重试。"
     },
     "badges": {
-      "bestValue": "Best Value"
+      "bestValue": "超值推荐"
     },
     "products": {
       "diamonds10": {
-        "title": "10 Diamonds",
+        "title": "10 钻石",
         "price": "$ 0.99"
       },
       "diamonds25": {
-        "title": "25 Diamonds",
+        "title": "25 钻石",
         "price": "$ 1.99"
       },
       "diamonds70": {
-        "title": "70 Diamonds",
+        "title": "70 钻石",
         "price": "$ 5.99"
       },
       "diamonds200": {
-        "title": "200 Diamonds",
+        "title": "200 钻石",
         "price": "$ 15.99"
       },
       "diamonds300": {
-        "title": "300 Diamonds",
+        "title": "300 钻石",
         "price": "$ 20.99"
       }
     }
@@ -265,8 +282,24 @@
     "welcomeBack": "欢迎回来，{username}！👋",
     "dashboardTab": "主页",
     "todaysReward": "今日奖励",
-    "friends": "好友",
-    "friendStatus": "正在玩 迷雾象棋",
+    "weekdaySun": "日",
+    "weekdayMon": "一",
+    "weekdayTue": "二",
+    "weekdayWed": "三",
+    "weekdayThu": "四",
+    "weekdayFri": "五",
+    "weekdaySat": "六",
+    "dateRangeSeparator": " - ",
+    "weeklyProgress": "本周进度",
+    "streakTitle": "连续签到 {count} 天！",
+    "streakEncouragement": "继续保持，你做得很棒！🎉",
+    "streakDialogAria": "签到奖励",
+    "claimReward": "领取奖励",
+    "rewardCoins": "+{count} 金币",
+    "rewardDiamonds": "+{count} 钻石",
+    "rewardFlowers": "+{count} 鲜花",
+    "premiumBonusAlt": "高级会员奖励",
+    "plusBonusAlt": "Plus 会员奖励",
     "totalPoints": "总积分",
     "dayStreak": "连续天数",
     "daysUnit": "天",
