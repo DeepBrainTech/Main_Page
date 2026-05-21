@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Link } from "@/lib/i18n-navigation";
 import Image from "next/image";
@@ -21,23 +21,78 @@ import {
 
 export type AppTab = "dashboard" | "learning" | "test" | "brainGames" | "leaderboard";
 
+type NotificationMessageParts = {
+  before: string;
+  highlight: string;
+  after: string;
+};
+
 type NotificationItem = {
   id: number;
   type: string;
   title: string;
   message: string;
+  messageParts: NotificationMessageParts | null;
   icon: string;
   time: string;
   iconSrc: string;
   iconAlt: string;
+  iconBgClass: string;
+  iconImgClass: string;
   unread: boolean;
 };
 
-function notificationIcon(icon: string): { src: string; alt: string } {
-  if (icon === "purchase") {
-    return { src: "/notification/purchase.svg", alt: "Purchase successful" };
+function notificationIcon(icon: string): {
+  src: string;
+  alt: string;
+  bgClass: string;
+  imgClass: string;
+} {
+  switch (icon) {
+    case "achievement":
+      return {
+        src: "/notification/achievement.svg",
+        alt: "Achievement",
+        bgClass: "bg-amber-100",
+        imgClass: "h-5 w-5",
+      };
+    case "course_expire":
+      return {
+        src: "/notification/course_expire.svg",
+        alt: "Course expiring",
+        bgClass: "bg-purple-100",
+        imgClass: "h-5 w-5",
+      };
+    case "purchase":
+      return {
+        src: "/notification/purchase.svg",
+        alt: "Purchase successful",
+        bgClass: "bg-rose-100",
+        imgClass: "h-5 w-5",
+      };
+    case "subscription":
+    default:
+      return {
+        src: "/notification/subscription.svg",
+        alt: "Subscription",
+        bgClass: "bg-blue-200",
+        imgClass: "h-6 w-6",
+      };
   }
-  return { src: "/notification/subscription.svg", alt: "Subscription" };
+}
+
+function parseMessageParts(metadata: Record<string, unknown>): NotificationMessageParts | null {
+  const before = metadata.message_before;
+  const highlight = metadata.message_highlight;
+  const after = metadata.message_after;
+  if (
+    typeof before === "string" &&
+    typeof highlight === "string" &&
+    typeof after === "string"
+  ) {
+    return { before, highlight, after };
+  }
+  return null;
 }
 
 function formatNotificationTime(value: string | null): string {
@@ -79,12 +134,59 @@ function mapNotification(notification: UserNotificationData): NotificationItem {
     type: notification.type,
     title: notification.title,
     message: notification.message,
+    messageParts: parseMessageParts(notification.metadata ?? {}),
     icon: notification.icon,
     iconSrc: icon.src,
     iconAlt: icon.alt,
+    iconBgClass: icon.bgClass,
+    iconImgClass: icon.imgClass,
     time: formatNotificationTime(notification.created_at),
     unread: !notification.is_read,
   };
+}
+
+function NotificationMessage({ notification }: { notification: NotificationItem }) {
+  if (notification.messageParts) {
+    const { before, highlight, after } = notification.messageParts;
+    return (
+      <p className="w-full text-sm font-normal leading-5 text-sky-700">
+        {before}
+        <span className="font-semibold">{highlight}</span>
+        {after}
+      </p>
+    );
+  }
+
+  return <p className="w-full text-sm font-normal leading-5 text-sky-700">{notification.message}</p>;
+}
+
+const NOTIFICATION_VISIBLE_LIMIT = 4;
+const NOTIFICATION_LIST_GAP_PX = 12;
+const NOTIFICATION_LIST_PADDING_Y_PX = 24;
+const NOTIFICATION_FALLBACK_ITEM_HEIGHT_PX = 104;
+
+function measureNotificationListCap(listRoot: HTMLElement): number | null {
+  const items = Array.from(listRoot.querySelectorAll<HTMLElement>("[data-notification-item]"));
+  if (items.length <= NOTIFICATION_VISIBLE_LIMIT) {
+    return null;
+  }
+
+  let contentHeight = 0;
+  for (let i = 0; i < NOTIFICATION_VISIBLE_LIMIT; i += 1) {
+    if (i > 0) {
+      contentHeight += NOTIFICATION_LIST_GAP_PX;
+    }
+    const measured = items[i].getBoundingClientRect().height || items[i].offsetHeight;
+    contentHeight += measured;
+  }
+
+  if (contentHeight <= 0) {
+    contentHeight =
+      NOTIFICATION_VISIBLE_LIMIT * NOTIFICATION_FALLBACK_ITEM_HEIGHT_PX +
+      (NOTIFICATION_VISIBLE_LIMIT - 1) * NOTIFICATION_LIST_GAP_PX;
+  }
+
+  return Math.ceil(contentHeight);
 }
 
 interface AppShellProps {
@@ -130,9 +232,102 @@ export default function AppShell({
   const [membershipPlan, setMembershipPlan] = useState<MembershipPlan>("free");
   const [avatarFailed, setAvatarFailed] = useState(false);
   const notificationsRef = useRef<HTMLDivElement | null>(null);
+  const notificationBellRef = useRef<HTMLButtonElement | null>(null);
+  const notificationListRef = useRef<HTMLDivElement | null>(null);
+  const notificationPanelRef = useRef<HTMLDivElement | null>(null);
+  const notificationScrollRef = useRef<HTMLDivElement | null>(null);
+  const [notificationListMaxHeight, setNotificationListMaxHeight] = useState<number | null>(null);
+  const [notificationPanelPosition, setNotificationPanelPosition] = useState<{
+    top: number;
+    left: number;
+    width: number;
+    arrowRight: number;
+  } | null>(null);
+  const notificationScrollIdleRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [notificationScrollActive, setNotificationScrollActive] = useState(false);
+  const [notificationScrollbar, setNotificationScrollbar] = useState({
+    canScroll: false,
+    thumbHeight: 176,
+    thumbTop: 0,
+  });
   const { loading: rewardsLoading, coins, diamonds, flowers } = useRewards();
+
+  const NOTIFICATION_PANEL_WIDTH = 465;
+
+  const updateNotificationListHeight = () => {
+    const listRoot = notificationListRef.current;
+    if (!listRoot) {
+      return;
+    }
+    setNotificationListMaxHeight(measureNotificationListCap(listRoot));
+  };
+
+  const updateNotificationPanelPosition = () => {
+    const bellEl = notificationBellRef.current;
+    const alignEl =
+      document.querySelector<HTMLElement>("[data-brainpower-panel]") ??
+      document.querySelector<HTMLElement>("main");
+    if (!bellEl || !alignEl) {
+      return;
+    }
+
+    const alignRect = alignEl.getBoundingClientRect();
+    const bellRect = bellEl.getBoundingClientRect();
+    const panelWidth = Math.min(NOTIFICATION_PANEL_WIDTH, window.innerWidth - 32);
+    const left = Math.max(16, Math.round(alignRect.right - panelWidth));
+    const top = Math.round(bellRect.bottom + 8);
+    const bellCenterX = bellRect.left + bellRect.width / 2;
+    const panelRight = left + panelWidth;
+    const arrowRight = Math.round(panelRight - bellCenterX - 6);
+
+    setNotificationPanelPosition({ top, left, width: panelWidth, arrowRight });
+  };
+
+  const updateNotificationScrollbar = () => {
+    const el = notificationScrollRef.current;
+    if (!el) {
+      return;
+    }
+
+    const { scrollHeight, clientHeight, scrollTop } = el;
+    const canScroll = scrollHeight > clientHeight + 1;
+
+    if (!canScroll) {
+      setNotificationScrollbar({ canScroll: false, thumbHeight: 176, thumbTop: 0 });
+      return;
+    }
+
+    const trackHeight = clientHeight;
+    const thumbHeight = Math.max(44, Math.round((clientHeight / scrollHeight) * trackHeight));
+    const maxThumbTop = trackHeight - thumbHeight;
+    const scrollRatio = scrollTop / (scrollHeight - clientHeight);
+    const thumbTop = Math.round(scrollRatio * maxThumbTop);
+
+    setNotificationScrollbar({ canScroll: true, thumbHeight, thumbTop });
+  };
+
+  const revealNotificationScrollbar = () => {
+    updateNotificationScrollbar();
+    setNotificationScrollActive(true);
+    if (notificationScrollIdleRef.current) {
+      clearTimeout(notificationScrollIdleRef.current);
+    }
+    notificationScrollIdleRef.current = setTimeout(() => {
+      setNotificationScrollActive(false);
+    }, 700);
+  };
   const resolvedAvatarSrc = !avatarFailed && avatarUrl ? avatarUrl : "/dashboard/default.png";
   const hasUnreadNotifications = notifications.some((notification) => notification.unread);
+  const notificationListNeedsScroll =
+    !notificationsLoading && notifications.length > NOTIFICATION_VISIBLE_LIMIT;
+  const notificationListScrollMaxHeight =
+    notificationListMaxHeight !== null
+      ? notificationListMaxHeight + NOTIFICATION_LIST_PADDING_Y_PX
+      : notificationListNeedsScroll
+        ? NOTIFICATION_VISIBLE_LIMIT * NOTIFICATION_FALLBACK_ITEM_HEIGHT_PX +
+          (NOTIFICATION_VISIBLE_LIMIT - 1) * NOTIFICATION_LIST_GAP_PX +
+          NOTIFICATION_LIST_PADDING_Y_PX
+        : null;
 
   const markNotificationAsRead = (notificationId: number) => {
     const target = notifications.find((notification) => notification.id === notificationId);
@@ -200,6 +395,110 @@ export default function AppShell({
   }, []);
 
   useEffect(() => {
+    return () => {
+      if (notificationScrollIdleRef.current) {
+        clearTimeout(notificationScrollIdleRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!notificationsOpen) {
+      setNotificationScrollActive(false);
+    }
+  }, [notificationsOpen]);
+
+  useLayoutEffect(() => {
+    if (!notificationsOpen) {
+      setNotificationPanelPosition(null);
+      setNotificationListMaxHeight(null);
+      return;
+    }
+
+    const measureLayout = () => {
+      updateNotificationPanelPosition();
+      updateNotificationListHeight();
+    };
+
+    measureLayout();
+    const raf1 = requestAnimationFrame(() => {
+      measureLayout();
+      requestAnimationFrame(measureLayout);
+    });
+
+    return () => cancelAnimationFrame(raf1);
+  }, [notificationsOpen, activeTab, notifications, notificationsLoading]);
+
+  useEffect(() => {
+    if (!notificationsOpen) {
+      return;
+    }
+
+    updateNotificationPanelPosition();
+    updateNotificationScrollbar();
+
+    const el = notificationScrollRef.current;
+    const listRoot = notificationListRef.current;
+    const scrollObserver =
+      el || listRoot
+        ? new ResizeObserver(() => {
+            updateNotificationListHeight();
+            updateNotificationScrollbar();
+            updateNotificationPanelPosition();
+          })
+        : null;
+    if (el && scrollObserver) {
+      scrollObserver.observe(el);
+    }
+    if (listRoot && scrollObserver) {
+      scrollObserver.observe(listRoot);
+    }
+
+    const onLayoutChange = () => {
+      updateNotificationPanelPosition();
+      updateNotificationScrollbar();
+    };
+    window.addEventListener("resize", onLayoutChange);
+    window.addEventListener("scroll", onLayoutChange, true);
+
+    return () => {
+      scrollObserver?.disconnect();
+      window.removeEventListener("resize", onLayoutChange);
+      window.removeEventListener("scroll", onLayoutChange, true);
+    };
+  }, [notificationsOpen, notifications, notificationsLoading]);
+
+  useEffect(() => {
+    if (!notificationsOpen) {
+      return;
+    }
+
+    const panel = notificationPanelRef.current;
+    if (!panel) {
+      return;
+    }
+
+    const onWheel = (event: WheelEvent) => {
+      if (!panel.contains(event.target as Node)) {
+        return;
+      }
+
+      event.preventDefault();
+      event.stopPropagation();
+
+      const scrollEl = notificationScrollRef.current;
+      if (scrollEl && scrollEl.scrollHeight > scrollEl.clientHeight + 1) {
+        scrollEl.scrollTop += event.deltaY;
+      }
+
+      revealNotificationScrollbar();
+    };
+
+    panel.addEventListener("wheel", onWheel, { passive: false });
+    return () => panel.removeEventListener("wheel", onWheel);
+  }, [notificationsOpen]);
+
+  useEffect(() => {
     if (!notificationsOpen) {
       return;
     }
@@ -223,7 +522,7 @@ export default function AppShell({
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-100 via-slate-100 to-slate-200 pb-8 text-slate-800">
+    <div className="min-h-screen bg-[var(--background)] pb-8 text-slate-800">
       <header className="sticky top-0 z-50 border-b border-slate-200 bg-white/95 shadow-sm backdrop-blur">
         <div className="flex min-h-16 items-center justify-between gap-2 px-4 py-3 sm:min-h-[4.75rem] sm:gap-3 sm:px-6 sm:py-3.5 lg:min-h-24 lg:px-8 lg:py-4">
           <div className="flex min-w-0 items-center">
@@ -306,30 +605,53 @@ export default function AppShell({
 
             <div ref={notificationsRef} className="relative shrink-0">
               <button
+                ref={notificationBellRef}
                 type="button"
                 onClick={() => {
                   setProfileOpen(false);
                   setSettingsOpen(false);
                   setNotificationsOpen((open) => !open);
                 }}
-                className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-sky-700 hover:bg-indigo-100 sm:h-10 sm:w-10 md:h-11 md:w-11"
+                className="relative inline-flex size-9 shrink-0 flex-col items-start justify-start rounded-xl bg-indigo-50 px-2 pt-2 text-sky-700 hover:bg-indigo-100 sm:size-10 sm:px-2.5 sm:pt-2.5 md:size-11 md:px-3 md:pt-3"
                 aria-label="Notifications"
                 aria-expanded={notificationsOpen}
               >
-                <img src="/notification/mail.svg" alt="" width={20} height={20} className="h-5 w-5" />
-                {hasUnreadNotifications ? (
-                  <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-[#F44F44]" aria-hidden="true" />
-                ) : null}
+                <div className="relative size-5 shrink-0">
+                  <img src="/notification/mail.svg" alt="" width={15} height={15} className="h-5 w-5" />
+                  {hasUnreadNotifications ? (
+                    <img
+                      src="/notification/unread.svg"
+                      alt=""
+                      width={10}
+                      height={10}
+                      className="absolute bottom-0 right-0 h-2 w-2 translate-x-[2px] translate-y-[-1px]"
+                      aria-hidden
+                    />
+                  ) : null}
+                </div>
               </button>
 
-              {notificationsOpen ? (
-                <div className="absolute right-[-130px] top-full z-50 mt-2 w-[465px] max-w-[calc(100vw-2rem)] pt-1.5 font-app-body">
-                  <div className="absolute right-[148px] top-[1px] z-10">
+              {notificationsOpen && notificationPanelPosition ? (
+                <div
+                  ref={notificationPanelRef}
+                  className="fixed z-50 overscroll-contain pt-1.5 font-app-body"
+                  style={{
+                    top: notificationPanelPosition.top,
+                    left: notificationPanelPosition.left,
+                    width: notificationPanelPosition.width,
+                  }}
+                >
+                  <div
+                    className="absolute top-[1px] z-10"
+                    style={{ right: notificationPanelPosition.arrowRight }}
+                  >
                     <div className="h-3 w-3 -rotate-45 rounded-[2px] border-r border-t border-[#b9cfe5] bg-white" />
                   </div>
 
-                  <div className="h-[588px] overflow-hidden rounded-3xl bg-white shadow-[0px_20px_30px_0px_rgba(0,0,0,0.15)] outline outline-[1.2px] outline-offset-[-1.2px] outline-slate-300">
-                    <div className="flex h-20 items-center justify-between border-b border-zinc-800/10 px-6">
+                  <div
+                    className="relative w-full overflow-hidden overscroll-contain rounded-3xl bg-white shadow-[0px_20px_30px_0px_rgba(0,0,0,0.15)] outline outline-[1.2px] outline-offset-[-1.2px] outline-slate-300"
+                  >
+                    <div className="flex h-20 items-center justify-between px-6">
                       <h2 className="font-app-heading text-xl font-bold leading-8 text-sky-700">Notifications</h2>
                       <button
                         type="button"
@@ -344,25 +666,42 @@ export default function AppShell({
                         Mark all as read
                       </button>
                     </div>
+                    <div className="mx-3 h-px bg-zinc-800/10" />
 
-                    <div
-                      className="max-h-[495px] overscroll-contain overflow-y-auto px-3 py-3"
-                      onWheel={(event) => event.stopPropagation()}
-                    >
-                      <div className="space-y-3">
+                    <div className="relative">
+                      <div
+                        ref={notificationScrollRef}
+                        className={`notification-panel-scroll-hide overscroll-contain px-3 py-3 ${
+                          notificationListNeedsScroll ? "overflow-y-auto" : "overflow-y-visible"
+                        }`}
+                        style={
+                          notificationListScrollMaxHeight !== null
+                            ? { maxHeight: notificationListScrollMaxHeight }
+                            : undefined
+                        }
+                        onScroll={revealNotificationScrollbar}
+                      >
+                        <div ref={notificationListRef} className="space-y-3">
                         {notificationsLoading ? (
-                          <div className="flex w-96 max-w-full items-center justify-center rounded-[10px] px-4 py-10 text-sm text-slate-400">
+                          <div
+                            data-notification-item
+                            className="flex min-h-[104px] w-full items-center justify-center rounded-[10px] px-4 py-4 text-center text-sm text-slate-400"
+                          >
                             Loading notifications...
                           </div>
                         ) : null}
                         {!notificationsLoading && notifications.length === 0 ? (
-                          <div className="flex w-96 max-w-full items-center justify-center rounded-[10px] px-4 py-10 text-sm text-slate-400">
-                            No notifications yet.
+                          <div
+                            data-notification-item
+                            className="flex min-h-[104px] w-full items-center justify-center rounded-[10px] px-4 py-4"
+                          >
+                            <p className="text-center text-sm text-slate-400">No notifications yet.</p>
                           </div>
                         ) : null}
                         {!notificationsLoading && notifications.map((notification) => (
                           <div
                             key={notification.id}
+                            data-notification-item
                             role={notification.unread ? "button" : undefined}
                             tabIndex={notification.unread ? 0 : undefined}
                             onClick={() => markNotificationAsRead(notification.id)}
@@ -372,21 +711,23 @@ export default function AppShell({
                                 markNotificationAsRead(notification.id);
                               }
                             }}
-                            className={`flex w-96 max-w-full items-start gap-3 rounded-[10px] px-4 py-4 ${
-                              notification.unread ? "bg-[#EFF6FF]" : "bg-white"
+                            className={`flex w-full items-start gap-3 rounded-[10px] px-4 py-4 ${
+                              notification.unread ? "bg-blue-50" : ""
                             } ${notification.unread ? "cursor-pointer" : ""}`}
                           >
-                            <img
-                              src={notification.iconSrc}
-                              alt={notification.iconAlt}
-                              width={40}
-                              height={40}
-                              className="h-10 w-10 shrink-0"
-                            />
+                            <div
+                              className={`flex size-10 shrink-0 items-center justify-center rounded-full px-2.5 ${notification.iconBgClass}`}
+                            >
+                              <img
+                                src={notification.iconSrc}
+                                alt={notification.iconAlt}
+                                className={notification.iconImgClass}
+                              />
+                            </div>
 
-                            <div className="min-w-0 flex-1">
-                              <div className="flex items-center justify-between gap-3">
-                                <h3 className="truncate text-base font-semibold text-zinc-800">
+                            <div className="flex min-w-0 flex-1 flex-col items-start gap-2">
+                              <div className="flex w-full items-center justify-between gap-3">
+                                <h3 className="min-w-0 flex-1 text-base font-semibold text-zinc-800">
                                   {notification.title}
                                 </h3>
                                 {notification.unread ? (
@@ -395,15 +736,37 @@ export default function AppShell({
                                     alt="Unread"
                                     width={10}
                                     height={10}
-                                    className="h-2.5 w-2.5 shrink-0"
+                                    className="h-2 w-2 shrink-0"
                                   />
                                 ) : null}
                               </div>
-                              <p className="mt-2 text-sm font-normal leading-5 text-sky-700">{notification.message}</p>
-                              <p className="mt-2 text-xs font-normal leading-4 text-slate-400">{notification.time}</p>
+                              <NotificationMessage notification={notification} />
+                              <p className="w-full text-xs font-normal leading-4 text-slate-400">
+                                {notification.time}
+                              </p>
                             </div>
                           </div>
                         ))}
+                        </div>
+                      </div>
+
+                      <div
+                        className={`pointer-events-none absolute bottom-3 right-0 top-3 overflow-hidden transition-opacity duration-200 ${
+                          notificationScrollActive && notificationScrollbar.canScroll
+                            ? "w-2.5 opacity-100"
+                            : "w-2.5 opacity-0"
+                        }`}
+                        aria-hidden
+                      >
+                        <div className="relative h-full w-2.5 rounded-[100px] bg-[#E8E8E8]">
+                          <div
+                            className="absolute left-0 w-2.5 rounded-[100px] bg-[#7A7A7A]"
+                            style={{
+                              height: `${notificationScrollbar.thumbHeight}px`,
+                              top: `${notificationScrollbar.thumbTop}px`,
+                            }}
+                          />
+                        </div>
                       </div>
                     </div>
                   </div>

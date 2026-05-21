@@ -38,7 +38,10 @@ export default function BrainpowerPanel({ scores }: BrainpowerPanelProps) {
   );
 
   return (
-    <section className="w-full self-start rounded-[clamp(1.2rem,2vw,1.8rem)] border border-white/70 bg-white/65 p-[clamp(0.9rem,1.6vw,1.25rem)] shadow-lg backdrop-blur">
+    <section
+      data-brainpower-panel
+      className="w-full self-start rounded-[clamp(1.2rem,2vw,1.8rem)] border border-white/70 bg-white/65 p-[clamp(0.9rem,1.6vw,1.25rem)] shadow-lg backdrop-blur"
+    >
       <h3 className="mb-[clamp(0.35rem,0.9vw,0.6rem)] text-[clamp(1.05rem,1.6vw,1.5rem)] font-extrabold text-sky-800">
         {tHome("brainpowerChart")}
       </h3>
