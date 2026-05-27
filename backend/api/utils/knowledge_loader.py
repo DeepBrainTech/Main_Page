@@ -1,4 +1,4 @@
-"""Knowledge loading helpers for GoodCool chat."""
+"""Knowledge loading helpers for Wukoo chat."""
 
 from __future__ import annotations
 
@@ -17,8 +17,8 @@ _cached_at = 0.0
 
 
 def _read_r2_knowledge() -> str:
-    bucket = os.getenv("GOODCOOL_KNOWLEDGE_BUCKET", DEFAULT_KNOWLEDGE_BUCKET).strip() or DEFAULT_KNOWLEDGE_BUCKET
-    key = os.getenv("GOODCOOL_KNOWLEDGE_KEY", DEFAULT_KNOWLEDGE_KEY).strip() or DEFAULT_KNOWLEDGE_KEY
+    bucket = os.getenv("WUKOO_KNOWLEDGE_BUCKET", DEFAULT_KNOWLEDGE_BUCKET).strip() or DEFAULT_KNOWLEDGE_BUCKET
+    key = os.getenv("WUKOO_KNOWLEDGE_KEY", DEFAULT_KNOWLEDGE_KEY).strip() or DEFAULT_KNOWLEDGE_KEY
     client = get_r2_client()
     response = client.get_object(Bucket=bucket, Key=key)
     body = response["Body"].read()
@@ -29,7 +29,7 @@ def get_platform_knowledge() -> str:
     """Load platform knowledge from Cloudflare R2 only."""
     global _cached_at, _cached_knowledge
 
-    cache_seconds = int(os.getenv("GOODCOOL_KNOWLEDGE_CACHE_SECONDS", str(DEFAULT_CACHE_SECONDS)) or DEFAULT_CACHE_SECONDS)
+    cache_seconds = int(os.getenv("WUKOO_KNOWLEDGE_CACHE_SECONDS", str(DEFAULT_CACHE_SECONDS)) or DEFAULT_CACHE_SECONDS)
     now = time.time()
     if _cached_knowledge and now - _cached_at < cache_seconds:
         return _cached_knowledge

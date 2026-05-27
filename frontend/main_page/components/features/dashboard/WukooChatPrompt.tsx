@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { FormEvent } from "react";
 
-interface GoodCoolChatPromptProps {
+interface WukooChatPromptProps {
   label: string;
   value: string;
   disabled?: boolean;
@@ -11,13 +11,13 @@ interface GoodCoolChatPromptProps {
   onSubmit: () => void;
 }
 
-export default function GoodCoolChatPrompt({
+export default function WukooChatPrompt({
   label,
   value,
   disabled = false,
   onChange,
   onSubmit,
-}: GoodCoolChatPromptProps) {
+}: WukooChatPromptProps) {
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     event.stopPropagation();
@@ -47,7 +47,7 @@ export default function GoodCoolChatPrompt({
         className="grid h-[30px] w-[30px] shrink-0 place-items-center rounded-full transition hover:opacity-80"
         aria-label={label}
       >
-        <Image src="/dashboard/voice.svg" alt="" width={30} height={30} className="h-[30px] w-[30px]" aria-hidden />
+        <Image src="/home-system/chat/voice.svg" alt="" width={30} height={30} className="h-[30px] w-[30px]" aria-hidden />
       </button>
 
       <button
@@ -56,7 +56,7 @@ export default function GoodCoolChatPrompt({
         className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-zinc-800 text-white transition hover:bg-zinc-700 disabled:cursor-not-allowed disabled:bg-zinc-400"
         aria-label={label}
       >
-        <Image src="/dashboard/send.svg" alt="" width={13} height={13} className="h-[13px] w-[13px]" aria-hidden />
+        <Image src="/home-system/chat/send.svg" alt="" width={13} height={13} className="h-[13px] w-[13px]" aria-hidden />
       </button>
     </form>
   );

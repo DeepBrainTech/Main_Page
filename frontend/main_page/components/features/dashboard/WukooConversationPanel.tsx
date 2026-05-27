@@ -5,7 +5,7 @@ import { useCallback, useEffect, useRef } from "react";
 import { useTypewriterText } from "@/hooks/useTypewriterText";
 import type { MonkeyChatMessage } from "@/services/monkeyChatApi";
 
-interface GoodCoolConversationPanelProps {
+interface WukooConversationPanelProps {
   messages: MonkeyChatMessage[];
   userAvatarUrl?: string | null;
   closeLabel: string;
@@ -14,14 +14,14 @@ interface GoodCoolConversationPanelProps {
   onClose: () => void;
 }
 
-export default function GoodCoolConversationPanel({
+export default function WukooConversationPanel({
   messages,
   userAvatarUrl = null,
   closeLabel,
   animateLatestAssistant = false,
   onLatestAssistantAnimationComplete,
   onClose,
-}: GoodCoolConversationPanelProps) {
+}: WukooConversationPanelProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const scrollFrameRef = useRef<number | null>(null);
@@ -63,7 +63,7 @@ export default function GoodCoolConversationPanel({
       className="pointer-events-auto flex h-[min(24rem,calc(100cqh-4.75rem))] min-h-[12rem] w-full flex-col rounded-3xl border border-white/60 bg-white/80 shadow-xl backdrop-blur-md"
       role="dialog"
       aria-modal="false"
-      aria-label="GoodCool chat"
+      aria-label="Wukoo chat"
       onClick={(event) => event.stopPropagation()}
     >
       <button

@@ -4,6 +4,7 @@ import { useState } from "react";
 import Image from "next/image";
 import { useTranslations } from "next-intl";
 import { DAILY_TASKS, MONTHLY_TASK, type TaskConfig } from "@/config/tasks";
+import { dashboardCardClass } from "@/components/features/dashboard/dashboardCardStyles";
 
 interface TaskListProps {
   dailyProgress: Record<string, number>;
@@ -47,7 +48,7 @@ function TaskRow({
   const rewardIcon = isCoinReward ? "/dashboard/coin.svg" : "/dashboard/dimond.svg";
   const rewardBg = done ? "bg-[#22C55E]" : "bg-[#E45C44]";
   const statusBorder = done ? "border-green-400" : "border-transparent";
-  const statusBg = done ? "bg-emerald-100" : "bg-indigo-50";
+  const statusBg = done ? "bg-emerald-100" : "bg-[#EDF4FC]";
   const textColor = done ? "text-green-500 line-through" : "text-sky-700";
   const displayCurrent = target > 0 ? Math.min(current, target) : current;
 
@@ -136,7 +137,9 @@ export default function TaskList({
   const totalGoals = DAILY_TASKS.length + 1;
 
   return (
-    <div className="flex h-full w-full flex-col items-start gap-[clamp(0.9rem,1.8vw,1.5rem)] rounded-[clamp(1.25rem,2.2vw,2rem)] bg-white/60 px-[clamp(0.9rem,2vw,2rem)] py-[clamp(0.9rem,2vw,2rem)] shadow-[0px_4px_6px_-4px_rgba(0,0,0,0.10)] shadow-lg outline outline-1 outline-white/60">
+    <div
+      className={`${dashboardCardClass} flex h-full w-full flex-col items-start gap-[clamp(0.9rem,1.8vw,1.5rem)] px-[clamp(0.9rem,2vw,2rem)] py-[clamp(0.9rem,2vw,2rem)]`}
+    >
       <div className="flex w-full items-center justify-between gap-3">
         <h3 className="font-['Titan_One'] text-[clamp(1.1rem,1.9vw,1.55rem)] font-normal leading-tight tracking-wide text-sky-700">
           Brain Hub

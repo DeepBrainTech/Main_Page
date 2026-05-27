@@ -124,10 +124,10 @@ export default function StreakRewardDialog({
             <Image src="/checkin/coin.svg" alt="" width={64} height={64} className="h-16 w-16 object-contain" />
           </div>
           <div className="inline-flex min-w-0 flex-1 flex-col items-start justify-start gap-1">
-            <div className="self-stretch font-['Outfit'] text-sm font-medium leading-5 text-sky-700">
+            <div className="self-stretch font-app-body text-sm font-medium leading-5 text-sky-700">
               {tHome("todaysReward")}
             </div>
-            <div className="self-stretch break-words font-['Outfit'] text-xl font-semibold leading-8 text-amber-400">
+            <div className="self-stretch break-words font-app-body text-xl font-semibold leading-8 text-amber-400">
               {rewardParts.join(" ")}
             </div>
           </div>
@@ -157,7 +157,7 @@ export default function StreakRewardDialog({
                     className="h-4-auto object-contain"
                   />
                 </div>
-                <div className="self-stretch break-words font-['Outfit'] text-xl font-semibold leading-8 text-[#2478DC]">
+                <div className="self-stretch break-words font-app-body text-xl font-semibold leading-8 text-[#2478DC]">
                   {membershipBonusParts.join(" ")}
                 </div>
               </div>

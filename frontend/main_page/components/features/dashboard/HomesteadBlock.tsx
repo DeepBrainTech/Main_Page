@@ -3,9 +3,9 @@
 import { useState, useEffect, useRef } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import AvatarCharacter, { type AvatarConfig } from "./AvatarCharacter";
-import GoodCoolChatPrompt from "./GoodCoolChatPrompt";
-import GoodCoolConversationPanel from "./GoodCoolConversationPanel";
-import GoodCoolMessageBubble from "./GoodCoolMessageBubble";
+import WukooChatPrompt from "./WukooChatPrompt";
+import WukooConversationPanel from "./WukooConversationPanel";
+import WukooMessageBubble from "./WukooMessageBubble";
 import { sendMonkeyChatMessage, type MonkeyChatMessage } from "@/services/monkeyChatApi";
 
 interface HomesteadBlockProps {
@@ -21,6 +21,18 @@ export type SceneType = "island";
 /** 平滑插值 */
 function lerp(a: number, b: number, t: number): number {
   return a + (b - a) * t;
+}
+
+function getBubblePlacement(position: { x: number; y: number }) {
+  const safeLeft = "0.75rem";
+  const rightOffset = `calc(100% - ${position.x}% + 4rem)`;
+
+  return {
+    right: rightOffset,
+    width: `clamp(13rem, calc(${position.x}% - 4rem - ${safeLeft}), 20rem)`,
+    top: `clamp(0.75rem, calc(${position.y}% - 12.5rem), calc(100% - 7rem))`,
+    transform: "none",
+  };
 }
 
 /**
@@ -50,7 +62,7 @@ export default function HomesteadBlock({
   const [direction, setDirection] = useState<"left" | "right">("right");
   const [isWalking, setIsWalking] = useState(false);
   const [chatInput, setChatInput] = useState("");
-  const [chatMessage, setChatMessage] = useState(tHome("goodCoolMessage"));
+  const [chatMessage, setChatMessage] = useState(tHome("wukooMessage"));
   const [chatHistory, setChatHistory] = useState<MonkeyChatMessage[]>([]);
   const [isChatLoading, setIsChatLoading] = useState(false);
   const [isChatPanelOpen, setIsChatPanelOpen] = useState(false);
@@ -61,13 +73,14 @@ export default function HomesteadBlock({
   const returnCenterTimerRef = useRef<number | null>(null);
 
   const displayedChatMessages: MonkeyChatMessage[] = [
-    { role: "assistant", content: tHome("goodCoolMessage") },
+    { role: "assistant", content: tHome("wukooMessage") },
     ...chatHistory,
   ];
   const lastDisplayedMessage = displayedChatMessages[displayedChatMessages.length - 1];
   if (chatMessage && (!lastDisplayedMessage || lastDisplayedMessage.content !== chatMessage)) {
     displayedChatMessages.push({ role: "assistant", content: chatMessage });
   }
+  const bubblePlacement = getBubblePlacement(position);
 
   const handleChatSubmit = async () => {
     const message = chatInput.trim();
@@ -75,7 +88,7 @@ export default function HomesteadBlock({
 
     const nextHistory: MonkeyChatMessage[] = [...chatHistory, { role: "user" as const, content: message }].slice(-8);
     setChatInput("");
-    setChatMessage(tHome("goodCoolThinking"));
+    setChatMessage(tHome("wukooThinking"));
     setChatHistory(nextHistory);
     setIsChatLoading(true);
     setShouldAnimateLatestAssistant(false);
@@ -90,7 +103,7 @@ export default function HomesteadBlock({
       setChatHistory([...nextHistory, { role: "assistant" as const, content: result.answer }].slice(-8));
       setShouldAnimateLatestAssistant(true);
     } catch {
-      const fallback = tHome("goodCoolError");
+      const fallback = tHome("wukooError");
       setChatMessage(fallback);
       setChatHistory([...nextHistory, { role: "assistant" as const, content: fallback }].slice(-8));
       setShouldAnimateLatestAssistant(true);
@@ -101,12 +114,14 @@ export default function HomesteadBlock({
 
   const handleCloseChatPanel = () => {
     setIsChatPanelOpen(false);
-    setChatMessage(tHome("goodCoolMessage"));
+    setChatMessage(tHome("wukooMessage"));
     setShouldAnimateLatestAssistant(false);
   };
 
   // 点击场景移动角色
   const handleContainerClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if ((e.target as HTMLElement).closest('[data-chat-control="true"]')) return;
+
     const el = containerRef.current;
     if (!el) return;
     const rect = el.getBoundingClientRect();
@@ -185,6 +200,20 @@ export default function HomesteadBlock({
           onClick={handleContainerClick}
           className="@container/hs absolute left-0 right-0 top-[clamp(5rem,10vw,6rem)] bottom-[clamp(0.5rem,1.8vw,1.25rem)] z-20 cursor-pointer px-[clamp(0.25rem,1.2vw,0.5rem)] lg:top-16"
         >
+        {!isChatPanelOpen ? (
+          <div
+            data-chat-control="true"
+            className="pointer-events-auto absolute z-30"
+            style={bubblePlacement}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <WukooMessageBubble
+              message={chatMessage}
+              expandLabel={tHome("wukooExpandChat")}
+              onExpand={() => setIsChatPanelOpen(true)}
+            />
+          </div>
+        ) : null}
         <div
           className="absolute will-change-transform"
           style={{
@@ -196,18 +225,6 @@ export default function HomesteadBlock({
           }}
         >
           <div className={`relative min-w-0 ${isWalking ? "avatar-walk" : ""}`}>
-            {!isChatPanelOpen ? (
-              <div
-                className="pointer-events-auto absolute right-full -top-1 z-30 hidden w-[min(18rem,34cqi)] min-w-[14rem] pr-0 -mr-1.5 sm:block"
-                onClick={(event) => event.stopPropagation()}
-              >
-                <GoodCoolMessageBubble
-                  message={chatMessage}
-                  expandLabel={tHome("goodCoolExpandChat")}
-                  onExpand={() => setIsChatPanelOpen(true)}
-                />
-              </div>
-            ) : null}
             <AvatarCharacter config={avatarConfig} level={level} direction={direction} />
           </div>
           <div className="absolute bottom-2 left-1/2 -z-10 h-4 w-24 -translate-x-1/2 rounded-[100%] bg-black/10 blur-sm" />
@@ -215,13 +232,13 @@ export default function HomesteadBlock({
         </div>
 
         <div
-          className="@container/chat pointer-events-none absolute bottom-[clamp(1rem,2.5vw,1.5rem)] right-[clamp(1rem,2.5vw,1.5rem)] top-[clamp(0.75rem,2vw,1rem)] z-40 flex w-[min(20rem,38%,calc(100%-2rem))] min-w-[14rem] flex-col items-stretch justify-end gap-2"
+          className="@container/chat pointer-events-none absolute bottom-[clamp(1rem,2.5vw,1.5rem)] left-[clamp(1rem,2.5vw,1.5rem)] right-[clamp(1rem,2.5vw,1.5rem)] top-[clamp(0.75rem,2vw,1rem)] z-40 flex min-w-0 flex-col items-stretch justify-end gap-2 sm:left-auto sm:w-[min(20rem,38%,calc(100%-2rem))] sm:min-w-[14rem]"
         >
           {isChatPanelOpen ? (
-          <GoodCoolConversationPanel
+          <WukooConversationPanel
             messages={displayedChatMessages}
             userAvatarUrl={userAvatarUrl}
-            closeLabel={tHome("goodCoolCloseChat")}
+            closeLabel={tHome("wukooCloseChat")}
             animateLatestAssistant={shouldAnimateLatestAssistant && !isChatLoading}
             onLatestAssistantAnimationComplete={() => setShouldAnimateLatestAssistant(false)}
             onClose={handleCloseChatPanel}
@@ -229,8 +246,8 @@ export default function HomesteadBlock({
           ) : null}
 
           <div className="pointer-events-auto w-full min-w-0">
-            <GoodCoolChatPrompt
-              label={tHome("goodCoolChatHint")}
+            <WukooChatPrompt
+              label={tHome("wukooChatHint")}
               value={chatInput}
               disabled={isChatLoading}
               onChange={setChatInput}

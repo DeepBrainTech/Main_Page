@@ -11,6 +11,7 @@ import { useRewards } from "@/hooks/useRewards";
 import { useCognitiveScores } from "@/hooks/useCognitiveScores";
 import StatCard from "@/components/features/dashboard/StatCard";
 import BrainpowerPanel from "@/components/features/dashboard/BrainpowerPanel";
+import { dashboardCardClass } from "@/components/features/dashboard/dashboardCardStyles";
 import {
   formatLocalDateKey,
   formatWeekDateRange,
@@ -144,7 +145,7 @@ export default function HomeTab({ username = "", avatarUrl = null }: HomeTabProp
       <section className="grid grid-cols-1 gap-5 xl:grid-cols-12">
         <div className="space-y-5 xl:col-span-8">
           <div
-            className={`relative min-h-[360px] overflow-visible rounded-3xl border border-white/70 bg-white p-4 shadow-lg backdrop-blur transition-[padding] duration-300 md:min-h-[430px] xl:min-h-[500px] ${
+            className={`${dashboardCardClass} relative min-h-[360px] overflow-visible p-4 transition-[padding] duration-300 md:min-h-[430px] xl:min-h-[500px] ${
               isHomesteadMenuOpen ? "pb-[clamp(16rem,38vw,20rem)] sm:pb-[clamp(14rem,28vw,16.25rem)]" : ""
             }`}
           >

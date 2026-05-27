@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useLocale, useTranslations } from "next-intl";
 import type { CheckInState } from "@/hooks/useRewards";
+import { dashboardCardClass } from "@/components/features/dashboard/dashboardCardStyles";
 
 interface CheckInCalendarProps {
   checkIn: CheckInState;
@@ -40,7 +41,7 @@ export default function CheckInCalendar({
   for (let d = 1; d <= daysInMonth; d++) days.push(d);
 
   return (
-    <div className="flex w-full flex-col rounded-3xl border border-gray-100 bg-white p-[clamp(0.9rem,1.5vw,1.5rem)] shadow-sm">
+    <div className={`${dashboardCardClass} flex w-full flex-col p-[clamp(0.9rem,1.5vw,1.5rem)]`}>
       <div className="mb-[clamp(0.6rem,1.2vw,1rem)] flex items-center justify-between gap-3">
         <div>
           <h3 className="font-['Titan_One'] text-[clamp(1.1rem,2vw,1.5rem)] font-normal text-[#045E96] leading-tight">
@@ -52,7 +53,7 @@ export default function CheckInCalendar({
           type="button"
           onClick={onCheckIn}
           disabled={hasCheckedInToday}
-          className={`rounded-full px-[clamp(0.6rem,1.2vw,1rem)] py-[clamp(0.3rem,0.8vw,0.45rem)] text-[clamp(0.65rem,1.2vw,0.78rem)] font-bold transition-all shadow-sm ${
+          className={`rounded-full px-[clamp(0.6rem,1.2vw,1rem)] py-[clamp(0.3rem,0.8vw,0.45rem)] font-app-body text-base font-medium transition-all shadow-sm ${
             hasCheckedInToday
               ? "bg-gray-100 text-gray-400 cursor-not-allowed"
               : "bg-[#E45C44] text-white hover:shadow-md hover:scale-105 active:scale-95"

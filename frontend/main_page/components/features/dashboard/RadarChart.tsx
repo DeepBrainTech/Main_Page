@@ -13,13 +13,17 @@ interface RadarChartProps {
   embedded?: boolean;
 }
 
+const GRID_LEVELS = [0, 25, 50, 75, 100] as const;
+const CHART_LINE_COLOR = "#D4EAF8";
+const DATA_STROKE_COLOR = "#E45C44";
+const DATA_FILL_COLOR = "#E45C4466";
+
 /**
- * Six-dimension radar chart (pure SVG)
+ * Six-dimension radar chart (pure SVG) with layered hexagonal grid rings
  */
 export default function RadarChart({ scores, size = 220, embedded = false }: RadarChartProps) {
   const tDimension = useTranslations("dimensions");
   const tHome = useTranslations("dashboard");
-
   const labels = useMemo(
     () => COGNITIVE_DIMENSION_KEYS.map((key) => tDimension(key)),
     [tDimension]
@@ -27,7 +31,8 @@ export default function RadarChart({ scores, size = 220, embedded = false }: Rad
 
   const count = 6;
   const center = size / 2;
-  const radius = center - 40;
+  const radius = center - 52;
+  const labelOffset = 22;
 
   const getPoint = (i: number, r: number) => {
     const angle = (i * 2 * Math.PI) / count - Math.PI / 2;
@@ -51,69 +56,69 @@ export default function RadarChart({ scores, size = 220, embedded = false }: Rad
   const chartNode = (
     <div className="flex items-center justify-center py-[clamp(0.2rem,0.7vw,0.5rem)]">
       <svg viewBox={`0 0 ${size} ${size}`} className="h-auto w-full max-w-full overflow-visible">
-        <defs>
-          <linearGradient id="radarGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#ef4444" stopOpacity="0.36" />
-            <stop offset="100%" stopColor="#fb7185" stopOpacity="0.16" />
-          </linearGradient>
-        </defs>
-
-        {[0.25, 0.5, 0.75, 1].map((scale) => (
-          <polygon
-            key={scale}
-            points={polygonPoints(radius * scale)}
-            fill={scale === 1 ? "#f8fafc" : "none"}
-            stroke="#bfdbfe"
-            strokeWidth="1.2"
-            strokeDasharray={scale === 1 ? "0" : "4 4"}
-          />
-        ))}
-
-        {Array.from({ length: count }, (_, i) => {
-          const p = getPoint(i, radius);
+        {/* Concentric hexagon grid lines */}
+        {GRID_LEVELS.map((level) => {
+          if (level === 0) return null;
+          const scale = level / 100;
           return (
-            <line key={i} x1={center} y1={center} x2={p.x} y2={p.y} stroke="#dbeafe" strokeWidth="1.2" />
+            <polygon
+              key={level}
+              points={polygonPoints(radius * scale)}
+              fill="none"
+              stroke={CHART_LINE_COLOR}
+              strokeWidth={level === 100 ? 1.4 : 1}
+            />
           );
         })}
 
+        {/* Radial axes */}
+        {Array.from({ length: count }, (_, i) => {
+          const p = getPoint(i, radius);
+          return (
+            <line key={i} x1={center} y1={center} x2={p.x} y2={p.y} stroke={CHART_LINE_COLOR} strokeWidth="1" />
+          );
+        })}
+
+        {/* Data polygon */}
         <polygon
           points={dataPoints}
-          fill="url(#radarGradient)"
-          stroke="#ef4444"
+          fill={DATA_FILL_COLOR}
+          stroke={DATA_STROKE_COLOR}
           strokeWidth="2.2"
           strokeLinejoin="round"
         />
 
-        {COGNITIVE_DIMENSION_KEYS.map((key, i) => {
-          const value = Math.min(100, Math.max(0, scores[key] ?? 0));
-          const p = getPoint(i, (radius * value) / 100);
-          return <circle key={i} cx={p.x} cy={p.y} r="3" fill="white" stroke="#ef4444" strokeWidth="1.8" />;
+        {/* Scale labels along top (Memory) axis */}
+        {GRID_LEVELS.map((level) => {
+          const p = getPoint(0, (radius * level) / 100);
+          return (
+            <text
+              key={`scale-${level}`}
+              x={p.x}
+              y={p.y}
+              textAnchor="start"
+              dominantBaseline="middle"
+              className="fill-current font-app-body text-[10px] font-normal text-sky-700"
+            >
+              {level}
+            </text>
+          );
         })}
 
+        {/* Dimension labels */}
         {Array.from({ length: count }, (_, i) => {
-          const p = getPoint(i, radius + 24);
-          const value = Math.min(100, Math.max(0, scores[COGNITIVE_DIMENSION_KEYS[i]] ?? 0));
+          const p = getPoint(i, radius + labelOffset);
           return (
-            <g key={i}>
-              <text
-                x={p.x}
-                y={p.y - 7}
-                textAnchor="middle"
-                dominantBaseline="middle"
-                className="fill-sky-700 text-[10px] font-semibold tracking-wide"
-              >
-                {labels[i]}
-              </text>
-              <text
-                x={p.x}
-                y={p.y + 7}
-                textAnchor="middle"
-                dominantBaseline="middle"
-                className="fill-rose-500 text-xs font-bold"
-              >
-                {value}
-              </text>
-            </g>
+            <text
+              key={i}
+              x={p.x}
+              y={p.y}
+              textAnchor="middle"
+              dominantBaseline="middle"
+              className="fill-current font-app-body text-sm font-bold text-sky-700"
+            >
+              {labels[i]}
+            </text>
           );
         })}
       </svg>
