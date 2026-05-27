@@ -79,16 +79,7 @@ export default function RadarChart({ scores, size = 220, embedded = false }: Rad
           );
         })}
 
-        {/* Data polygon */}
-        <polygon
-          points={dataPoints}
-          fill={DATA_FILL_COLOR}
-          stroke={DATA_STROKE_COLOR}
-          strokeWidth="2.2"
-          strokeLinejoin="round"
-        />
-
-        {/* Scale labels along top (Memory) axis */}
+        {/* Scale labels — below data fill so covered ticks appear occluded */}
         {GRID_LEVELS.map((level) => {
           const p = getPoint(0, (radius * level) / 100);
           return (
@@ -104,6 +95,15 @@ export default function RadarChart({ scores, size = 220, embedded = false }: Rad
             </text>
           );
         })}
+
+        {/* Data polygon (fill + stroke on top of scale ticks) */}
+        <polygon
+          points={dataPoints}
+          fill={DATA_FILL_COLOR}
+          stroke={DATA_STROKE_COLOR}
+          strokeWidth="2.2"
+          strokeLinejoin="round"
+        />
 
         {/* Dimension labels */}
         {Array.from({ length: count }, (_, i) => {

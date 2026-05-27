@@ -3,7 +3,12 @@
 import Image from "next/image";
 import { useLocale, useTranslations } from "next-intl";
 import type { CheckInState } from "@/hooks/useRewards";
-import { dashboardCardClass } from "@/components/features/dashboard/dashboardCardStyles";
+import {
+  dashboardCardClass,
+  dashboardSectionHeaderRowClass,
+  dashboardSectionPadding,
+  dashboardSectionTitleClass,
+} from "@/components/features/dashboard/dashboardCardStyles";
 
 interface CheckInCalendarProps {
   checkIn: CheckInState;
@@ -41,14 +46,9 @@ export default function CheckInCalendar({
   for (let d = 1; d <= daysInMonth; d++) days.push(d);
 
   return (
-    <div className={`${dashboardCardClass} flex w-full flex-col p-[clamp(0.9rem,1.5vw,1.5rem)]`}>
-      <div className="mb-[clamp(0.6rem,1.2vw,1rem)] flex items-center justify-between gap-3">
-        <div>
-          <h3 className="font-['Titan_One'] text-[clamp(1.1rem,2vw,1.5rem)] font-normal text-[#045E96] leading-tight">
-            {tHome("checkInTitle")}
-          </h3>
-        </div>
-        
+    <div className={`${dashboardCardClass} flex w-full flex-col ${dashboardSectionPadding}`}>
+      <div className={dashboardSectionHeaderRowClass}>
+        <h3 className={dashboardSectionTitleClass}>{tHome("checkInTitle")}</h3>
         <button
           type="button"
           onClick={onCheckIn}

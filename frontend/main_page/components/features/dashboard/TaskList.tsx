@@ -4,7 +4,12 @@ import { useState } from "react";
 import Image from "next/image";
 import { useTranslations } from "next-intl";
 import { DAILY_TASKS, MONTHLY_TASK, type TaskConfig } from "@/config/tasks";
-import { dashboardCardClass } from "@/components/features/dashboard/dashboardCardStyles";
+import {
+  dashboardCardClass,
+  dashboardSectionHeaderRowClass,
+  dashboardSectionPadding,
+  dashboardSectionTitleClass,
+} from "@/components/features/dashboard/dashboardCardStyles";
 
 interface TaskListProps {
   dailyProgress: Record<string, number>;
@@ -137,13 +142,9 @@ export default function TaskList({
   const totalGoals = DAILY_TASKS.length + 1;
 
   return (
-    <div
-      className={`${dashboardCardClass} flex h-full w-full flex-col items-start gap-[clamp(0.9rem,1.8vw,1.5rem)] px-[clamp(0.9rem,2vw,2rem)] py-[clamp(0.9rem,2vw,2rem)]`}
-    >
-      <div className="flex w-full items-center justify-between gap-3">
-        <h3 className="font-['Titan_One'] text-[clamp(1.1rem,1.9vw,1.55rem)] font-normal leading-tight tracking-wide text-sky-700">
-          Brain Hub
-        </h3>
+    <div className={`${dashboardCardClass} flex w-full flex-col ${dashboardSectionPadding}`}>
+      <div className={dashboardSectionHeaderRowClass}>
+        <h3 className={dashboardSectionTitleClass}>Brain Hub</h3>
         <div className="flex items-center justify-center gap-1.5 rounded-full bg-blue-100 px-[clamp(0.55rem,1.2vw,0.9rem)] py-[clamp(0.35rem,0.8vw,0.55rem)]">
           <span className="font-app-body text-[clamp(0.72rem,1vw,1rem)] font-medium leading-[1.2] text-[#045E96]">
             {totalCompleted}/{totalGoals} Completed
