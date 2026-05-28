@@ -53,7 +53,7 @@ export default function CheckInCalendar({
           type="button"
           onClick={onCheckIn}
           disabled={hasCheckedInToday}
-          className={`rounded-full px-[clamp(0.6rem,1.2vw,1rem)] py-[clamp(0.3rem,0.8vw,0.45rem)] font-app-body text-base font-medium transition-all shadow-sm ${
+          className={`rounded-full px-[clamp(0.55rem,1.2vw,0.9rem)] py-[clamp(0.35rem,0.8vw,0.55rem)] font-app-body text-[clamp(0.72rem,1vw,1rem)] font-medium leading-[1.2] transition-all shadow-sm ${
             hasCheckedInToday
               ? "bg-gray-100 text-gray-400 cursor-not-allowed"
               : "bg-[#E45C44] text-white hover:shadow-md hover:scale-105 active:scale-95"
@@ -64,14 +64,14 @@ export default function CheckInCalendar({
       </div>
 
       <div className="flex flex-col">
-        <div className="mb-[clamp(0.35rem,0.9vw,0.6rem)] text-center font-app-body text-[clamp(0.9rem,1.4vw,1.35rem)] font-semibold leading-[1.35] text-[#106FAA]">
+        <div className="mb-[clamp(0.6rem,1.2vw,1rem)] text-center font-app-body text-[clamp(0.95rem,1.25vw,1.125rem)] font-semibold leading-[1.2] text-sky-700">
           {monthYearLabel}
         </div>
         <div className="mb-[clamp(0.2rem,0.6vw,0.35rem)] grid grid-cols-7 gap-[clamp(0.2rem,0.6vw,0.5rem)] text-center">
           {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((w) => (
             <div
               key={w}
-              className="py-[clamp(0.1rem,0.35vw,0.25rem)] font-app-body text-[clamp(0.62rem,1vw,1.02rem)] font-medium text-[#106FAA]"
+              className="py-[clamp(0.1rem,0.35vw,0.25rem)] font-app-body text-[clamp(0.8rem,0.95vw,0.92rem)] font-medium text-[#106FAA]"
             >
               {w}
             </div>
@@ -101,7 +101,7 @@ export default function CheckInCalendar({
                     height={20}
                     className="row-start-2 h-[clamp(0.5rem,1.25vw,1.7rem)] w-[clamp(0.5rem,1.25vw,1.7rem)]"
                   />
-                  <span className="row-start-3 font-app-body text-[clamp(0.68rem,1vw,1.1rem)] font-normal leading-[1.1]">
+                  <span className="row-start-3 font-app-body text-[clamp(0.68rem,1vw,1.1rem)] font-normal leading-[1.1] text-[#045E96]">
                     {d}
                   </span>
                 </div>

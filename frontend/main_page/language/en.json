@@ -326,6 +326,7 @@
     "streakDialogAria": "Check-in reward",
     "claimReward": "Claim Reward",
     "rewardCoins": "+{count} Coins",
+    "rewardCoinsWeeklyBonus": "+{count} Coins (Weekly Reward)",
     "rewardDiamonds": "+{count} Diamonds",
     "rewardFlowers": "+{count} Flowers",
     "premiumBonusAlt": "Premium Bonus",

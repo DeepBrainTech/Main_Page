@@ -325,6 +325,7 @@
     "streakDialogAria": "签到奖励",
     "claimReward": "领取奖励",
     "rewardCoins": "+{count} 金币",
+    "rewardCoinsWeeklyBonus": "+{count} 金币（周连签奖励）",
     "rewardDiamonds": "+{count} 钻石",
     "rewardFlowers": "+{count} 鲜花",
     "premiumBonusAlt": "高级会员奖励",

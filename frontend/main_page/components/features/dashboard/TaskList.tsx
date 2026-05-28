@@ -154,7 +154,7 @@ export default function TaskList({
 
       <div className="flex w-full flex-col gap-[clamp(0.8rem,1.6vw,1.5rem)]">
         <div className="flex w-full flex-col gap-[clamp(0.6rem,1.2vw,1.25rem)]">
-          <div className="font-app-body text-[clamp(0.4rem,1.2vw,1.15rem)] font-semibold leading-[1.2] text-sky-700">
+          <div className="font-app-body text-[clamp(0.95rem,1.25vw,1.125rem)] font-semibold leading-[1.2] text-sky-700">
             Daily Goals ({dailyDoneCount}/{DAILY_TASKS.length})
           </div>
           <div className="flex w-full flex-col gap-[clamp(0.4rem,0.9vw,0.75rem)]">
@@ -179,7 +179,7 @@ export default function TaskList({
         </div>
 
         <div className="flex w-full flex-col gap-[clamp(0.6rem,1.2vw,1.25rem)]">
-          <div className="font-app-body text-[clamp(0.9rem,1.2vw,1.15rem)] font-semibold leading-[1.2] text-sky-700">
+          <div className="font-app-body text-[clamp(0.95rem,1.25vw,1.125rem)] font-semibold leading-[1.2] text-sky-700">
             Monthly Goals ({monthlyDone}/1){" "}
             <span className="font-medium text-[clamp(0.62rem,0.85vw,0.8rem)] text-sky-700/70">{monthDateRange}</span>
           </div>
