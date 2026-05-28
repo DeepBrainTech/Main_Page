@@ -21,7 +21,7 @@ const DATA_FILL_COLOR = "#E45C4466";
 /**
  * Six-dimension radar chart (pure SVG) with layered hexagonal grid rings
  */
-export default function RadarChart({ scores, size = 220, embedded = false }: RadarChartProps) {
+export default function RadarChart({ scores, size = 320, embedded = false }: RadarChartProps) {
   const tDimension = useTranslations("dimensions");
   const tHome = useTranslations("dashboard");
   const labels = useMemo(

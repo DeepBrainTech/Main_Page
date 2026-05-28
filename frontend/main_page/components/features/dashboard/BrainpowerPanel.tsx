@@ -41,14 +41,14 @@ export default function BrainpowerPanel({ scores }: BrainpowerPanelProps) {
   return (
     <section
       data-brainpower-panel
-      className={`${dashboardCardClass} w-full self-start p-[clamp(0.9rem,1.6vw,1.25rem)]`}
+      className={`${dashboardCardClass} w-full self-start p-[clamp(1.25rem,2.2vw,2rem)]`}
     >
-      <h3 className="mb-[clamp(0.35rem,0.9vw,0.6rem)] font-['Titan_One'] text-2xl font-normal leading-8 tracking-wide text-sky-700">
+      <h3 className="mb-[clamp(1rem,2vw,1.5rem)] font-['Titan_One'] text-[clamp(1.25rem,2vw,1.5rem)] font-normal leading-8 tracking-wide text-sky-700">
         {tHome("brainpowerChart")}
       </h3>
 
-      <div className="mx-auto w-full max-w-[clamp(15rem,32vw,21rem)]">
-        <RadarChart scores={scores} size={320} embedded />
+      <div className="mx-auto w-full max-w-[min(20rem,42svh,100%)]">
+        <RadarChart scores={scores} embedded />
       </div>
 
       <div className="mt-[clamp(0.35rem,0.9vw,0.6rem)] grid grid-cols-1 gap-[clamp(0.4rem,0.9vw,0.75rem)] sm:grid-cols-2">

@@ -3,12 +3,7 @@
 import Image from "next/image";
 import { useLocale, useTranslations } from "next-intl";
 import type { CheckInState } from "@/hooks/useRewards";
-import {
-  dashboardCardClass,
-  dashboardSectionHeaderRowClass,
-  dashboardSectionPadding,
-  dashboardSectionTitleClass,
-} from "@/components/features/dashboard/dashboardCardStyles";
+import { dashboardCardClass } from "@/components/features/dashboard/dashboardCardStyles";
 
 interface CheckInCalendarProps {
   checkIn: CheckInState;
@@ -44,16 +39,21 @@ export default function CheckInCalendar({
   const days: (number | null)[] = [];
   for (let i = 0; i < firstDay; i++) days.push(null);
   for (let d = 1; d <= daysInMonth; d++) days.push(d);
+  while (days.length % 7 !== 0) days.push(null);
 
   return (
-    <div className={`${dashboardCardClass} flex w-full flex-col ${dashboardSectionPadding}`}>
-      <div className={dashboardSectionHeaderRowClass}>
-        <h3 className={dashboardSectionTitleClass}>{tHome("checkInTitle")}</h3>
+    <div
+      className={`${dashboardCardClass} @container/checkin flex w-full flex-col p-[clamp(1.25rem,2.2vw,2rem)]`}
+    >
+      <div className="mb-[clamp(1rem,2vw,1.5rem)] flex min-h-[clamp(2.25rem,4vw,2.5rem)] items-center justify-between gap-[clamp(0.75rem,1.5vw,1rem)]">
+        <h3 className="font-['Titan_One'] text-[clamp(1.25rem,2vw,1.5rem)] font-normal leading-8 tracking-wide text-sky-700">
+          {tHome("checkInTitle")}
+        </h3>
         <button
           type="button"
           onClick={onCheckIn}
           disabled={hasCheckedInToday}
-          className={`rounded-full px-[clamp(0.55rem,1.2vw,0.9rem)] py-[clamp(0.35rem,0.8vw,0.55rem)] font-app-body text-[clamp(0.72rem,1vw,1rem)] font-medium leading-[1.2] transition-all shadow-sm ${
+          className={`rounded-full px-[clamp(0.85rem,1.8vw,1rem)] py-[clamp(0.45rem,0.9vw,0.5rem)] font-['Outfit'] text-[clamp(0.8rem,1.2vw,1rem)] font-medium leading-6 transition-all shadow-sm ${
             hasCheckedInToday
               ? "bg-gray-100 text-gray-400 cursor-not-allowed"
               : "bg-[#E45C44] text-white hover:shadow-md hover:scale-105 active:scale-95"
@@ -64,44 +64,44 @@ export default function CheckInCalendar({
       </div>
 
       <div className="flex flex-col">
-        <div className="mb-[clamp(0.6rem,1.2vw,1rem)] text-center font-app-body text-[clamp(0.95rem,1.25vw,1.125rem)] font-semibold leading-[1.2] text-sky-700">
+        <div className="mb-[clamp(0.7rem,1.5vw,0.95rem)] text-center font-['Outfit'] text-[clamp(1rem,1.35vw,1.125rem)] font-semibold leading-7 text-sky-700">
           {monthYearLabel}
         </div>
-        <div className="mb-[clamp(0.2rem,0.6vw,0.35rem)] grid grid-cols-7 gap-[clamp(0.2rem,0.6vw,0.5rem)] text-center">
+        <div className="mb-[clamp(0.45rem,1vw,0.75rem)] grid grid-cols-7 gap-[clamp(0.38rem,1vw,0.55rem)] text-center">
           {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((w) => (
             <div
               key={w}
-              className="py-[clamp(0.1rem,0.35vw,0.25rem)] font-app-body text-[clamp(0.8rem,0.95vw,0.92rem)] font-medium text-[#106FAA]"
+              className="py-[clamp(0.1rem,0.35vw,0.25rem)] font-['Outfit'] text-sm font-medium leading-5 text-sky-700"
             >
               {w}
             </div>
           ))}
         </div>
-        <div className="grid grid-cols-7 gap-[clamp(0.2rem,0.6vw,0.5rem)] text-center">
+        <div className="grid grid-cols-7 gap-[clamp(0.3rem,1.55cqw,0.55rem)] text-center">
           {days.map((d, i) => {
             if (d === null)
-              return <div key={`empty-${i}`} className="aspect-square " />;
+              return <div key={`empty-${i}`} className="aspect-square" />;
             const dateStr = `${monthKey}-${String(d).padStart(2, "0")}`;
             const signed = signedSet.has(dateStr);
             
             return (
               <div
                 key={d}
-                className={`aspect-square transition-all ${
+                className={`aspect-square rounded-xl transition-all ${
                   signed
-                    ? "bg-[#D4EAF8] rounded-xl text-[#106FAA]"
-                    : "bg-[#EDF4FC] rounded-xl text-[#106FAA]"
+                    ? "bg-[#D4EAF8] text-sky-700"
+                    : "bg-[#EDF4FC] text-sky-700"
                 }`}
               >
-                <div className="grid h-full w-full grid-rows-[1fr_auto_1fr_auto_1fr] place-items-center">
+                <div className="flex h-full w-full flex-col items-center justify-center gap-[clamp(0.05rem,0.75cqw,0.35rem)]">
                   <Image
                     src={signed ? "/dashboard/checkin_icon.svg" : "/dashboard/nocheckin_icon.svg"}
                     alt={signed ? "checked in" : "not checked in"}
                     width={20}
                     height={20}
-                    className="row-start-2 h-[clamp(0.5rem,1.25vw,1.7rem)] w-[clamp(0.5rem,1.25vw,1.7rem)]"
+                    className="h-[clamp(0.75rem,4.4cqw,1.5rem)] w-[clamp(0.75rem,4.4cqw,1.5rem)]"
                   />
-                  <span className="row-start-3 font-app-body text-[clamp(0.68rem,1vw,1.1rem)] font-normal leading-[1.1] text-[#045E96]">
+                  <span className="font-['Outfit'] text-[clamp(0.65rem,2.5cqw,0.875rem)] font-normal leading-none text-sky-700">
                     {d}
                   </span>
                 </div>

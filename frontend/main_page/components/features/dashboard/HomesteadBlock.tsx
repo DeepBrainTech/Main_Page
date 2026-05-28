@@ -179,7 +179,7 @@ export default function HomesteadBlock({
   }, []);
 
   return (
-    <div className="relative flex h-full min-h-[340px] flex-col rounded-3xl border border-amber-100/50 p-[clamp(0.75rem,2vw,1.5rem)] shadow-sm transition-all select-none md:min-h-[390px] xl:min-h-[440px]">
+    <div className="relative flex h-full min-h-[clamp(19rem,40svh,27.5rem)] flex-col rounded-3xl border border-amber-100/50 p-[clamp(0.75rem,2vw,1.5rem)] shadow-sm transition-all select-none md:min-h-[clamp(21rem,44svh,27.5rem)]">
       {/* Clips scene + avatar + chat to the card; customize panel is a sibling so it is not cut off. */}
       <div className="absolute inset-0 z-0 overflow-hidden rounded-3xl">
         <div className="absolute inset-0 z-0">
@@ -198,7 +198,7 @@ export default function HomesteadBlock({
         <div
           ref={containerRef}
           onClick={handleContainerClick}
-          className="@container/hs absolute left-0 right-0 top-[clamp(5rem,10vw,6rem)] bottom-[clamp(0.5rem,1.8vw,1.25rem)] z-20 cursor-pointer px-[clamp(0.25rem,1.2vw,0.5rem)] lg:top-16"
+          className="@container/hs absolute left-0 right-0 top-[clamp(4.5rem,10svh,6rem)] bottom-[clamp(0.5rem,1.8svh,1.25rem)] z-20 cursor-pointer px-[clamp(0.25rem,1.2vw,0.5rem)] lg:top-[clamp(4rem,8svh,5rem)]"
         >
         {!isChatPanelOpen ? (
           <div
@@ -258,7 +258,7 @@ export default function HomesteadBlock({
       </div>
 
       <div
-        className={`absolute left-0 right-0 top-[calc(100%+96px)] z-40 rounded-b-3xl bg-white px-5 pb-5 pt-3 transition-opacity duration-300 sm:top-[calc(100%+56px)] ${
+        className={`absolute left-0 right-0 top-[calc(100%+clamp(3.5rem,8svh,6rem))] z-40 rounded-b-3xl bg-white px-[clamp(1rem,2vw,1.25rem)] pb-[clamp(1rem,2vw,1.25rem)] pt-3 transition-opacity duration-300 sm:top-[calc(100%+clamp(2rem,5svh,3.5rem))] ${
           menuOpen && activeCustomizeTab ? "opacity-100" : "pointer-events-none opacity-0"
         }`}
       >
@@ -276,7 +276,7 @@ export default function HomesteadBlock({
           {activeCustomizeTab === "background" ? (
             <button
               type="button"
-              className="min-w-[128px] rounded-2xl border-2 border-[#E45C44] bg-[#FFF5F5] p-3 transition"
+              className="min-w-[clamp(6.5rem,18vw,8rem)] rounded-2xl border-2 border-[#E45C44] bg-[#FFF5F5] p-3 transition"
             >
               <div className="h-14 rounded-xl bg-gradient-to-b from-sky-500 to-sky-100" />
               <div className="mt-2 text-center text-lg text-sky-700">Free</div>

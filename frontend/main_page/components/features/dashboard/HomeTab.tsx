@@ -145,8 +145,8 @@ export default function HomeTab({ username = "", avatarUrl = null }: HomeTabProp
       <section className="grid grid-cols-1 gap-5 xl:grid-cols-12">
         <div className="space-y-5 xl:col-span-8">
           <div
-            className={`${dashboardCardClass} relative min-h-[360px] overflow-visible p-4 transition-[padding] duration-300 md:min-h-[430px] xl:min-h-[500px] ${
-              isHomesteadMenuOpen ? "pb-[clamp(16rem,38vw,20rem)] sm:pb-[clamp(14rem,28vw,16.25rem)]" : ""
+            className={`${dashboardCardClass} relative min-h-[clamp(20rem,42svh,31.25rem)] overflow-visible p-4 transition-[padding] duration-300 md:min-h-[clamp(22rem,46svh,31.25rem)] ${
+              isHomesteadMenuOpen ? "pb-[clamp(12rem,32svh,20rem)] sm:pb-[clamp(11rem,28svh,16.25rem)]" : ""
             }`}
           >
             <HomesteadBlock
