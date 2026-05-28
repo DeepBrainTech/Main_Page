@@ -3,7 +3,16 @@
 import Image from "next/image";
 import { useLocale, useTranslations } from "next-intl";
 import type { CheckInState } from "@/hooks/useRewards";
-import { dashboardCardClass } from "@/components/features/dashboard/dashboardCardStyles";
+import {
+  dashboardCardClass,
+  dashboardPairedCardPadding,
+  dashboardSectionHeaderBlockClass,
+  dashboardSectionSignTodayButtonClass,
+  dashboardSectionSignedBadgeClass,
+  dashboardSectionSubtitleClass,
+  dashboardSectionSubtitleRowClass,
+  dashboardSectionTitleClass,
+} from "@/components/features/dashboard/dashboardCardStyles";
 
 interface CheckInCalendarProps {
   checkIn: CheckInState;
@@ -43,30 +52,24 @@ export default function CheckInCalendar({
 
   return (
     <div
-      className={`${dashboardCardClass} @container/checkin flex w-full flex-col p-[clamp(1.25rem,2.2vw,2rem)]`}
+      className={`${dashboardCardClass} @container/checkin flex w-full flex-col ${dashboardPairedCardPadding}`}
     >
-      <div className="mb-[clamp(1rem,2vw,1.5rem)] flex min-h-[clamp(2.25rem,4vw,2.5rem)] items-center justify-between gap-[clamp(0.75rem,1.5vw,1rem)]">
-        <h3 className="font-['Titan_One'] text-[clamp(1.25rem,2vw,1.5rem)] font-normal leading-8 tracking-wide text-sky-700">
-          {tHome("checkInTitle")}
-        </h3>
-        <button
-          type="button"
-          onClick={onCheckIn}
-          disabled={hasCheckedInToday}
-          className={`rounded-full px-[clamp(0.85rem,1.8vw,1rem)] py-[clamp(0.45rem,0.9vw,0.5rem)] font-['Outfit'] text-[clamp(0.8rem,1.2vw,1rem)] font-medium leading-6 transition-all shadow-sm ${
-            hasCheckedInToday
-              ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-              : "bg-[#E45C44] text-white hover:shadow-md hover:scale-105 active:scale-95"
-          }`}
-        >
-          {hasCheckedInToday ? tHome("signed") : tHome("signToday")}
-        </button>
+      <div className={dashboardSectionHeaderBlockClass}>
+        <h3 className={dashboardSectionTitleClass}>{tHome("checkInTitle")}</h3>
+        {hasCheckedInToday ? (
+          <span className={dashboardSectionSignedBadgeClass}>{tHome("signed")}</span>
+        ) : (
+          <button type="button" onClick={onCheckIn} className={dashboardSectionSignTodayButtonClass}>
+            {tHome("signToday")}
+          </button>
+        )}
+      </div>
+
+      <div className={`${dashboardSectionSubtitleRowClass} justify-center`}>
+        <div className={`${dashboardSectionSubtitleClass} text-center`}>{monthYearLabel}</div>
       </div>
 
       <div className="flex flex-col">
-        <div className="mb-[clamp(0.7rem,1.5vw,0.95rem)] text-center font-['Outfit'] text-[clamp(1rem,1.35vw,1.125rem)] font-semibold leading-7 text-sky-700">
-          {monthYearLabel}
-        </div>
         <div className="mb-[clamp(0.45rem,1vw,0.75rem)] grid grid-cols-7 gap-[clamp(0.38rem,1vw,0.55rem)] text-center">
           {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((w) => (
             <div

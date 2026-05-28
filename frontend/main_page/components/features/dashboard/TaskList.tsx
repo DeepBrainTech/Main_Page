@@ -4,7 +4,15 @@ import { useState } from "react";
 import Image from "next/image";
 import { useTranslations } from "next-intl";
 import { DAILY_TASKS, MONTHLY_TASK, type TaskConfig } from "@/config/tasks";
-import { dashboardCardClass } from "@/components/features/dashboard/dashboardCardStyles";
+import {
+  dashboardCardClass,
+  dashboardPairedCardPadding,
+  dashboardSectionHeaderBlockClass,
+  dashboardSectionStatusBadgeClass,
+  dashboardSectionSubtitleClass,
+  dashboardSectionSubtitleRowClass,
+  dashboardSectionTitleClass,
+} from "@/components/features/dashboard/dashboardCardStyles";
 
 interface TaskListProps {
   dailyProgress: Record<string, number>;
@@ -137,23 +145,22 @@ export default function TaskList({
   const totalGoals = DAILY_TASKS.length + 1;
 
   return (
-    <div className={`${dashboardCardClass} flex w-full flex-col p-[clamp(1.25rem,2.2vw,2rem)]`}>
-      <div className="mb-[clamp(1rem,2vw,1.5rem)] flex min-h-[clamp(2.25rem,4vw,2.5rem)] items-center justify-between gap-[clamp(0.75rem,1.5vw,1rem)]">
-        <h3 className="font-['Titan_One'] text-[clamp(1.25rem,2vw,1.5rem)] font-normal leading-8 tracking-wide text-sky-700">
-          Brain Hub
-        </h3>
-        <div className="flex items-center justify-center gap-1.5 rounded-full bg-blue-100 px-[clamp(0.85rem,1.8vw,1rem)] py-[clamp(0.45rem,0.9vw,0.5rem)]">
-          <span className="font-['Outfit'] text-[clamp(0.8rem,1.2vw,1rem)] font-medium leading-6 text-sky-700">
-            {totalCompleted}/{totalGoals} Completed
-          </span>
+    <div className={`${dashboardCardClass} flex w-full flex-col ${dashboardPairedCardPadding}`}>
+      <div className={dashboardSectionHeaderBlockClass}>
+        <h3 className={dashboardSectionTitleClass}>Brain Hub</h3>
+        <span className={dashboardSectionStatusBadgeClass}>
+          {totalCompleted}/{totalGoals} Completed
+        </span>
+      </div>
+
+      <div className={dashboardSectionSubtitleRowClass}>
+        <div className={dashboardSectionSubtitleClass}>
+          Daily Goals ({dailyDoneCount}/{DAILY_TASKS.length})
         </div>
       </div>
 
       <div className="flex w-full flex-col gap-[clamp(0.8rem,1.6vw,1.5rem)]">
         <div className="flex w-full flex-col gap-[clamp(0.6rem,1.2vw,1.25rem)]">
-          <div className="font-app-body text-[clamp(0.95rem,1.25vw,1.125rem)] font-semibold leading-[1.2] text-sky-700">
-            Daily Goals ({dailyDoneCount}/{DAILY_TASKS.length})
-          </div>
           <div className="flex w-full flex-col gap-[clamp(0.4rem,0.9vw,0.75rem)]">
             {DAILY_TASKS.map((task) => {
               const current = dailyProgress[task.id] ?? 0;
@@ -176,7 +183,7 @@ export default function TaskList({
         </div>
 
         <div className="flex w-full flex-col gap-[clamp(0.6rem,1.2vw,1.25rem)]">
-          <div className="font-app-body text-[clamp(0.95rem,1.25vw,1.125rem)] font-semibold leading-[1.2] text-sky-700">
+          <div className={dashboardSectionSubtitleClass}>
             Monthly Goals ({monthlyDone}/1){" "}
             <span className="font-medium text-[clamp(0.62rem,0.85vw,0.8rem)] text-sky-700/70">{monthDateRange}</span>
           </div>
