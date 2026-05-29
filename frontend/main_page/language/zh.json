@@ -1118,6 +1118,7 @@
       "historyScore": "得分：{correct}/{total}",
       "historyTime": "用时：{time}",
       "backToMenu": "返回菜单",
+      "backToLessons": "返回课程列表",
       "historyReportTitle": "历史报告 #{id}",
       "compareTitle": "与上次报告对比",
       "compareCustomTitle": "任意两次报告对比",

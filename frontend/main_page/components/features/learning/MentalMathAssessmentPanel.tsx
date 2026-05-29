@@ -146,7 +146,11 @@ function questionExprForDisplay(expression: string): string {
   return expression.replace(/\s*=\s*\?+\s*$/u, "").trim();
 }
 
-export default function MentalMathAssessmentPanel() {
+interface MentalMathAssessmentPanelProps {
+  onBackToLessons?: () => void;
+}
+
+export default function MentalMathAssessmentPanel({ onBackToLessons }: MentalMathAssessmentPanelProps) {
   const t = useTranslations("learning");
   const tCommon = useTranslations("common");
   const [tab, setTab] = useState<Tab>("current");
@@ -637,6 +641,22 @@ export default function MentalMathAssessmentPanel() {
       <div className={mainCardClass}>
         {tab === "current" && phase === "intro" && (
           <div className="flex flex-col gap-5 self-stretch">
+            <div className="flex w-full flex-wrap items-center justify-between gap-3 self-stretch">
+              <div className="flex items-center gap-4 py-px">
+                <div className="flex items-center justify-center gap-2.5 rounded-2xl py-3">
+                  <span className="text-2xl font-semibold leading-none text-sky-700">
+                    {t("assessment.overviewTitle")}
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setTab("history")}
+                className="flex items-center justify-center rounded-2xl bg-indigo-50 px-8 py-4 text-lg font-medium leading-7 text-sky-700 transition hover:bg-indigo-100"
+              >
+                {t("assessment.testHistoryCta")}
+              </button>
+            </div>
             <div className="flex flex-col gap-6 self-stretch rounded-2xl bg-white/90 p-12">
               <div className="flex flex-col gap-2.5 self-stretch">
                 <h3 className="text-2xl font-medium leading-none text-sky-700">{t("assessment.introHeadline")}</h3>
@@ -813,10 +833,13 @@ export default function MentalMathAssessmentPanel() {
             <div className="flex flex-col gap-4 sm:flex-row">
               <button
                 type="button"
-                onClick={() => setTab("current")}
+                onClick={() => {
+                  setTab("current");
+                  onBackToLessons?.();
+                }}
                 className="flex h-14 flex-1 items-center justify-center rounded-2xl bg-indigo-50 px-6 py-4 text-base font-medium leading-6 text-sky-700 transition hover:bg-indigo-100"
               >
-                {t("assessment.backToMenu")}
+                {t("assessment.backToLessons")}
               </button>
               <button
                 type="button"

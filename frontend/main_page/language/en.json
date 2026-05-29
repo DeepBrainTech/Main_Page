@@ -1119,6 +1119,7 @@
       "historyScore": "Score: {correct}/{total}",
       "historyTime": "Time: {time}",
       "backToMenu": "Back to Menu",
+      "backToLessons": "Back to Lessons",
       "historyReportTitle": "History report #{id}",
       "compareTitle": "Compared with previous report",
       "compareCustomTitle": "Compare any two reports",

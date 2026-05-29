@@ -293,7 +293,7 @@ export default function LearningTab() {
             </div>
 
             {activeLessonKey === "assessment" ? (
-              <MentalMathAssessmentPanel />
+              <MentalMathAssessmentPanel onBackToLessons={() => setActiveLessonKey(null)} />
             ) : activeLessonKey === "makingWhole" ? (
               <section className="rounded-[24px] border border-white/70 bg-white/80 p-4 shadow-[0px_10px_15px_0px_rgba(0,0,0,0.1)]">
                 <div className="mb-3 flex items-center justify-between">
