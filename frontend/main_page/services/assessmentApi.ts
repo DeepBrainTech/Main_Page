@@ -40,6 +40,7 @@ export interface AssessmentSessionSummary {
   total_questions: number;
   correct_count: number;
   accuracy: number;
+  attempt_number: number;
   strongest_area: string | null;
   weakest_area: string | null;
   topic_stats: AssessmentTopicStatPayload[];

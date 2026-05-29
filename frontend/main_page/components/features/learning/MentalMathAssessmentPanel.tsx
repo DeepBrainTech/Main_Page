@@ -1,12 +1,14 @@
-"use client";
+﻿"use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import {
   MENTAL_MATH_ASSESSMENT_TOPICS,
   MENTAL_MATH_ASSESSMENT_TOTAL_MINUTES,
   MENTAL_MATH_ASSESSMENT_TOTAL_MS,
 } from "@/config/mental-math-assessment";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
+import AssessmentReport from "@/components/features/learning/assessment/AssessmentReport";
 import {
   createAssessmentSession,
   fetchAssessmentDetail,
@@ -28,14 +30,11 @@ const QUESTION_GRID_PREV_PATH =
 const QUESTION_GRID_NEXT_PATH =
   "M8 12H16M12 16L16 12L12 8M2 12C2 17.5228 6.47715 22 12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12Z";
 
-/** Right-panel question map: design is 4 rows × 5 pills per page. */
+/** Right-panel question map: design is 4 rows Ã— 5 pills per page. */
 const SIDE_QUESTION_PILL_PAGE_SIZE = 20;
 
 type Phase = "intro" | "inProgress" | "result";
 type Tab = "current" | "history";
-type AnswerFilter = "all" | "incorrect" | "timeout" | "correct";
-type TrendRange = "30n" | "100n" | "all";
-type TrendHoverState = { point: { x: number; y: number; label: string; accuracy: number }; mouseX: number; mouseY: number } | null;
 
 interface AssessmentQuestion {
   topicKey: string;
@@ -59,7 +58,7 @@ interface TopicStat {
 }
 
 function calcExpression(expression: string): number {
-  const normalized = expression.replace("= ?", "").replaceAll(" ", "").replaceAll("−", "-");
+  const normalized = expression.replace("= ?", "").replaceAll(" ", "").replaceAll("âˆ’", "-");
   const numbers = normalized.split(/[+-]/).map((x) => Number(x));
   const operators = normalized.match(/[+-]/g) ?? [];
   if (numbers.length === 0 || Number.isNaN(numbers[0])) {
@@ -74,12 +73,6 @@ function calcExpression(expression: string): number {
   }, numbers[0]);
 }
 
-function formatDuration(seconds: number): string {
-  const m = Math.floor(seconds / 60);
-  const s = seconds % 60;
-  return `${m}:${String(s).padStart(2, "0")}`;
-}
-
 /** HH:MM:SS for countdown display (ceil to whole seconds). */
 function formatHhMmSsFromMs(ms: number): string {
   const totalSec = Math.max(0, Math.ceil(ms / 1000));
@@ -89,21 +82,22 @@ function formatHhMmSsFromMs(ms: number): string {
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
 }
 
-function formatDateTime(iso: string | null): string {
-  if (!iso) {
-    return "-";
-  }
-  return parseServerDate(iso).toLocaleString();
-}
-
-function formatTrendTick(iso: string): string {
-  const d = parseServerDate(iso);
-  return `${d.toLocaleDateString()} ${d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
-}
-
 function parseServerDate(iso: string): Date {
   const hasTimezone = /(?:Z|[+-]\d{2}:\d{2})$/.test(iso);
   return new Date(hasTimezone ? iso : `${iso}Z`);
+}
+
+function formatDateOnly(iso: string | null): string {
+  if (!iso) {
+    return "-";
+  }
+  return parseServerDate(iso).toLocaleDateString();
+}
+
+function formatDuration(seconds: number): string {
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${m}:${String(s).padStart(2, "0")}`;
 }
 
 function mapRecordsToAnswers(records: AssessmentRecord[]): AssessmentAnswerPayload[] {
@@ -154,6 +148,7 @@ function questionExprForDisplay(expression: string): string {
 
 export default function MentalMathAssessmentPanel() {
   const t = useTranslations("learning");
+  const tCommon = useTranslations("common");
   const [tab, setTab] = useState<Tab>("current");
   const [phase, setPhase] = useState<Phase>("intro");
   const [username, setUsername] = useState("-");
@@ -168,16 +163,12 @@ export default function MentalMathAssessmentPanel() {
 
   const [history, setHistory] = useState<AssessmentSessionSummary[]>([]);
   const [trend, setTrend] = useState<AssessmentTrendPoint[]>([]);
-  const [trendRange, setTrendRange] = useState<TrendRange>("30n");
-  const [trendHover, setTrendHover] = useState<TrendHoverState>(null);
   const [selectedSessionId, setSelectedSessionId] = useState<number | null>(null);
   const [detail, setDetail] = useState<AssessmentSessionDetail | null>(null);
   const [historyLoading, setHistoryLoading] = useState(false);
 
-  const [answerFilter, setAnswerFilter] = useState<AnswerFilter>("all");
-  const [answerPage, setAnswerPage] = useState(1);
   const [sideQuestionPillPage, setSideQuestionPillPage] = useState(1);
-  const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({});
+  const [quitConfirmOpen, setQuitConfirmOpen] = useState(false);
   const submitLockRef = useRef(false);
   const answerInputRef = useRef<HTMLInputElement>(null);
   const latestGlobalTimerRef = useRef<{
@@ -293,10 +284,8 @@ export default function MentalMathAssessmentPanel() {
     setTab("current");
   };
 
-  const quitTest = useCallback(() => {
-    if (typeof window !== "undefined" && !window.confirm(t("assessment.quitConfirm"))) {
-      return;
-    }
+  const performQuitTest = useCallback(() => {
+    setQuitConfirmOpen(false);
     setPhase("intro");
     setQuestions([]);
     setRecords([]);
@@ -306,7 +295,7 @@ export default function MentalMathAssessmentPanel() {
     setQuestionStartedAt(null);
     setTimeLeftMs(MENTAL_MATH_ASSESSMENT_TOTAL_MS);
     setTab("current");
-  }, [t]);
+  }, []);
 
   const finishTest = useCallback(
     async (nextRecords: AssessmentRecord[]) => {
@@ -471,7 +460,6 @@ export default function MentalMathAssessmentPanel() {
   const correctCount = detail?.correct_count ?? 0;
   const totalQuestions = detail?.total_questions ?? 0;
   const timeoutCount = answers.filter((x) => x.is_timeout).length;
-  const incorrectCount = totalQuestions - correctCount - timeoutCount;
 
   const categoryStats = useMemo(() => {
     const map = new Map<string, { accuracy: number; topics: TopicStat[] }>();
@@ -490,227 +478,22 @@ export default function MentalMathAssessmentPanel() {
     return Array.from(map.entries()).map(([category, data]) => ({ category, ...data }));
   }, [displayTopicStats]);
 
-  const filteredAnswers = useMemo(() => {
-    if (answerFilter === "all") return answers;
-    if (answerFilter === "timeout") return answers.filter((x) => x.is_timeout);
-    if (answerFilter === "correct") return answers.filter((x) => x.is_correct);
-    return answers.filter((x) => !x.is_correct && !x.is_timeout);
-  }, [answerFilter, answers]);
-  const pageSize = 10;
-  const totalPages = Math.max(1, Math.ceil(filteredAnswers.length / pageSize));
-  const safePage = Math.min(answerPage, totalPages);
-  const pageRows = filteredAnswers.slice((safePage - 1) * pageSize, safePage * pageSize);
-  useEffect(() => {
-    setAnswerPage(1);
-  }, [answerFilter]);
-
-  const displayTrend = useMemo(() => {
-    if (trend.length === 0) return [] as AssessmentTrendPoint[];
-    if (trendRange === "30n") return trend.slice(-30);
-    if (trendRange === "100n") return trend.slice(-100);
-    return trend;
-  }, [trend, trendRange]);
-
-  const trendChart = useMemo(() => {
-    if (displayTrend.length < 2) {
-      return { polyline: "", dots: [] as Array<{ x: number; y: number; label: string; accuracy: number }>, ticks: [] as Array<{ x: number; label: string }> };
-    }
-    const left = 10;
-    const right = 96;
-    const top = 8;
-    const bottom = 88;
-    const times = displayTrend.map((p) => parseServerDate(p.finished_at).getTime());
-    const minT = Math.min(...times);
-    const maxT = Math.max(...times);
-    const span = Math.max(1, maxT - minT);
-    const dots = displayTrend.map((point, index) => {
-      const ratioX = (times[index] - minT) / span;
-      const x = left + (right - left) * ratioX;
-      const y = bottom - ((bottom - top) * point.accuracy) / 100;
-      return { x, y, label: formatTrendTick(point.finished_at), accuracy: point.accuracy };
-    });
-    const polyline = dots.map((p) => `${p.x},${p.y}`).join(" ");
-    const tickIndexes = Array.from(new Set([0, Math.floor((displayTrend.length - 1) / 2), displayTrend.length - 1]));
-    const ticks = tickIndexes.map((i) => ({ x: dots[i].x, label: dots[i].label }));
-    return { polyline, dots, ticks };
-  }, [displayTrend]);
-
-  const handleTrendMouseMove = useCallback(
-    (event: MouseEvent<SVGRectElement>) => {
-      if (trendChart.dots.length === 0) {
-        setTrendHover(null);
-        return;
-      }
-      const rect = event.currentTarget.getBoundingClientRect();
-      const xInViewBox = ((event.clientX - rect.left) / Math.max(1, rect.width)) * 100;
-      const yInViewBox = ((event.clientY - rect.top) / Math.max(1, rect.height)) * 100;
-      const nearest = trendChart.dots.reduce((best, cur) =>
-        Math.abs(cur.x - xInViewBox) < Math.abs(best.x - xInViewBox) ? cur : best
-      );
-      setTrendHover({ point: nearest, mouseX: xInViewBox, mouseY: yInViewBox });
-    },
-    [trendChart.dots]
-  );
-
-  useEffect(() => {
-    setTrendHover(null);
-  }, [trendRange, detail?.id]);
-
-  const donutGradient = useMemo(() => {
-    const total = totalQuestions || 1;
-    const c = Math.round((correctCount / total) * 100);
-    const i = Math.round((incorrectCount / total) * 100);
-    return `conic-gradient(#16a34a 0 ${c}%, #ef4444 ${c}% ${c + i}%, #f59e0b ${c + i}% 100%)`;
-  }, [correctCount, incorrectCount, totalQuestions]);
-
   const detailDashboard = detail ? (
-    <div className="rounded-xl bg-white p-4">
-      <p className="text-sm text-gray-700">{t("assessment.subject")}</p>
-      <p className="text-sm text-gray-700">{t("assessment.reportUsername", { username })}</p>
-      <p className="text-sm text-gray-700">{t("assessment.reportStartedAt", { time: formatDateTime(detail.started_at) })}</p>
-      <p className="text-sm text-gray-700">{t("assessment.reportFinishedAt", { time: formatDateTime(detail.finished_at) })}</p>
-
-      {trend.length > 0 && (
-        <div className="mt-4 rounded-lg bg-gray-50 p-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className="font-semibold text-gray-900">{t("assessment.trendTitle")}</p>
-            <div className="inline-flex rounded border border-gray-200 bg-white p-1 text-xs">
-              <button type="button" onClick={() => setTrendRange("30n")} className={`rounded px-2 py-1 ${trendRange === "30n" ? "bg-blue-600 text-white" : "text-gray-600"}`}>{t("assessment.trendRange30n")}</button>
-              <button type="button" onClick={() => setTrendRange("100n")} className={`rounded px-2 py-1 ${trendRange === "100n" ? "bg-blue-600 text-white" : "text-gray-600"}`}>{t("assessment.trendRange100n")}</button>
-              <button type="button" onClick={() => setTrendRange("all")} className={`rounded px-2 py-1 ${trendRange === "all" ? "bg-blue-600 text-white" : "text-gray-600"}`}>{t("assessment.trendRangeAll")}</button>
-            </div>
-          </div>
-          {displayTrend.length < trend.length && <p className="mt-1 text-xs text-gray-500">{t("assessment.trendTruncatedHint", { count: displayTrend.length })}</p>}
-          {displayTrend.length <= 1 && <p className="mt-1 text-xs text-gray-500">{t("assessment.trendNeedMoreData")}</p>}
-          <div className="relative mt-2 rounded bg-white p-2">
-            <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="h-36 w-full">
-              <line x1="10" y1="8" x2="96" y2="8" stroke="#eef2ff" strokeWidth="0.8" />
-              <line x1="10" y1="48" x2="96" y2="48" stroke="#eef2ff" strokeWidth="0.8" />
-              <line x1="10" y1="88" x2="96" y2="88" stroke="#e2e8f0" strokeWidth="0.9" />
-
-              <polyline points={trendChart.polyline} fill="none" stroke="#2563eb" strokeWidth="1.3" strokeLinejoin="round" strokeLinecap="round" />
-              <rect
-                x="10"
-                y="8"
-                width="86"
-                height="80"
-                fill="transparent"
-                onMouseMove={handleTrendMouseMove}
-                onMouseLeave={() => setTrendHover(null)}
-              />
-            </svg>
-            {trendHover && (
-              <div
-                className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-full rounded bg-gray-900 px-2 py-1 text-xs text-white"
-                style={{ left: `${trendHover.mouseX}%`, top: `${Math.max(8, trendHover.mouseY - 4)}%` }}
-              >
-                Accuracy: {trendHover.point.accuracy}%
-              </div>
-            )}
-            <div className="relative mt-1 h-4 text-xs text-gray-500">
-              {trendChart.ticks.map((tick) => (
-                <span
-                  key={`${tick.x}-${tick.label}`}
-                  className="absolute -translate-x-1/2 whitespace-nowrap"
-                  style={{ left: `${tick.x}%` }}
-                >
-                  {tick.label}
-                </span>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <div className="rounded-lg bg-gray-50 p-3"><p className="text-xs text-gray-500">{t("assessment.metricAccuracy")}</p><p className="text-xl font-semibold text-gray-900">{accuracy}%</p></div>
-        <div className="rounded-lg bg-gray-50 p-3"><p className="text-xs text-gray-500">{t("assessment.metricScore")}</p><p className="text-xl font-semibold text-gray-900">{correctCount}/{totalQuestions}</p></div>
-        <div className="rounded-lg bg-gray-50 p-3"><p className="text-xs text-gray-500">{t("assessment.metricDuration")}</p><p className="text-xl font-semibold text-gray-900">{formatDuration(detail.duration_seconds)}</p></div>
-        <div className="rounded-lg bg-gray-50 p-3"><p className="text-xs text-gray-500">{t("assessment.metricQuestions")}</p><p className="text-xl font-semibold text-gray-900">{totalQuestions}</p></div>
-      </div>
-
-      <div className="mt-4 grid grid-cols-1 gap-4 xl:grid-cols-3">
-        <div className="rounded-lg bg-gray-50 p-3 xl:col-span-2">
-          <p className="font-semibold text-gray-900">{t("assessment.topicPerformance")}</p>
-          <div className="mt-3 space-y-2">
-            {categoryStats.map((row) => (
-              <div key={row.category} className="rounded-md bg-white p-2">
-                <button type="button" onClick={() => setExpandedCategories((prev) => ({ ...prev, [row.category]: !prev[row.category] }))} className="mb-1 flex w-full items-center justify-between text-sm text-gray-700">
-                  <span>{t(`mentalMathCategories.${row.category}`)} ({row.topics.length})</span>
-                  <span>{expandedCategories[row.category] ? t("assessment.collapse") : t("assessment.expand")}</span>
-                </button>
-                <div className="h-2 overflow-hidden rounded-full bg-gray-100"><div className="h-full bg-blue-600" style={{ width: `${row.accuracy}%` }} /></div>
-                {expandedCategories[row.category] && <div className="mt-2 space-y-1 text-xs text-gray-600">{row.topics.map((x) => <p key={x.topic_key}>{topicLabel(x.topic_key)}: {x.accuracy}%</p>)}</div>}
-              </div>
-            ))}
-          </div>
-        </div>
-        <div className="rounded-lg bg-gray-50 p-3">
-          <p className="font-semibold text-gray-900">{t("assessment.resultBreakdown")}</p>
-          <div className="mt-3 flex justify-center">
-            <div className="relative h-28 w-28 rounded-full" style={{ background: donutGradient }}>
-              <div className="absolute left-1/2 top-1/2 h-16 w-16 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white" />
-            </div>
-          </div>
-          <div className="mt-3 space-y-1.5 text-xs text-gray-700">
-            <div className="flex items-center justify-between">
-              <span className="inline-flex items-center gap-2">
-                <span className="h-2 w-2 rounded-full bg-green-600" />
-                {t("assessment.correct")}
-              </span>
-              <span>
-                {correctCount} ({totalQuestions > 0 ? Math.round((correctCount / totalQuestions) * 100) : 0}%)
-              </span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="inline-flex items-center gap-2">
-                <span className="h-2 w-2 rounded-full bg-red-500" />
-                {t("assessment.incorrect")}
-              </span>
-              <span>
-                {Math.max(0, incorrectCount)} ({totalQuestions > 0 ? Math.round((Math.max(0, incorrectCount) / totalQuestions) * 100) : 0}%)
-              </span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="inline-flex items-center gap-2">
-                <span className="h-2 w-2 rounded-full bg-amber-500" />
-                {t("assessment.timeout")}
-              </span>
-              <span>
-                {timeoutCount} ({totalQuestions > 0 ? Math.round((timeoutCount / totalQuestions) * 100) : 0}%)
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="mt-4 rounded-lg bg-gray-50 p-3">
-        <div className="mb-2 flex items-center justify-between">
-          <p className="font-semibold text-gray-900">{t("assessment.answerReview")}</p>
-          <div className="inline-flex rounded border border-gray-200 bg-white p-1 text-xs">
-            {(["all", "incorrect", "timeout", "correct"] as const).map((f) => <button key={f} type="button" onClick={() => setAnswerFilter(f)} className={`rounded px-2 py-1 ${answerFilter === f ? "bg-blue-600 text-white" : "text-gray-600"}`}>{t(`assessment.filter.${f}`)}</button>)}
-          </div>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="min-w-full text-sm">
-            <thead className="bg-white text-left text-gray-600"><tr><th className="px-3 py-2">#</th><th className="px-3 py-2">{t("assessment.tableQuestion")}</th><th className="px-3 py-2">{t("assessment.tableYourAnswer")}</th><th className="px-3 py-2">{t("assessment.tableCorrectAnswer")}</th><th className="px-3 py-2">{t("assessment.tableResult")}</th></tr></thead>
-            <tbody className="divide-y divide-gray-100 bg-white text-gray-700">
-              {pageRows.map((row, i) => {
-                const res = row.is_timeout ? t("assessment.timeout") : row.is_correct ? t("assessment.correct") : t("assessment.incorrect");
-                return <tr key={`${row.topic_key}-${i}-${row.question_text}`}><td className="px-3 py-2">{(safePage - 1) * pageSize + i + 1}</td><td className="px-3 py-2">{row.question_text}</td><td className="px-3 py-2">{row.user_answer ?? "-"}</td><td className="px-3 py-2">{row.correct_answer ?? "-"}</td><td className="px-3 py-2">{res}</td></tr>;
-              })}
-            </tbody>
-          </table>
-        </div>
-        <div className="mt-2 flex items-center justify-between text-sm text-gray-600">
-          <span>{t("assessment.pageInfo", { current: safePage, total: totalPages })}</span>
-          <div className="flex gap-2">
-            <button type="button" onClick={() => setAnswerPage((p) => Math.max(1, p - 1))} disabled={safePage <= 1} className="rounded border border-gray-300 px-2 py-1 disabled:opacity-40">{t("assessment.prevPage")}</button>
-            <button type="button" onClick={() => setAnswerPage((p) => Math.min(totalPages, p + 1))} disabled={safePage >= totalPages} className="rounded border border-gray-300 px-2 py-1 disabled:opacity-40">{t("assessment.nextPage")}</button>
-          </div>
-        </div>
-      </div>
-    </div>
+    <AssessmentReport
+      accuracy={accuracy}
+      correctCount={correctCount}
+      totalQuestions={totalQuestions}
+      timeoutCount={timeoutCount}
+      durationSeconds={detail.duration_seconds}
+      attemptNumber={detail.attempt_number}
+      trend={trend}
+      answers={answers}
+      categoryStats={categoryStats}
+      topicLabel={topicLabel}
+      categoryLabel={(category) => t(`mentalMathCategories.${category}`)}
+      onOpenHistory={() => setTab("history")}
+      onRetake={startTest}
+    />
   ) : null;
 
   const showAssessmentSidePanel = tab === "current" && (phase === "intro" || phase === "inProgress");
@@ -732,31 +515,6 @@ export default function MentalMathAssessmentPanel() {
     pillRowsForPage.push(pillPageSlice.slice(i, i + 5));
   }
   const sideTimerDisplayMs = phase === "inProgress" ? timeLeftMs : ASSESSMENT_INTRO_DISPLAY_MS;
-
-  const assessmentHeader = (
-    <div className="flex w-full flex-wrap items-center justify-between gap-3 self-stretch">
-      <div className="flex items-center gap-4 py-px">
-        <button
-          type="button"
-          onClick={() => setTab("current")}
-          className={`rounded-2xl py-3 text-left text-2xl font-semibold leading-none transition ${
-            tab === "current" ? "text-sky-700" : "text-sky-700/50 hover:text-sky-700"
-          }`}
-        >
-          {t("assessment.overviewTitle")}
-        </button>
-      </div>
-      <button
-        type="button"
-        onClick={() => setTab("history")}
-        className={`rounded-2xl bg-indigo-50 px-8 py-4 text-lg font-medium leading-7 text-sky-700 transition hover:bg-indigo-100 ${
-          tab === "history" ? "ring-2 ring-sky-600/40" : ""
-        }`}
-      >
-        {t("assessment.testHistoryCta")}
-      </button>
-    </div>
-  );
 
   const questionPillRows = (
     <div className="flex w-96 max-w-full flex-col gap-6">
@@ -877,8 +635,6 @@ export default function MentalMathAssessmentPanel() {
       }
     >
       <div className={mainCardClass}>
-        {!showInProgressFillIn ? assessmentHeader : null}
-
         {tab === "current" && phase === "intro" && (
           <div className="flex flex-col gap-5 self-stretch">
             <div className="flex flex-col gap-6 self-stretch rounded-2xl bg-white/90 p-12">
@@ -924,7 +680,7 @@ export default function MentalMathAssessmentPanel() {
               </div>
               <button
                 type="button"
-                onClick={quitTest}
+                onClick={() => setQuitConfirmOpen(true)}
                 className="flex h-14 shrink-0 items-center justify-center rounded-2xl bg-indigo-50 px-5 py-3 text-lg font-normal leading-5 text-sky-700 transition hover:bg-indigo-100"
               >
                 {t("assessment.quitTest")}
@@ -969,9 +725,15 @@ export default function MentalMathAssessmentPanel() {
                 type="button"
                 onClick={() => submitAnswer(false)}
                 disabled={!canSubmit}
-                className="flex h-14 w-28 shrink-0 items-center justify-center rounded-2xl bg-sky-700 text-lg font-medium leading-7 text-white transition hover:opacity-95 disabled:cursor-not-allowed disabled:bg-zinc-300"
+                className={`flex h-14 w-28 shrink-0 items-center justify-center rounded-2xl text-lg font-medium leading-7 text-white transition hover:opacity-95 disabled:cursor-not-allowed disabled:bg-zinc-300 disabled:shadow-none ${
+                  currentIndex >= questions.length - 1
+                    ? "bg-[#E45C44] shadow-[0px_10px_15px_0px_rgba(228,92,68,0.20)]"
+                    : "bg-sky-700"
+                }`}
               >
-                {t("assessment.nextQuestion")}
+                {currentIndex >= questions.length - 1
+                  ? t("assessment.submit")
+                  : t("assessment.nextQuestion")}
               </button>
             </div>
           </div>
@@ -981,27 +743,14 @@ export default function MentalMathAssessmentPanel() {
           <div className="space-y-4">
             {saving && <p className="text-sm text-gray-500">{t("assessment.saving")}</p>}
             {detailDashboard}
-            <div className="flex flex-wrap gap-3">
-              <button
-                type="button"
-                onClick={startTest}
-                className="rounded-2xl bg-[#045E96] px-5 py-2.5 text-sm font-semibold text-white transition hover:opacity-95"
-              >
-                {t("assessment.retest")}
-              </button>
-              <button
-                type="button"
-                onClick={() => setTab("history")}
-                className="rounded-2xl border border-sky-200 bg-indigo-50 px-5 py-2.5 text-sm font-medium text-sky-700 transition hover:bg-indigo-100"
-              >
-                {t("assessment.testHistoryCta")}
-              </button>
-            </div>
           </div>
         )}
 
         {tab === "history" && (
-          <div className="space-y-4">
+          <div className="flex flex-col gap-6">
+            <h2 className="text-2xl font-semibold leading-none text-sky-700">
+              {t("assessment.testHistoryCta")}
+            </h2>
             {saving && <p className="text-sm text-gray-500">{t("assessment.saving")}</p>}
             {historyLoading && <p className="text-sm text-gray-500">{t("assessment.historyLoading")}</p>}
             {!historyLoading && history.length === 0 && (
@@ -1009,34 +758,90 @@ export default function MentalMathAssessmentPanel() {
             )}
 
             {history.length > 0 && (
-              <div className="rounded-2xl border border-white/80 bg-white/90 p-4">
-                <p className="font-semibold text-gray-900">{t("assessment.historyList")}</p>
-                <select
-                  value={selectedSessionId ?? ""}
-                  onChange={async (e) => {
-                    const id = Number(e.target.value);
-                    if (!id) return;
-                    setSelectedSessionId(id);
-                    setDetail(await fetchAssessmentDetail(id));
-                  }}
-                  className="mt-2 w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm"
-                >
-                  <option value="">{t("assessment.historySelectPlaceholder")}</option>
-                  {history.map((session) => (
-                    <option key={session.id} value={session.id}>
-                      {formatDateTime(session.finished_at)}
-                    </option>
-                  ))}
-                </select>
+              <div className="flex max-h-[36rem] flex-col gap-6 overflow-y-auto overflow-x-hidden px-3 py-2">
+                {history.map((session) => {
+                  return (
+                    <button
+                      key={session.id}
+                      type="button"
+                      onClick={async () => {
+                        setSelectedSessionId(session.id);
+                        setDetail(await fetchAssessmentDetail(session.id));
+                        setPhase("result");
+                        setTab("current");
+                      }}
+                      className="flex min-h-24 w-full items-center justify-between gap-4 rounded-2xl bg-white/80 px-6 py-4 text-left transition duration-200 hover:scale-[1.01] hover:bg-[#D6E3F2] hover:shadow-[0px_10px_15px_0px_rgba(214,227,242,0.40)]"
+                    >
+                      <div className="flex min-w-0 items-center gap-4">
+                        <span className="flex size-12 shrink-0 items-center justify-center rounded-full bg-indigo-50 text-base font-normal leading-6 text-sky-700">
+                          {session.attempt_number}
+                        </span>
+                        <span className="flex min-w-0 flex-col gap-1">
+                          <span className="truncate text-xl font-normal text-zinc-800">
+                            {t("assessment.historyTestLabel", { attempt: session.attempt_number })}
+                          </span>
+                          <span className="text-base font-normal leading-5 text-sky-700">
+                            {formatDateOnly(session.finished_at)}
+                          </span>
+                        </span>
+                      </div>
+                      <div className="flex shrink-0 items-center gap-6">
+                        <span className="flex flex-col items-end gap-1">
+                          <span className="text-right text-xl font-normal leading-6 text-zinc-800">
+                            {t("assessment.historyScore", {
+                              correct: session.correct_count,
+                              total: session.total_questions,
+                            })}
+                          </span>
+                          <span className="text-right text-base font-normal leading-5 text-sky-700">
+                            {t("assessment.historyTime", { time: formatDuration(session.duration_seconds) })}
+                          </span>
+                        </span>
+                        <span className="min-w-12 text-left text-2xl font-normal leading-7 text-green-500">
+                          {session.accuracy}%
+                        </span>
+                        <span className="relative size-6 overflow-hidden" aria-hidden>
+                          <span className="absolute left-[9px] top-[6px] h-3 w-3 rotate-45 border-r-2 border-t-2 border-zinc-800" />
+                        </span>
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
             )}
 
-            {detailDashboard}
+            <div className="flex flex-col gap-4 sm:flex-row">
+              <button
+                type="button"
+                onClick={() => setTab("current")}
+                className="flex h-14 flex-1 items-center justify-center rounded-2xl bg-indigo-50 px-6 py-4 text-base font-medium leading-6 text-sky-700 transition hover:bg-indigo-100"
+              >
+                {t("assessment.backToMenu")}
+              </button>
+              <button
+                type="button"
+                onClick={startTest}
+                className="flex h-14 flex-1 items-center justify-center rounded-2xl bg-[#E45C44] px-6 py-4 text-base font-medium leading-6 text-white shadow-[0px_4px_6px_-4px_rgba(0,0,0,0.10)] shadow-lg transition hover:opacity-95"
+              >
+                {t("assessment.retest")}
+              </button>
+            </div>
           </div>
         )}
       </div>
 
       {sidePanel}
+
+      <ConfirmDialog
+        open={quitConfirmOpen}
+        title={t("assessment.quitTest")}
+        message={t("assessment.quitConfirm")}
+        confirmLabel={tCommon("confirm")}
+        cancelLabel={tCommon("cancel")}
+        destructive
+        onConfirm={performQuitTest}
+        onCancel={() => setQuitConfirmOpen(false)}
+      />
     </div>
   );
 }

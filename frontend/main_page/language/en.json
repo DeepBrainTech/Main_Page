@@ -1047,6 +1047,7 @@
       "metricScore": "Score",
       "metricDuration": "Duration",
       "metricQuestions": "Questions",
+      "metricAttempt": "Attempt",
       "progress": "Question {current}/{total}",
       "timer": "{seconds}s",
       "answerPlaceholder": "Enter your answer",
@@ -1058,11 +1059,30 @@
       "reportDuration": "Total duration: {duration}",
       "reportScore": "Score: {correct}/{total}",
       "reportAccuracy": "Accuracy: {accuracy}%",
+      "reportBands": {
+        "superstar": {
+          "title": "Math Superstar! 🎉",
+          "subtitle": "You are very fast and ready for our most advanced challenges."
+        },
+        "strongSolver": {
+          "title": "Strong Solver! 🎉",
+          "subtitle": "You know your stuff, and we can help you get even faster."
+        },
+        "greatStarter": {
+          "title": "Great Starter! 🎯",
+          "subtitle": "You have the basics down. This course will teach you cool shortcuts."
+        },
+        "keepPracticing": {
+          "title": "Keep Practicing! 🏃",
+          "subtitle": "You are just starting your journey. We will help you build your confidence."
+        }
+      },
       "reportStrongest": "Strongest area: {area}",
       "reportWeakest": "Weakest area: {area}",
       "reportStrongestLabel": "Strongest Area",
       "reportWeakestLabel": "Needs Improvement",
       "topicPerformance": "Topic performance",
+      "performance": "Performance",
       "resultBreakdown": "Result breakdown",
       "answerReview": "Answer review",
       "tableQuestion": "Question",
@@ -1079,7 +1099,8 @@
         "all": "All",
         "incorrect": "Incorrect",
         "timeout": "Timeout",
-        "correct": "Correct"
+        "correct": "Correct",
+        "topics": "Topics"
       },
       "userAnswer": "Your answer {answer}",
       "correctAnswer": "Correct answer {answer}",
@@ -1094,6 +1115,10 @@
       "historyEmpty": "No history reports yet.",
       "historyList": "History list",
       "historySelectPlaceholder": "Select a report time",
+      "historyTestLabel": "Test {attempt}",
+      "historyScore": "Score: {correct}/{total}",
+      "historyTime": "Time: {time}",
+      "backToMenu": "Back to Menu",
       "historyReportTitle": "History report #{id}",
       "compareTitle": "Compared with previous report",
       "compareCustomTitle": "Compare any two reports",
@@ -1107,7 +1132,8 @@
       "trendRange100n": "100 Records",
       "trendRangeAll": "All",
       "trendTruncatedHint": "Showing latest {count} records.",
-      "trendNeedMoreData": "Need at least two records in this range to draw a line."
+      "trendNeedMoreData": "Need at least two records in this range to draw a line.",
+      "trendAverage": "Average: {value}%"
     },
     "unlock": {
       "locked": "Locked",

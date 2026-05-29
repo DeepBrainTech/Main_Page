@@ -1046,6 +1046,7 @@
       "metricScore": "得分",
       "metricDuration": "用时",
       "metricQuestions": "题量",
+      "metricAttempt": "测试次数",
       "progress": "第 {current}/{total} 题",
       "timer": "{seconds}秒",
       "answerPlaceholder": "请输入答案",
@@ -1057,11 +1058,30 @@
       "reportDuration": "总用时：{duration}",
       "reportScore": "得分：{correct}/{total}",
       "reportAccuracy": "正确率：{accuracy}%",
+      "reportBands": {
+        "superstar": {
+          "title": "Math Superstar! 🎉",
+          "subtitle": "You are very fast and ready for our most advanced challenges."
+        },
+        "strongSolver": {
+          "title": "Strong Solver! 🎉",
+          "subtitle": "You know your stuff, and we can help you get even faster."
+        },
+        "greatStarter": {
+          "title": "Great Starter! 🎯",
+          "subtitle": "You have the basics down. This course will teach you cool shortcuts."
+        },
+        "keepPracticing": {
+          "title": "Keep Practicing! 🏃",
+          "subtitle": "You are just starting your journey. We will help you build your confidence."
+        }
+      },
       "reportStrongest": "较强方面：{area}",
       "reportWeakest": "较弱方面：{area}",
       "reportStrongestLabel": "较强方面",
       "reportWeakestLabel": "待提升方面",
       "topicPerformance": "各专题表现",
+      "performance": "表现",
       "resultBreakdown": "结果汇总",
       "answerReview": "答题明细",
       "tableQuestion": "题目",
@@ -1078,7 +1098,8 @@
         "all": "全部",
         "incorrect": "错误",
         "timeout": "超时",
-        "correct": "正确"
+        "correct": "正确",
+        "topics": "专题"
       },
       "userAnswer": "你的答案 {answer}",
       "correctAnswer": "正确答案 {answer}",
@@ -1093,6 +1114,10 @@
       "historyEmpty": "暂无历史报告",
       "historyList": "历史列表",
       "historySelectPlaceholder": "选择报告时间",
+      "historyTestLabel": "测试 {attempt}",
+      "historyScore": "得分：{correct}/{total}",
+      "historyTime": "用时：{time}",
+      "backToMenu": "返回菜单",
       "historyReportTitle": "历史报告 #{id}",
       "compareTitle": "与上次报告对比",
       "compareCustomTitle": "任意两次报告对比",
@@ -1106,7 +1131,8 @@
       "trendRange100n": "100条",
       "trendRangeAll": "全部",
       "trendTruncatedHint": "当前展示最近 {count} 条记录。",
-      "trendNeedMoreData": "当前范围至少需要两次记录才能形成折线。"
+      "trendNeedMoreData": "当前范围至少需要两次记录才能形成折线。",
+      "trendAverage": "平均值：{value}%"
     },
     "unlock": {
       "locked": "未解锁",

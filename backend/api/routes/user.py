@@ -8,7 +8,7 @@ from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Header
 from sqlalchemy.orm import Session
-from sqlalchemy import func, desc
+from sqlalchemy import and_, func, or_, desc
 
 from database import get_db
 from models import (
@@ -596,6 +596,21 @@ def _serialize_assessment_session(
     session: UserAssessmentSession,
     include_answers: bool = False,
 ) -> dict:
+    attempt_number = (
+        db.query(func.count(UserAssessmentSession.id))
+        .filter(
+            UserAssessmentSession.user_id == session.user_id,
+            UserAssessmentSession.subject == session.subject,
+            or_(
+                UserAssessmentSession.finished_at < session.finished_at,
+                and_(
+                    UserAssessmentSession.finished_at == session.finished_at,
+                    UserAssessmentSession.id <= session.id,
+                ),
+            ),
+        )
+        .scalar()
+    ) or 1
     topic_rows = (
         db.query(UserAssessmentTopicStat)
         .filter(UserAssessmentTopicStat.session_id == session.id)
@@ -611,6 +626,7 @@ def _serialize_assessment_session(
         "total_questions": session.total_questions,
         "correct_count": session.correct_count,
         "accuracy": session.accuracy,
+        "attempt_number": int(attempt_number),
         "strongest_area": session.strongest_area,
         "weakest_area": session.weakest_area,
         "topic_stats": [
