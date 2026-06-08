@@ -27,6 +27,9 @@ from models import (
     UserCourseEntitlement,
     UserLearningTopicProgress,
     UserLearningQuestionProgress,
+    UserLearningStudyTime,
+    UserLearningPracticeReport,
+    UserLearningPracticeReportAnswer,
 )
 from schemas import (
     APIResponse,
@@ -36,6 +39,9 @@ from schemas import (
     LeaderboardEntry,
     AssessmentSessionCreate,
     LearningQuestionAttemptCreate,
+    LearningTopicProgressReset,
+    LearningStudyTimeCreate,
+    LearningPracticeReportUpsert,
     MentalMathUnlockDiamondsBody,
 )
 from auth import get_current_active_user
@@ -73,6 +79,7 @@ def _to_progress_percent(numerator: int, denominator: int) -> int:
 def _build_topic_progress_payload(
     topic_row: UserLearningTopicProgress,
     question_rows: list[UserLearningQuestionProgress],
+    has_practice_report: bool = False,
 ) -> dict:
     total_questions = int(topic_row.total_questions or 0)
     attempted_unique_questions = int(topic_row.attempted_unique_questions or 0)
@@ -91,7 +98,97 @@ def _build_topic_progress_payload(
         "last_attempted_question_key": topic_row.last_attempted_question_key,
         "last_attempted_at": topic_row.last_attempted_at.isoformat() if topic_row.last_attempted_at else None,
         "attempted_question_keys": [row.question_key for row in question_rows],
+        "has_practice_report": has_practice_report,
+        "question_attempts": [
+            {
+                "question_key": row.question_key,
+                "user_answer": row.user_answer,
+                "is_correct": bool(row.is_correct_latest),
+                "time_spent_seconds": int(row.time_spent_seconds or 0),
+            }
+            for row in question_rows
+        ],
     }
+
+
+def _topic_has_practice_report(
+    db: Session,
+    user_id: int,
+    subject_key: str,
+    module_key: str,
+    topic_key: str,
+) -> bool:
+    return (
+        db.query(UserLearningPracticeReport.id)
+        .filter(
+            UserLearningPracticeReport.user_id == user_id,
+            UserLearningPracticeReport.subject_key == subject_key,
+            UserLearningPracticeReport.module_key == module_key,
+            UserLearningPracticeReport.topic_key == topic_key,
+        )
+        .first()
+        is not None
+    )
+
+
+def _build_practice_report_payload(
+    report_row: UserLearningPracticeReport,
+    answer_rows: list[UserLearningPracticeReportAnswer],
+) -> dict:
+    return {
+        "id": int(report_row.id),
+        "subject_key": report_row.subject_key,
+        "module_key": report_row.module_key,
+        "topic_key": report_row.topic_key,
+        "accuracy": int(report_row.accuracy or 0),
+        "correct_count": int(report_row.correct_count or 0),
+        "total_questions": int(report_row.total_questions or 0),
+        "duration_seconds": int(report_row.duration_seconds or 0),
+        "attempt_number": int(report_row.attempt_number or 1),
+        "finished_at": report_row.finished_at.isoformat() if report_row.finished_at else None,
+        "answers": [
+            {
+                "topic_key": row.topic_key,
+                "question_text": row.question_text,
+                "user_answer": row.user_answer,
+                "correct_answer": row.correct_answer,
+                "is_correct": bool(row.is_correct),
+                "is_timeout": bool(row.is_timeout),
+                "time_spent_ms": int(row.time_spent_ms or 0),
+            }
+            for row in answer_rows
+        ],
+    }
+
+
+def _build_practice_report_summary(report_row: UserLearningPracticeReport) -> dict:
+    return {
+        "id": int(report_row.id),
+        "subject_key": report_row.subject_key,
+        "module_key": report_row.module_key,
+        "topic_key": report_row.topic_key,
+        "accuracy": int(report_row.accuracy or 0),
+        "correct_count": int(report_row.correct_count or 0),
+        "total_questions": int(report_row.total_questions or 0),
+        "duration_seconds": int(report_row.duration_seconds or 0),
+        "attempt_number": int(report_row.attempt_number or 1),
+        "finished_at": report_row.finished_at.isoformat() if report_row.finished_at else None,
+    }
+
+
+def _practice_report_scope_filter(
+    query,
+    user_id: int,
+    subject_key: str,
+    module_key: str,
+    topic_key: str,
+):
+    return query.filter(
+        UserLearningPracticeReport.user_id == user_id,
+        UserLearningPracticeReport.subject_key == subject_key,
+        UserLearningPracticeReport.module_key == module_key,
+        UserLearningPracticeReport.topic_key == topic_key,
+    )
 
 
 def _today_in_tz(tz: str) -> str:
@@ -161,6 +258,8 @@ async def record_learning_question_attempt(
             attempt_count=1,
             is_correct_latest=body.is_correct,
             is_correct_ever=body.is_correct,
+            user_answer=body.user_answer,
+            time_spent_seconds=int(body.time_spent_seconds or 0),
             first_attempted_at=now,
             last_attempted_at=now,
         )
@@ -169,6 +268,9 @@ async def record_learning_question_attempt(
         question_row.attempt_count = int(question_row.attempt_count or 0) + 1
         question_row.is_correct_latest = body.is_correct
         question_row.is_correct_ever = was_correct_ever or body.is_correct
+        if body.user_answer is not None:
+            question_row.user_answer = body.user_answer
+        question_row.time_spent_seconds = int(body.time_spent_seconds or 0)
         question_row.last_attempted_at = now
         db.add(question_row)
 
@@ -232,7 +334,77 @@ async def record_learning_question_attempt(
     return APIResponse(
         success=True,
         message="ok",
-        data=_build_topic_progress_payload(topic_row, topic_question_rows),
+        data=_build_topic_progress_payload(
+            topic_row,
+            topic_question_rows,
+            _topic_has_practice_report(
+                db,
+                current_user.id,
+                body.subject_key,
+                body.module_key,
+                body.topic_key,
+            ),
+        ),
+    )
+
+
+@router.post("/learning/progress/topic-reset", response_model=APIResponse)
+async def reset_learning_topic_progress(
+    body: LearningTopicProgressReset,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+):
+    db.query(UserLearningQuestionProgress).filter(
+        UserLearningQuestionProgress.user_id == current_user.id,
+        UserLearningQuestionProgress.subject_key == body.subject_key,
+        UserLearningQuestionProgress.module_key == body.module_key,
+        UserLearningQuestionProgress.topic_key == body.topic_key,
+    ).delete(synchronize_session=False)
+
+    topic_row = (
+        db.query(UserLearningTopicProgress)
+        .filter(
+            UserLearningTopicProgress.user_id == current_user.id,
+            UserLearningTopicProgress.subject_key == body.subject_key,
+            UserLearningTopicProgress.module_key == body.module_key,
+            UserLearningTopicProgress.topic_key == body.topic_key,
+        )
+        .first()
+    )
+    if topic_row is None:
+        topic_row = UserLearningTopicProgress(
+            user_id=current_user.id,
+            subject_key=body.subject_key,
+            module_key=body.module_key,
+            topic_key=body.topic_key,
+        )
+        db.add(topic_row)
+
+    topic_row.total_questions = body.total_questions if body.total_questions > 0 else int(topic_row.total_questions or 0)
+    topic_row.attempted_unique_questions = 0
+    topic_row.correct_unique_questions = 0
+    topic_row.progress_percent_attempted = 0
+    topic_row.progress_percent_correct = 0
+    topic_row.last_attempted_question_key = None
+    topic_row.last_attempted_at = None
+    db.add(topic_row)
+    db.commit()
+    db.refresh(topic_row)
+
+    return APIResponse(
+        success=True,
+        message="ok",
+        data=_build_topic_progress_payload(
+            topic_row,
+            [],
+            _topic_has_practice_report(
+                db,
+                current_user.id,
+                body.subject_key,
+                body.module_key,
+                body.topic_key,
+            ),
+        ),
     )
 
 
@@ -271,17 +443,202 @@ async def get_learning_module_progress(
     for row in question_rows:
         questions_by_topic.setdefault(row.topic_key, []).append(row)
 
+    report_topic_keys = {
+        row.topic_key
+        for row in db.query(UserLearningPracticeReport.topic_key)
+        .filter(
+            UserLearningPracticeReport.user_id == current_user.id,
+            UserLearningPracticeReport.subject_key == subject_key,
+            UserLearningPracticeReport.module_key == module_key,
+        )
+        .all()
+    }
+
     return APIResponse(
         success=True,
         message="ok",
         data={
             "subject_key": subject_key,
             "module_key": module_key,
+            "practice_report_topic_keys": sorted(report_topic_keys),
             "topics": [
-                _build_topic_progress_payload(row, questions_by_topic.get(row.topic_key, []))
+                _build_topic_progress_payload(
+                    row,
+                    questions_by_topic.get(row.topic_key, []),
+                    row.topic_key in report_topic_keys,
+                )
                 for row in topic_rows
             ],
         },
+    )
+
+
+@router.post("/learning/progress/practice-report", response_model=APIResponse)
+async def upsert_learning_practice_report(
+    body: LearningPracticeReportUpsert,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+):
+    now = datetime.utcnow()
+    scope_query = _practice_report_scope_filter(
+        db.query(UserLearningPracticeReport),
+        current_user.id,
+        body.subject_key,
+        body.module_key,
+        body.topic_key,
+    )
+    last_attempt_number = (
+        scope_query.with_entities(func.max(UserLearningPracticeReport.attempt_number)).scalar() or 0
+    )
+    attempt_number = max(int(body.attempt_number or 1), int(last_attempt_number) + 1)
+
+    report_row = UserLearningPracticeReport(
+        user_id=current_user.id,
+        subject_key=body.subject_key,
+        module_key=body.module_key,
+        topic_key=body.topic_key,
+        accuracy=int(body.accuracy or 0),
+        correct_count=int(body.correct_count or 0),
+        total_questions=int(body.total_questions or 0),
+        duration_seconds=int(body.duration_seconds or 0),
+        attempt_number=attempt_number,
+        finished_at=now,
+    )
+    db.add(report_row)
+    db.flush()
+
+    for index, answer in enumerate(body.answers):
+        db.add(
+            UserLearningPracticeReportAnswer(
+                report_id=report_row.id,
+                topic_key=answer.topic_key,
+                question_text=answer.question_text,
+                user_answer=answer.user_answer,
+                correct_answer=answer.correct_answer,
+                is_correct=answer.is_correct,
+                is_timeout=answer.is_timeout,
+                time_spent_ms=int(answer.time_spent_ms or 0),
+                sort_order=index,
+            )
+        )
+
+    db.commit()
+    db.refresh(report_row)
+    answer_rows = (
+        db.query(UserLearningPracticeReportAnswer)
+        .filter(UserLearningPracticeReportAnswer.report_id == report_row.id)
+        .order_by(UserLearningPracticeReportAnswer.sort_order.asc(), UserLearningPracticeReportAnswer.id.asc())
+        .all()
+    )
+    return APIResponse(
+        success=True,
+        message="ok",
+        data=_build_practice_report_payload(report_row, answer_rows),
+    )
+
+
+@router.get("/learning/progress/practice-report/history", response_model=APIResponse)
+async def list_learning_practice_report_history(
+    subject_key: str = Query(..., min_length=1, max_length=64),
+    module_key: str = Query(..., min_length=1, max_length=64),
+    topic_key: str = Query(..., min_length=1, max_length=64),
+    limit: int = Query(50, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+):
+    scope_query = _practice_report_scope_filter(
+        db.query(UserLearningPracticeReport),
+        current_user.id,
+        subject_key,
+        module_key,
+        topic_key,
+    )
+    total = scope_query.count()
+    rows = (
+        scope_query.order_by(
+            UserLearningPracticeReport.finished_at.desc(),
+            UserLearningPracticeReport.id.desc(),
+        )
+        .offset(offset)
+        .limit(limit)
+        .all()
+    )
+    return APIResponse(
+        success=True,
+        message="ok",
+        data={
+            "total": total,
+            "list": [_build_practice_report_summary(row) for row in rows],
+        },
+    )
+
+
+@router.get("/learning/progress/practice-report/by-id/{report_id}", response_model=APIResponse)
+async def get_learning_practice_report_by_id(
+    report_id: int,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+):
+    report_row = (
+        db.query(UserLearningPracticeReport)
+        .filter(
+            UserLearningPracticeReport.id == report_id,
+            UserLearningPracticeReport.user_id == current_user.id,
+        )
+        .first()
+    )
+    if report_row is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="practice_report_not_found")
+
+    answer_rows = (
+        db.query(UserLearningPracticeReportAnswer)
+        .filter(UserLearningPracticeReportAnswer.report_id == report_row.id)
+        .order_by(UserLearningPracticeReportAnswer.sort_order.asc(), UserLearningPracticeReportAnswer.id.asc())
+        .all()
+    )
+    return APIResponse(
+        success=True,
+        message="ok",
+        data=_build_practice_report_payload(report_row, answer_rows),
+    )
+
+
+@router.get("/learning/progress/practice-report", response_model=APIResponse)
+async def get_learning_practice_report(
+    subject_key: str = Query(..., min_length=1, max_length=64),
+    module_key: str = Query(..., min_length=1, max_length=64),
+    topic_key: str = Query(..., min_length=1, max_length=64),
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+):
+    report_row = (
+        _practice_report_scope_filter(
+            db.query(UserLearningPracticeReport),
+            current_user.id,
+            subject_key,
+            module_key,
+            topic_key,
+        )
+        .order_by(
+            UserLearningPracticeReport.finished_at.desc(),
+            UserLearningPracticeReport.id.desc(),
+        )
+        .first()
+    )
+    if report_row is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="practice_report_not_found")
+
+    answer_rows = (
+        db.query(UserLearningPracticeReportAnswer)
+        .filter(UserLearningPracticeReportAnswer.report_id == report_row.id)
+        .order_by(UserLearningPracticeReportAnswer.sort_order.asc(), UserLearningPracticeReportAnswer.id.asc())
+        .all()
+    )
+    return APIResponse(
+        success=True,
+        message="ok",
+        data=_build_practice_report_payload(report_row, answer_rows),
     )
 
 
@@ -335,6 +692,71 @@ async def get_learning_subject_progress(
         data={
             "subject_key": subject_key,
             "modules": modules,
+        },
+    )
+
+
+@router.get("/learning/study-time", response_model=APIResponse)
+async def get_learning_study_time(
+    subject_key: str = Query(..., min_length=1, max_length=64),
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+):
+    row = (
+        db.query(UserLearningStudyTime)
+        .filter(
+            UserLearningStudyTime.user_id == current_user.id,
+            UserLearningStudyTime.subject_key == subject_key,
+        )
+        .first()
+    )
+    total_seconds = int(row.total_seconds or 0) if row is not None else 0
+    return APIResponse(
+        success=True,
+        message="ok",
+        data={
+            "subject_key": subject_key,
+            "total_seconds": total_seconds,
+            "total_hours": round(total_seconds / 3600.0, 2),
+            "last_recorded_at": row.last_recorded_at.isoformat() if row and row.last_recorded_at else None,
+        },
+    )
+
+
+@router.post("/learning/study-time/session", response_model=APIResponse)
+async def record_learning_study_time(
+    body: LearningStudyTimeCreate,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+):
+    now = datetime.utcnow()
+    row = (
+        db.query(UserLearningStudyTime)
+        .filter(
+            UserLearningStudyTime.user_id == current_user.id,
+            UserLearningStudyTime.subject_key == body.subject_key,
+        )
+        .first()
+    )
+    if row is None:
+        row = UserLearningStudyTime(
+            user_id=current_user.id,
+            subject_key=body.subject_key,
+            total_seconds=0,
+        )
+    row.total_seconds = int(row.total_seconds or 0) + body.duration_seconds
+    row.last_recorded_at = now
+    db.add(row)
+    db.commit()
+    db.refresh(row)
+    return APIResponse(
+        success=True,
+        message="ok",
+        data={
+            "subject_key": row.subject_key,
+            "total_seconds": int(row.total_seconds or 0),
+            "total_hours": round(int(row.total_seconds or 0) / 3600.0, 2),
+            "last_recorded_at": row.last_recorded_at.isoformat() if row.last_recorded_at else None,
         },
     )
 

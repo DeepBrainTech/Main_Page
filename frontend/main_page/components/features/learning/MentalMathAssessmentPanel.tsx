@@ -20,6 +20,13 @@ import {
   type AssessmentSessionSummary,
   type AssessmentTrendPoint,
 } from "@/services/userApi";
+import { getMentalMathLesson, getMentalMathSecret } from "@/config/mental-math/catalog";
+import {
+  isMentalMathAnswerCorrect,
+  parseFillInAnswer,
+  questionExprForDisplay,
+  resolveMentalMathAnswer,
+} from "@/lib/mentalMathAnswer";
 
 /** Intro copy uses same total duration as in-progress countdown (config). */
 const ASSESSMENT_INTRO_DISPLAY_MS = MENTAL_MATH_ASSESSMENT_TOTAL_MS;
@@ -39,12 +46,13 @@ type Tab = "current" | "history";
 interface AssessmentQuestion {
   topicKey: string;
   expression: string;
-  correctAnswer: number;
+  correctAnswer: string;
+  acceptedAnswers: string[];
 }
 
 interface AssessmentRecord {
   question: AssessmentQuestion;
-  userAnswer: number | null;
+  userAnswer: string | null;
   isCorrect: boolean;
   isTimeout: boolean;
   timeSpentMs: number;
@@ -55,22 +63,6 @@ interface TopicStat {
   total: number;
   correct: number;
   accuracy: number;
-}
-
-function calcExpression(expression: string): number {
-  const normalized = expression.replace("= ?", "").replaceAll(" ", "").replaceAll("âˆ’", "-");
-  const numbers = normalized.split(/[+-]/).map((x) => Number(x));
-  const operators = normalized.match(/[+-]/g) ?? [];
-  if (numbers.length === 0 || Number.isNaN(numbers[0])) {
-    return 0;
-  }
-  return operators.reduce((acc, op, index) => {
-    const next = numbers[index + 1];
-    if (Number.isNaN(next)) {
-      return acc;
-    }
-    return op === "+" ? acc + next : acc - next;
-  }, numbers[0]);
 }
 
 /** HH:MM:SS for countdown display (ceil to whole seconds). */
@@ -104,8 +96,8 @@ function mapRecordsToAnswers(records: AssessmentRecord[]): AssessmentAnswerPaylo
   return records.map((row) => ({
     topic_key: row.question.topicKey,
     question_text: row.question.expression,
-    user_answer: row.userAnswer === null ? null : String(row.userAnswer),
-    correct_answer: String(row.question.correctAnswer),
+    user_answer: row.userAnswer,
+    correct_answer: row.question.correctAnswer,
     is_correct: row.isCorrect,
     is_timeout: row.isTimeout,
     time_spent_ms: row.timeSpentMs,
@@ -130,20 +122,6 @@ function buildTopicStatsFromAnswers(answers: AssessmentAnswerPayload[]): TopicSt
     }
   });
   return Array.from(map.values()).sort((a, b) => b.accuracy - a.accuracy);
-}
-
-/** Integer answer only (leading minus allowed). */
-function parseFillInInteger(raw: string): number | null {
-  const t = raw.trim();
-  if (t === "" || !/^-?\d+$/.test(t)) {
-    return null;
-  }
-  const n = Number(t);
-  return Number.isSafeInteger(n) ? n : null;
-}
-
-function questionExprForDisplay(expression: string): string {
-  return expression.replace(/\s*=\s*\?+\s*$/u, "").trim();
 }
 
 interface MentalMathAssessmentPanelProps {
@@ -198,7 +176,7 @@ export default function MentalMathAssessmentPanel({ onBackToLessons }: MentalMat
     []
   );
   const currentQuestion = questions[currentIndex] ?? null;
-  const parsedFillIn = parseFillInInteger(answerInput);
+  const parsedFillIn = parseFillInAnswer(answerInput);
   const canSubmit = parsedFillIn !== null;
 
   const questionPillCount = phase === "inProgress" ? questions.length : availableTopicsCount;
@@ -253,24 +231,31 @@ export default function MentalMathAssessmentPanel({ onBackToLessons }: MentalMat
     }
   }, [testStartedAt]);
 
+  useEffect(() => {
+    if (phase !== "inProgress") {
+      return;
+    }
+    const targetPage = Math.floor(currentIndex / SIDE_QUESTION_PILL_PAGE_SIZE) + 1;
+    setSideQuestionPillPage(targetPage);
+  }, [currentIndex, phase]);
+
   const topicLabel = useCallback(
     (topicKey: string): string => {
-      if (topicKey.startsWith("makingWhole.")) {
-        const secret = topicKey.split(".")[1];
-        return t(`makingWholeSecrets.${secret}`);
-      }
-      return t(`mentalMathCategories.${topicKey}`);
+      const [lessonKey, secretKey] = topicKey.split(".");
+      return getMentalMathSecret(lessonKey, secretKey)?.title ?? topicKey;
     },
-    [t]
+    []
   );
 
   const startTest = () => {
     const set = MENTAL_MATH_ASSESSMENT_TOPICS.filter((topic) => topic.questions.length > 0).map((topic) => {
       const random = topic.questions[Math.floor(Math.random() * topic.questions.length)];
+      const answer = resolveMentalMathAnswer(random.expression);
       return {
         topicKey: topic.id,
         expression: random.expression,
-        correctAnswer: calcExpression(random.expression),
+        correctAnswer: answer.display,
+        acceptedAnswers: answer.accepted,
       };
     });
     if (set.length === 0) {
@@ -346,11 +331,14 @@ export default function MentalMathAssessmentPanel({ onBackToLessons }: MentalMat
       submitLockRef.current = true;
       const now = Date.now();
       const elapsed = Math.max(0, now - questionStartedAt);
-      const parsed = isTimeout ? null : parseFillInInteger(answerInput);
+      const parsed = isTimeout ? null : parseFillInAnswer(answerInput);
       const row: AssessmentRecord = {
         question: currentQuestion,
         userAnswer: parsed,
-        isCorrect: !isTimeout && parsed !== null && parsed === currentQuestion.correctAnswer,
+        isCorrect:
+          !isTimeout &&
+          parsed !== null &&
+          isMentalMathAnswerCorrect(parsed, currentQuestion.expression, currentQuestion.acceptedAnswers),
         isTimeout,
         timeSpentMs: elapsed,
       };
@@ -494,7 +482,7 @@ export default function MentalMathAssessmentPanel({ onBackToLessons }: MentalMat
       answers={answers}
       categoryStats={categoryStats}
       topicLabel={topicLabel}
-      categoryLabel={(category) => t(`mentalMathCategories.${category}`)}
+      categoryLabel={(category) => getMentalMathLesson(category)?.title ?? t(`mentalMathCategories.${category}`)}
       onOpenHistory={() => setTab("history")}
       onRetake={startTest}
     />
@@ -521,7 +509,7 @@ export default function MentalMathAssessmentPanel({ onBackToLessons }: MentalMat
   const sideTimerDisplayMs = phase === "inProgress" ? timeLeftMs : ASSESSMENT_INTRO_DISPLAY_MS;
 
   const questionPillRows = (
-    <div className="flex w-96 max-w-full flex-col gap-6">
+    <div className="flex w-full flex-col gap-[clamp(1rem,2vw,1.5rem)]">
       <div className="flex h-10 w-full items-center justify-between py-px">
         <h3 className="rounded-2xl py-3 text-xl font-semibold leading-none text-sky-700">
           {t("assessment.questionsHeading")}
@@ -564,11 +552,14 @@ export default function MentalMathAssessmentPanel({ onBackToLessons }: MentalMat
         </div>
       </div>
       {pillRowsForPage.map((row, rowIdx) => (
-        <div key={`${safeSidePillPage}-${rowIdx}`} className="flex h-12 w-full items-center justify-between gap-1.5">
+        <div
+          key={`${safeSidePillPage}-${rowIdx}`}
+          className="grid h-[clamp(2.5rem,3.5vw,3rem)] w-full grid-cols-5 gap-[clamp(0.25rem,0.6vw,0.375rem)]"
+        >
           {row.map((num) => (
             <div
               key={num}
-              className={`flex h-12 w-14 shrink-0 items-center justify-center rounded-2xl bg-indigo-50 px-5 py-3 text-center text-base font-normal leading-5 text-sky-700 ${
+              className={`flex h-full min-w-0 items-center justify-center rounded-2xl bg-indigo-50 px-[clamp(0.25rem,0.8vw,0.75rem)] py-3 text-center text-[clamp(0.75rem,1.1vw,1rem)] font-normal leading-5 text-sky-700 ${
                 phase === "inProgress" && num === currentIndex + 1 ? "ring-2 ring-red-500/50" : ""
               }`}
             >
@@ -581,14 +572,12 @@ export default function MentalMathAssessmentPanel({ onBackToLessons }: MentalMat
   );
 
   const sidePanel = showAssessmentSidePanel ? (
-    <aside className="relative flex w-full shrink-0 flex-col overflow-visible rounded-[32px] border border-white/60 bg-white/60 shadow-[0px_4px_6px_-4px_rgba(0,0,0,0.10)] shadow-lg outline outline-1 outline-offset-[-1.03px] outline-white/60 xl:w-[459px]">
-      <div className="flex shrink-0 flex-col items-center overflow-visible px-6 pt-14">
+    <aside className="relative flex w-full min-w-0 shrink-0 flex-col self-start overflow-visible rounded-[32px] border border-white/60 bg-white/60 shadow-[0px_4px_6px_-4px_rgba(0,0,0,0.10)] shadow-lg outline outline-1 outline-offset-[-1.03px] outline-white/60 xl:w-[clamp(18rem,28vw,28.6875rem)]">
+      <div className="flex shrink-0 flex-col items-center overflow-visible px-[clamp(1rem,2vw,1.5rem)] pt-[clamp(2rem,4vw,3.5rem)]">
         <div className="relative mx-auto mt-4 shrink-0 overflow-visible">
           <svg
-            width={240}
-            height={240}
             viewBox="0 0 120 120"
-            className="block -rotate-90 overflow-visible"
+            className="block h-[clamp(13.75rem,18vw,15rem)] w-[clamp(13.75rem,18vw,15rem)] -rotate-90 overflow-visible"
             aria-hidden
           >
             <circle
@@ -614,19 +603,18 @@ export default function MentalMathAssessmentPanel({ onBackToLessons }: MentalMat
           </svg>
           <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
             <p className="text-base font-normal leading-5 text-sky-700">{t("assessment.timeRemaining")}</p>
-            <p className="mt-1 text-4xl font-normal tabular-nums leading-none text-zinc-800">
+            <p className="mt-1 text-[clamp(1.75rem,3vw,2.25rem)] font-normal tabular-nums leading-none text-zinc-800">
               {formatHhMmSsFromMs(sideTimerDisplayMs)}
             </p>
           </div>
         </div>
       </div>
-      <div className="flex w-full shrink-0 justify-center px-8 pb-8 pt-6">{questionPillRows}</div>
+      <div className="flex w-full shrink-0 px-[clamp(1.5rem,2.5vw,2rem)] pb-8 pt-6">{questionPillRows}</div>
     </aside>
   ) : null;
 
   const mainCardClass =
-    "flex min-w-0 flex-col gap-5 rounded-[32px] border border-white/60 bg-white/60 p-8 shadow-[0px_4px_6px_-4px_rgba(0,0,0,0.10)] shadow-lg outline outline-1 outline-offset-[-1.03px] outline-white/60 " +
-    (showAssessmentSidePanel ? "self-start flex-1 xl:max-w-[1094px]" : "w-full self-stretch");
+    "flex min-w-0 w-full flex-col gap-5 self-start rounded-[32px] border border-white/60 bg-white/60 p-[clamp(1.5rem,2.5vw,2rem)] shadow-[0px_4px_6px_-4px_rgba(0,0,0,0.10)] shadow-lg outline outline-1 outline-offset-[-1.03px] outline-white/60";
 
   const showInProgressFillIn = tab === "current" && phase === "inProgress" && currentQuestion;
 
@@ -634,11 +622,11 @@ export default function MentalMathAssessmentPanel({ onBackToLessons }: MentalMat
     <div
       className={
         showAssessmentSidePanel
-          ? "flex flex-col gap-5 font-app-body xl:flex-row xl:items-start xl:gap-5"
-          : "font-app-body"
+          ? "flex w-full flex-col items-start gap-[clamp(1rem,1.5vw,1.25rem)] font-app-body xl:flex-row"
+          : "w-full font-app-body"
       }
     >
-      <div className={mainCardClass}>
+      <div className={`${mainCardClass}${showAssessmentSidePanel ? " min-w-0 flex-1" : ""}`}>
         {tab === "current" && phase === "intro" && (
           <div className="flex flex-col gap-5 self-stretch">
             <div className="flex w-full flex-wrap items-center justify-between gap-3 self-stretch">
@@ -715,7 +703,7 @@ export default function MentalMathAssessmentPanel({ onBackToLessons }: MentalMat
                 <input
                   ref={answerInputRef}
                   type="text"
-                  inputMode="numeric"
+                  inputMode="text"
                   autoComplete="off"
                   aria-label={t("assessment.answerPlaceholder")}
                   value={answerInput}

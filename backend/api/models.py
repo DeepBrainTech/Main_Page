@@ -5,7 +5,7 @@
               ALTER TABLE users ALTER COLUMN hashed_password DROP NOT NULL;
   MySQL:      ALTER TABLE users ADD COLUMN google_id VARCHAR(255) UNIQUE; ALTER TABLE users MODIFY hashed_password VARCHAR(255) NULL;
 """
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, Date, Text, ForeignKey, JSON, UniqueConstraint
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, Date, Text, ForeignKey, JSON, UniqueConstraint, Index
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from database import Base
@@ -381,7 +381,80 @@ class UserLearningQuestionProgress(Base):
     attempt_count = Column(Integer, default=1, nullable=False)
     is_correct_latest = Column(Boolean, default=False, nullable=False)
     is_correct_ever = Column(Boolean, default=False, nullable=False)
+    user_answer = Column(String(128), nullable=True)
+    time_spent_seconds = Column(Integer, default=0, nullable=False)
     first_attempted_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     last_attempted_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class UserLearningStudyTime(Base):
+    """Per-user aggregate study time in a learning subject."""
+    __tablename__ = "user_learning_study_times"
+    __table_args__ = (
+        UniqueConstraint(
+            "user_id",
+            "subject_key",
+            name="uq_user_learning_study_time_subject",
+        ),
+    )
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    subject_key = Column(String(64), nullable=False, index=True)
+    total_seconds = Column(Integer, default=0, nullable=False)
+    last_recorded_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class UserLearningPracticeReport(Base):
+    """Saved practice report snapshots for a learning topic (multiple per topic)."""
+    __tablename__ = "user_learning_practice_reports"
+    __table_args__ = (
+        Index(
+            "ix_user_learning_practice_report_scope_finished",
+            "user_id",
+            "subject_key",
+            "module_key",
+            "topic_key",
+            "finished_at",
+        ),
+    )
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    subject_key = Column(String(64), nullable=False, index=True)
+    module_key = Column(String(64), nullable=False, index=True)
+    topic_key = Column(String(64), nullable=False, index=True)
+    accuracy = Column(Integer, default=0, nullable=False)
+    correct_count = Column(Integer, default=0, nullable=False)
+    total_questions = Column(Integer, default=0, nullable=False)
+    duration_seconds = Column(Integer, default=0, nullable=False)
+    attempt_number = Column(Integer, default=1, nullable=False)
+    finished_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    answers = relationship(
+        "UserLearningPracticeReportAnswer",
+        back_populates="report",
+        cascade="all, delete-orphan",
+    )
+
+
+class UserLearningPracticeReportAnswer(Base):
+    """Answer rows for a saved practice report."""
+    __tablename__ = "user_learning_practice_report_answers"
+
+    id = Column(Integer, primary_key=True, index=True)
+    report_id = Column(Integer, ForeignKey("user_learning_practice_reports.id"), nullable=False, index=True)
+    topic_key = Column(String(64), nullable=False)
+    question_text = Column(Text, nullable=False)
+    user_answer = Column(String(128), nullable=True)
+    correct_answer = Column(String(128), nullable=True)
+    is_correct = Column(Boolean, default=False, nullable=False)
+    is_timeout = Column(Boolean, default=False, nullable=False)
+    time_spent_ms = Column(Integer, default=0, nullable=False)
+    sort_order = Column(Integer, default=0, nullable=False)
+    report = relationship("UserLearningPracticeReport", back_populates="answers")

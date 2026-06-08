@@ -162,3 +162,69 @@ def ensure_users_table_compatibility():
                 "ON user_notifications (source_event_id) WHERE source_event_id IS NOT NULL"
             )
         )
+        conn.execute(
+            text(
+                "ALTER TABLE user_learning_question_progresses "
+                "ADD COLUMN IF NOT EXISTS user_answer VARCHAR(128)"
+            )
+        )
+        conn.execute(
+            text(
+                "ALTER TABLE user_learning_question_progresses "
+                "ADD COLUMN IF NOT EXISTS time_spent_seconds INTEGER DEFAULT 0 NOT NULL"
+            )
+        )
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS user_learning_practice_reports (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER NOT NULL REFERENCES users(id),
+                subject_key VARCHAR(64) NOT NULL,
+                module_key VARCHAR(64) NOT NULL,
+                topic_key VARCHAR(64) NOT NULL,
+                accuracy INTEGER NOT NULL DEFAULT 0,
+                correct_count INTEGER NOT NULL DEFAULT 0,
+                total_questions INTEGER NOT NULL DEFAULT 0,
+                duration_seconds INTEGER NOT NULL DEFAULT 0,
+                attempt_number INTEGER NOT NULL DEFAULT 1,
+                finished_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT NOW(),
+                created_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT NOW(),
+                updated_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT NOW()
+            )
+        """))
+        conn.execute(
+            text(
+                "ALTER TABLE user_learning_practice_reports "
+                "DROP CONSTRAINT IF EXISTS uq_user_learning_practice_report_scope"
+            )
+        )
+        conn.execute(
+            text(
+                "DROP INDEX IF EXISTS uq_user_learning_practice_report_scope"
+            )
+        )
+        conn.execute(
+            text(
+                "CREATE INDEX IF NOT EXISTS ix_user_learning_practice_report_scope_finished "
+                "ON user_learning_practice_reports (user_id, subject_key, module_key, topic_key, finished_at DESC)"
+            )
+        )
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS user_learning_practice_report_answers (
+                id SERIAL PRIMARY KEY,
+                report_id INTEGER NOT NULL REFERENCES user_learning_practice_reports(id) ON DELETE CASCADE,
+                topic_key VARCHAR(64) NOT NULL,
+                question_text TEXT NOT NULL,
+                user_answer VARCHAR(128),
+                correct_answer VARCHAR(128),
+                is_correct BOOLEAN NOT NULL DEFAULT FALSE,
+                is_timeout BOOLEAN NOT NULL DEFAULT FALSE,
+                time_spent_ms INTEGER NOT NULL DEFAULT 0,
+                sort_order INTEGER NOT NULL DEFAULT 0
+            )
+        """))
+        conn.execute(
+            text(
+                "CREATE INDEX IF NOT EXISTS ix_user_learning_practice_report_answers_report_id "
+                "ON user_learning_practice_report_answers (report_id)"
+            )
+        )

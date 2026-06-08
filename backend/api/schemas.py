@@ -260,6 +260,42 @@ class LearningQuestionAttemptCreate(BaseModel):
     question_key: str = Field(..., min_length=1, max_length=128)
     total_questions: int = Field(0, ge=0)
     is_correct: bool = False
+    user_answer: Optional[str] = Field(None, max_length=128)
+    time_spent_seconds: int = Field(0, ge=0, le=86400)
+
+
+class LearningTopicProgressReset(BaseModel):
+    subject_key: str = Field(..., min_length=1, max_length=64)
+    module_key: str = Field(..., min_length=1, max_length=64)
+    topic_key: str = Field(..., min_length=1, max_length=64)
+    total_questions: int = Field(0, ge=0)
+
+
+class LearningStudyTimeCreate(BaseModel):
+    subject_key: str = Field(..., min_length=1, max_length=64)
+    duration_seconds: int = Field(..., ge=1, le=86400)
+
+
+class LearningPracticeReportAnswerIn(BaseModel):
+    topic_key: str = Field(..., min_length=1, max_length=64)
+    question_text: str = Field(..., min_length=1, max_length=500)
+    user_answer: Optional[str] = Field(None, max_length=128)
+    correct_answer: Optional[str] = Field(None, max_length=128)
+    is_correct: bool = False
+    is_timeout: bool = False
+    time_spent_ms: int = Field(0, ge=0, le=86_400_000)
+
+
+class LearningPracticeReportUpsert(BaseModel):
+    subject_key: str = Field(..., min_length=1, max_length=64)
+    module_key: str = Field(..., min_length=1, max_length=64)
+    topic_key: str = Field(..., min_length=1, max_length=64)
+    accuracy: int = Field(0, ge=0, le=100)
+    correct_count: int = Field(0, ge=0)
+    total_questions: int = Field(0, ge=0)
+    duration_seconds: int = Field(0, ge=0, le=86400)
+    attempt_number: int = Field(1, ge=1)
+    answers: List[LearningPracticeReportAnswerIn] = []
 
 
 # ========== API 响应 ==========

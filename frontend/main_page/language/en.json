@@ -926,15 +926,11 @@
       },
       "lessons": {
         "assessment": "Lesson 0: Self-Assessment",
-        "makingWhole": "Lesson 1: Making Whole",
-        "breakIntoParts": "Lesson 2: Break into Parts",
-        "rearrange": "Lesson 3: Rearrange",
-        "roundAdjust": "Lesson 4: Round & Adjust",
-        "leftToRightFlow": "Lesson 5: Left-to-Right Flow",
-        "friendlyNumbers": "Lesson 6: Friendly Numbers",
-        "compensation": "Lesson 7: Compensation",
-        "multiplicationPatterns": "Lesson 8: Multiplication Patterns",
-        "divisionShortcuts": "Lesson 9: Division Shortcuts"
+        "lesson1": "Lesson 1: Benchmark Thinking",
+        "lesson2": "Lesson 2: Break Apart Thinking",
+        "lesson3": "Lesson 3: Rearrangement Thinking",
+        "lesson4": "Lesson 4: Complement Thinking",
+        "lesson5": "Lesson 5: Pattern Recognition"
       }
     },
     "math": "Math",
@@ -945,11 +941,11 @@
     },
     "mentalMathCategories": {
       "assessment": "Assessment",
-      "makingWhole": "Making Whole",
-      "breakIntoParts": "Break into Parts",
-      "rearrange": "Rearrange",
-      "roundAndAdjust": "Round & Adjust",
-      "leftToRightFlow": "Left-to-Right / Flow"
+      "lesson1": "Benchmark Thinking",
+      "lesson2": "Break Apart Thinking",
+      "lesson3": "Rearrangement Thinking",
+      "lesson4": "Complement Thinking",
+      "lesson5": "Pattern Recognition"
     },
     "makingWholeSecrets": {
       "secret1": "Secret 1: Friend Numbers",
@@ -964,8 +960,22 @@
       "secret10": "Secret 10: Left-to-Right Subtraction"
     },
     "practice": {
+      "inProgressTitle": "Practice",
+      "questionCountPill": "Question {current} / {total}",
+      "previousQuestion": "Previous",
+      "quitPractice": "Quit Practice",
+      "hintTitle": "Hint {num}",
+      "hintTooltip": "Hint",
+      "aiExplainTooltip": "AI Explain",
+      "hintView": "View",
+      "hintPrevious": "Previous hint",
+      "hintNext": "Next hint",
+      "hintProgress": "{current} / {total}",
+      "closeHint": "Close",
       "startPractice": "Start Practice",
       "questionMapTitle": "Question Map",
+      "resetSecretProgress": "Reset",
+      "viewReport": "View Report",
       "expandQuestionMap": "Expand Question Map",
       "collapseQuestionMap": "Collapse Question Map",
       "questionMapAttempted": "Question {index} attempted",
@@ -1011,7 +1021,11 @@
       "score": "Score: {score}/{total}",
       "totalTime": "Total time: {duration}",
       "retry": "Retry this category",
-      "nextCategory": "Next category"
+      "nextCategory": "Next category",
+      "practiceHistory": "Practice History",
+      "nextSecret": "Next Secret",
+      "historySessionLabel": "Practice {attempt}",
+      "historyBack": "Back"
     },
     "media": {
       "loading": "Loading image...",
@@ -1133,7 +1147,6 @@
       "trendRange100n": "100 Records",
       "trendRangeAll": "All",
       "trendTruncatedHint": "Showing latest {count} records.",
-      "trendNeedMoreData": "Need at least two records in this range to draw a line.",
       "trendAverage": "Average: {value}%"
     },
     "unlock": {

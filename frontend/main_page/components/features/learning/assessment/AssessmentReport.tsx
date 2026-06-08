@@ -38,6 +38,10 @@ interface AssessmentReportProps {
   categoryLabel: (category: string) => string;
   onOpenHistory: () => void;
   onRetake: () => void;
+  secondaryActionLabel?: string;
+  primaryActionLabel?: string;
+  primaryActionDisabled?: boolean;
+  variant?: "assessment" | "practice";
 }
 
 function formatDuration(seconds: number): string {
@@ -70,8 +74,13 @@ export default function AssessmentReport({
   categoryLabel,
   onOpenHistory,
   onRetake,
+  secondaryActionLabel,
+  primaryActionLabel,
+  primaryActionDisabled = false,
+  variant = "assessment",
 }: AssessmentReportProps) {
   const t = useTranslations("learning");
+  const isPracticeReport = variant === "practice";
   const [answerFilter, setAnswerFilter] = useState<AnswerFilter>("all");
   const [answerPage, setAnswerPage] = useState(1);
   const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({});
@@ -100,13 +109,24 @@ export default function AssessmentReport({
   }, [trend]);
 
   const trendChart = useMemo(() => {
-    if (displayTrend.length < 2) {
-      return { polyline: "", dots: [] as Array<{ x: number; y: number; label: string; accuracy: number }>, ticks: [] as Array<{ x: number; label: string }> };
-    }
     const left = 8;
     const right = 82;
     const top = 14;
     const bottom = 76;
+    if (displayTrend.length === 0) {
+      return { polyline: "", dots: [] as Array<{ x: number; y: number; label: string; accuracy: number }>, ticks: [] as Array<{ x: number; label: string }> };
+    }
+    if (displayTrend.length === 1) {
+      const point = displayTrend[0];
+      const x = (left + right) / 2;
+      const y = bottom - ((bottom - top) * point.accuracy) / 100;
+      const label = formatTrendTick(point.finished_at);
+      return {
+        polyline: "",
+        dots: [{ x, y, label, accuracy: point.accuracy }],
+        ticks: [{ x, label }],
+      };
+    }
     const span = Math.max(1, displayTrend.length - 1);
     const dots = displayTrend.map((point, index) => {
       const ratioX = index / span;
@@ -122,9 +142,19 @@ export default function AssessmentReport({
   const donutGradient = useMemo(() => {
     const total = totalQuestions || 1;
     const c = Math.round((correctCount / total) * 100);
+    if (isPracticeReport) {
+      return `conic-gradient(#4ADE80 0 ${c}%, #E45C44 ${c}% 100%)`;
+    }
     const i = Math.round((incorrectCount / total) * 100);
     return `conic-gradient(#4ADE80 0 ${c}%, #E45C44 ${c}% ${c + i}%, #FFB423 ${c + i}% 100%)`;
-  }, [correctCount, incorrectCount, totalQuestions]);
+  }, [correctCount, incorrectCount, isPracticeReport, totalQuestions]);
+
+  const answerFilters = useMemo((): AnswerFilter[] => {
+    if (isPracticeReport) {
+      return ["all", "incorrect", "correct"];
+    }
+    return ["all", "incorrect", "timeout", "correct", "topics"];
+  }, [isPracticeReport]);
 
   const reportBand = useMemo(() => {
     if (accuracy >= 80) return "superstar";
@@ -186,9 +216,6 @@ export default function AssessmentReport({
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_24rem]">
         <div className="flex min-h-96 flex-col gap-2.5 rounded-2xl border border-sky-700/10 bg-white p-6 md:p-8">
           <p className="text-base font-medium leading-7 text-sky-700">{t("assessment.trendTitle")}</p>
-          {displayTrend.length <= 1 && (
-            <p className="text-xs text-sky-700/60">{t("assessment.trendNeedMoreData")}</p>
-          )}
           <div className="relative min-h-72 flex-1 overflow-hidden rounded-2xl bg-white px-2 pb-10 pt-6">
             <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="absolute inset-x-2 top-6 h-[calc(100%-4rem)] w-[calc(100%-1rem)]">
               <line x1="8" y1="14" x2="96" y2="14" stroke="rgba(3,105,161,0.10)" strokeWidth="0.8" />
@@ -246,11 +273,13 @@ export default function AssessmentReport({
               <span>{t("assessment.incorrect")}</span>
               <span>{incorrectCount} ({resultPercent(incorrectCount)}%)</span>
             </div>
-            <div className="grid grid-cols-[1rem_1fr_auto] items-center gap-3">
-              <span className="size-4 rounded-full bg-[#FFB423]" />
-              <span>{t("assessment.timeout")}</span>
-              <span>{timeoutCount} ({resultPercent(timeoutCount)}%)</span>
-            </div>
+            {!isPracticeReport ? (
+              <div className="grid grid-cols-[1rem_1fr_auto] items-center gap-3">
+                <span className="size-4 rounded-full bg-[#FFB423]" />
+                <span>{t("assessment.timeout")}</span>
+                <span>{timeoutCount} ({resultPercent(timeoutCount)}%)</span>
+              </div>
+            ) : null}
           </div>
         </div>
       </div>
@@ -260,7 +289,7 @@ export default function AssessmentReport({
           <div className="flex flex-wrap items-center gap-6">
             <p className="text-xl font-semibold leading-5 text-sky-700">{t("assessment.performance")}</p>
             <div className="flex flex-wrap gap-2 rounded-2xl bg-white p-1.5">
-              {(["all", "incorrect", "timeout", "correct", "topics"] as const).map((f) => (
+              {answerFilters.map((f) => (
                 <button
                   key={f}
                   type="button"
@@ -401,14 +430,15 @@ export default function AssessmentReport({
             onClick={onOpenHistory}
             className="flex h-14 flex-1 items-center justify-center rounded-2xl bg-indigo-50 px-6 py-4 text-base font-medium leading-6 text-sky-700 transition hover:bg-indigo-100"
           >
-            {t("assessment.testHistoryCta")}
+            {secondaryActionLabel ?? t("assessment.testHistoryCta")}
           </button>
           <button
             type="button"
             onClick={onRetake}
-            className="flex h-14 flex-1 items-center justify-center rounded-2xl bg-[#E45C44] px-6 py-4 text-base font-medium leading-6 text-white shadow-[0px_4px_6px_-4px_rgba(0,0,0,0.10)] shadow-lg transition hover:opacity-95"
+            disabled={primaryActionDisabled}
+            className="flex h-14 flex-1 items-center justify-center rounded-2xl bg-[#E45C44] px-6 py-4 text-base font-medium leading-6 text-white shadow-[0px_4px_6px_-4px_rgba(0,0,0,0.10)] shadow-lg transition hover:opacity-95 disabled:cursor-not-allowed disabled:bg-zinc-300 disabled:shadow-none"
           >
-            {t("assessment.retest")}
+            {primaryActionLabel ?? t("assessment.retest")}
           </button>
         </div>
       </div>

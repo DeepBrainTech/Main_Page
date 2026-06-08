@@ -23,6 +23,11 @@
   --card-border: #f3f4f6;
 }
 
+html {
+  /* Reserve scrollbar width so layout does not shift when overflow toggles */
+  scrollbar-gutter: stable;
+}
+
 body {
   background: var(--background);
   color: var(--foreground);

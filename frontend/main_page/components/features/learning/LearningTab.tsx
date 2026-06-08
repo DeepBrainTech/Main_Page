@@ -11,26 +11,19 @@ import UnlockCourseDialog from "@/components/features/learning/UnlockCourseDialo
 import { useLearningAccess } from "@/hooks/useLearningAccess";
 import CircularProgressRing from "@/components/ui/CircularProgressRing";
 import type { MentalMathSecretKey } from "@/types/learning";
+import { getMentalMathLesson, getMentalMathSecret, MENTAL_MATH_LESSONS } from "@/config/mental-math/catalog";
 import {
   getLessonProgressPercentByPractice,
   refreshMentalMathLessonProgress,
-  refreshMakingWholeProgress,
   subscribePracticeProgress,
 } from "@/lib/mentalMathPracticeProgress";
+import { fetchLearningStudyTime } from "@/services/userApi";
 
 const MONTH_IDS = ["jan", "feb", "mar", "apr", "may", "jun", "jul"] as const;
 
 const LESSON_ROWS = [
   { key: "assessment", kind: "quiz" as const },
-  { key: "makingWhole", kind: "course" as const },
-  { key: "breakIntoParts", kind: "course" as const },
-  { key: "rearrange", kind: "course" as const },
-  { key: "roundAdjust", kind: "course" as const },
-  { key: "leftToRightFlow", kind: "course" as const },
-  { key: "friendlyNumbers", kind: "course" as const },
-  { key: "compensation", kind: "course" as const },
-  { key: "multiplicationPatterns", kind: "course" as const },
-  { key: "divisionShortcuts", kind: "course" as const },
+  ...MENTAL_MATH_LESSONS.map((lesson) => ({ key: lesson.key, kind: "course" as const })),
 ] as const;
 
 const UNLOCK_BANNER_INDEX = 2;
@@ -38,14 +31,10 @@ const BADGE_IDS = ["badgeNumberIgniter", "badgeFocusPilot", "badgeLogicExplorer"
 
 /**
  * Lesson progress shown on cards.
- * For now, only makingWhole reads persisted practice progress;
- * other lessons default to 0 until their backend progress is available.
+ * Lesson progress shown on cards.
  */
 function lessonProgressPercent(lessonKey: string): number {
-  if (lessonKey === "makingWhole") {
-    return getLessonProgressPercentByPractice("makingWhole");
-  }
-  return 0;
+  return getLessonProgressPercentByPractice(lessonKey);
 }
 
 const completedMonthCount = 4;
@@ -72,9 +61,19 @@ function createWeeklyProgressData(monthLabels: string[]) {
   }));
 }
 
+function formatStudyHours(totalSeconds: number): string {
+  const hours = totalSeconds / 3600;
+  if (hours <= 0) {
+    return "0";
+  }
+  if (hours < 10) {
+    return hours.toFixed(1).replace(/\.0$/, "");
+  }
+  return String(Math.floor(hours));
+}
+
 export default function LearningTab() {
   const tLearn = useTranslations("learning.home");
-  const tLearning = useTranslations("learning");
   const monthLabels = useMemo(
     () => MONTH_IDS.map((id) => tLearn(`month.${id}` as "month.jan")),
     [tLearn]
@@ -85,13 +84,26 @@ export default function LearningTab() {
   const [activeSecretKey, setActiveSecretKey] = useState<MentalMathSecretKey | null>(null);
   const [showUnlockCourseDialog, setShowUnlockCourseDialog] = useState(false);
   const [practiceProgressVersion, setPracticeProgressVersion] = useState(0);
+  const [studySeconds, setStudySeconds] = useState(0);
   const learningAccess = useLearningAccess();
   const showUnlockBanner = !learningAccess.bundleUnlocked;
 
   useEffect(() => subscribePracticeProgress(() => setPracticeProgressVersion((v) => v + 1)), []);
   useEffect(() => {
-    void refreshMakingWholeProgress();
     void refreshMentalMathLessonProgress();
+    fetchLearningStudyTime("mental_math")
+      .then((data) => setStudySeconds(data.total_seconds))
+      .catch(() => setStudySeconds(0));
+  }, []);
+
+  useEffect(() => {
+    const handler = () => {
+      fetchLearningStudyTime("mental_math")
+        .then((data) => setStudySeconds(data.total_seconds))
+        .catch(() => {});
+    };
+    window.addEventListener("learning-study-time-change", handler);
+    return () => window.removeEventListener("learning-study-time-change", handler);
   }, []);
 
   const lessonCards = useMemo(
@@ -99,19 +111,23 @@ export default function LearningTab() {
       LESSON_ROWS.map((row) => ({
         ...row,
         pill: row.kind === "quiz" ? tLearn("pillQuiz") : tLearn("pillCourse"),
-        title: tLearn(`lessons.${row.key}` as "lessons.assessment"),
+        title:
+          row.key === "assessment"
+            ? tLearn("lessons.assessment")
+            : `${row.key.replace("lesson", "Lesson ")}: ${getMentalMathLesson(row.key)?.title ?? tLearn("lessonComingSoon")}`,
       })),
     [tLearn]
   );
   const activeLessonTitle =
     activeLessonKey && activeLessonKey !== "assessment"
-      ? tLearn(`lessons.${activeLessonKey}` as "lessons.assessment")
+      ? `${activeLessonKey.replace("lesson", "Lesson ")}: ${getMentalMathLesson(activeLessonKey)?.title ?? tLearn("lessonComingSoon")}`
       : activeLessonKey === "assessment"
         ? tLearn("lessons.assessment")
         : null;
-  const activeSecretTitle = activeSecretKey
-    ? tLearning(`makingWholeSecrets.${activeSecretKey}` as "makingWholeSecrets.secret1")
-    : null;
+  const activeSecretTitle =
+    activeLessonKey && activeSecretKey
+      ? `Secret ${activeSecretKey.replace("secret", "")}: ${getMentalMathSecret(activeLessonKey, activeSecretKey)?.title ?? ""}`
+      : null;
 
   const toBarHeight = (percent: number) => {
     const clamped = Math.min(chartMaxPercent, Math.max(chartMinPercent, percent));
@@ -121,21 +137,31 @@ export default function LearningTab() {
 
   const statCards = [
     { titleKey: "statCompleted" as const, value: "14%", iconSrc: "/learning/completed.svg" },
-    { titleKey: "statLessons" as const, value: "1/10", iconSrc: "/learning/lessons.svg" },
-    { titleKey: "statHours" as const, value: "11", iconSrc: "/learning/hours.svg" },
+    { titleKey: "statLessons" as const, value: `1/${MENTAL_MATH_LESSONS.length}`, iconSrc: "/learning/lessons.svg" },
+    { titleKey: "statHours" as const, value: formatStudyHours(studySeconds), iconSrc: "/learning/hours.svg" },
   ] as const;
 
-  /** Lesson 0 self-assessment: focus layout without dashboard stats or sidebar widgets. */
-  const hideLearningChromeForAssessment = showLessonBoard && activeLessonKey === "assessment";
+  const showDashboardChrome = !showLessonBoard || activeLessonKey === null;
+  const showLessonStudyTrack =
+    showLessonBoard && activeLessonKey?.startsWith("lesson") && activeSecretKey === null;
+  const showStudyTrack = showDashboardChrome || showLessonStudyTrack;
+  const contentGridClass = showDashboardChrome
+    ? "xl:col-span-8 xl:row-start-2"
+    : showStudyTrack
+      ? "xl:col-span-8 xl:row-start-1 xl:self-start"
+      : "xl:col-span-12 xl:row-start-1 xl:self-start";
+  const studyTrackClass = showDashboardChrome
+    ? "xl:col-span-4 xl:row-span-2 xl:row-start-1"
+    : "xl:col-span-4 xl:col-start-9 xl:row-start-1";
 
   return (
     <div
       className={`grid grid-cols-1 items-stretch gap-5 pb-10 font-app-body xl:grid-cols-12 ${
-        hideLearningChromeForAssessment ? "xl:grid-rows-1" : "xl:grid-rows-[auto_1fr]"
+        showDashboardChrome ? "xl:grid-rows-[auto_1fr]" : "xl:grid-rows-1"
       }`}
     >
-      {!hideLearningChromeForAssessment ? (
-        <section className="grid grid-cols-1 gap-4 md:grid-cols-3 xl:col-span-8 xl:row-start-1">
+      {showDashboardChrome ? (
+        <section className="grid grid-cols-1 items-start gap-4 self-start md:grid-cols-3 xl:col-span-8 xl:row-start-1">
           {statCards.map((item) => (
             <article
               key={item.titleKey}
@@ -158,8 +184,10 @@ export default function LearningTab() {
         </section>
       ) : null}
 
-      {!hideLearningChromeForAssessment ? (
-        <aside className="space-y-5 rounded-[32px] border border-white/70 bg-white/70 p-6 shadow-[0px_10px_15px_0px_rgba(0,0,0,0.1)] backdrop-blur-md xl:col-span-4 xl:row-span-2 xl:row-start-1 xl:h-full xl:min-h-[760px]">
+      {showStudyTrack ? (
+        <aside
+          className={`space-y-5 self-start rounded-[32px] border border-white/70 bg-white/70 p-6 shadow-[0px_10px_15px_0px_rgba(0,0,0,0.1)] backdrop-blur-md ${studyTrackClass}`}
+        >
           <section>
             <h2 className="font-['Titan_One'] text-3xl text-[#045E96]">{tLearn("studyTrack")}</h2>
             <div className="mt-4 rounded-[24px] bg-[#E4F2F9] p-5">
@@ -205,9 +233,7 @@ export default function LearningTab() {
         </aside>
       ) : null}
 
-      <section
-        className={`space-y-3 ${hideLearningChromeForAssessment ? "xl:col-span-12 xl:row-start-1 xl:self-start" : "xl:col-span-8 xl:row-start-2"}`}
-      >
+      <section className={`space-y-3 ${contentGridClass}`}>
         {!showLessonBoard ? (
           <div className="space-y-3">
             <h2 className="text-xl font-semibold text-[#106FAA]">{tLearn("lessonsHeading")}</h2>
@@ -229,7 +255,7 @@ export default function LearningTab() {
                   <p className="mt-2 text-sm font-medium text-[#106FAA]">{tLearn("ageBand")}</p>
                   <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
                     <span className="rounded-full bg-[#EDF4FC] px-4 py-1.5 text-sm text-[#106FAA]">
-                      {tLearn("lessonMeta", { lessonCount: 10, hours: 24 })}
+                      {tLearn("lessonMeta", { lessonCount: MENTAL_MATH_LESSONS.length, hours: 24 })}
                     </span>
                     <button
                       type="button"
@@ -294,23 +320,14 @@ export default function LearningTab() {
 
             {activeLessonKey === "assessment" ? (
               <MentalMathAssessmentPanel onBackToLessons={() => setActiveLessonKey(null)} />
-            ) : activeLessonKey === "makingWhole" ? (
-              <section className="rounded-[24px] border border-white/70 bg-white/80 p-4 shadow-[0px_10px_15px_0px_rgba(0,0,0,0.1)]">
-                <div className="mb-3 flex items-center justify-between">
-                  <h3 className="text-xl font-semibold text-[#045E96]">{tLearn("lessons.makingWhole")}</h3>
-                  <button
-                    type="button"
-                    onClick={() => setActiveLessonKey(null)}
-                    className="rounded-full bg-[#EDF4FC] px-4 py-1.5 text-sm font-semibold text-[#045E96]"
-                  >
-                    {tLearn("backToLessons")}
-                  </button>
-                </div>
+            ) : activeLessonKey && activeLessonKey.startsWith("lesson") ? (
+              <div>
                 <MakingWholeLessonPanel
+                  lessonKey={activeLessonKey}
                   selectedSecret={activeSecretKey}
                   onSelectedSecretChange={setActiveSecretKey}
                 />
-              </section>
+              </div>
             ) : activeLessonKey ? (
               <section className="rounded-[24px] border border-white/70 bg-white/80 p-4 shadow-[0px_10px_15px_0px_rgba(0,0,0,0.1)]">
                 <div className="mb-3 flex items-center justify-between">
@@ -331,9 +348,9 @@ export default function LearningTab() {
                 <p className="text-sm leading-6 text-[#045E96]">{tLearn("lessonComingSoon")}</p>
               </section>
             ) : (
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+              <div className="grid grid-cols-1 items-start gap-4 md:grid-cols-2 xl:grid-cols-3">
                 {lessonCards.map((card, index) => {
-                  const isAlwaysFreeLesson = card.key === "assessment" || card.key === "makingWhole";
+                  const isAlwaysFreeLesson = card.key === "assessment" || card.key === "lesson1";
                   const isLocked = !learningAccess.bundleUnlocked && !isAlwaysFreeLesson;
                   void practiceProgressVersion;
                   const progressPercent = lessonProgressPercent(card.key);
@@ -349,14 +366,14 @@ export default function LearningTab() {
                       />
                     ) : null}
 
-                    <article className="relative flex h-full flex-col overflow-hidden rounded-[24px] border border-white/70 bg-white/80 p-4 shadow-[0px_10px_15px_0px_rgba(0,0,0,0.1)]">
+                    <article className="relative flex flex-col overflow-hidden rounded-[24px] border border-white/70 bg-white/80 p-[clamp(12px,1.25vw,16px)] shadow-[0px_10px_15px_0px_rgba(0,0,0,0.1)]">
                       <div className="relative overflow-hidden rounded-2xl">
                         <Image
                           src="/learning/mental_math/mental_math.png"
                           alt={card.title}
                           width={276}
                           height={100}
-                          className="h-[90px] w-full object-cover"
+                          className="h-[clamp(76px,6.25vw,90px)] w-full object-cover"
                         />
                         <LessonAccessTopBadge
                           access={learningAccess}
@@ -364,16 +381,16 @@ export default function LearningTab() {
                         />
                       </div>
 
-                      <div className="mt-4 min-h-[78px]">
+                      <div className="mt-[clamp(10px,1.1vw,16px)]">
                         <p className="text-[14px] leading-5 text-[#106FAA]">{card.pill}</p>
-                        <h3 className="mt-1 overflow-hidden text-ellipsis whitespace-nowrap text-[20px] font-semibold leading-7 text-[#045E96]">
+                        <h3 className="mt-1 break-words text-[clamp(16px,1.45vw,20px)] font-semibold leading-[1.35] text-[#045E96]">
                           {card.title}
                         </h3>
                       </div>
-                      <div className="mb-5 mt-4 h-px bg-slate-200" />
+                      <div className="mb-[clamp(10px,1.3vw,20px)] mt-[clamp(10px,1.1vw,16px)] h-px bg-slate-200" />
 
                       <div
-                        className={`mt-auto flex items-center ${isLocked ? "justify-start" : "justify-between"}`}
+                        className={`mt-auto flex items-center gap-3 ${isLocked ? "justify-start" : "justify-between"}`}
                       >
                         {card.key === "assessment" ? (
                           <span />
@@ -391,9 +408,6 @@ export default function LearningTab() {
                             onClick={() => {
                               if (card.key === "assessment") {
                                 setActiveLessonKey("assessment");
-                                setActiveSecretKey(null);
-                              } else if (card.key === "makingWhole") {
-                                setActiveLessonKey("makingWhole");
                                 setActiveSecretKey(null);
                               } else {
                                 setActiveLessonKey(card.key);

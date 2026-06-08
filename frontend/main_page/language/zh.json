@@ -925,15 +925,11 @@
       },
       "lessons": {
         "assessment": "第 0 课 · 摸底测评",
-        "makingWhole": "第 1 课 · 凑整补全",
-        "breakIntoParts": "第 2 课 · 拆数计算",
-        "rearrange": "第 3 课 · 重排凑整",
-        "roundAdjust": "第 4 课 · 近似修正",
-        "leftToRightFlow": "第 5 课 · 从左到右流式心算",
-        "friendlyNumbers": "第 6 课 · 朋友数",
-        "compensation": "第 7 课 · 补偿法",
-        "multiplicationPatterns": "第 8 课 · 乘法规律",
-        "divisionShortcuts": "第 9 课 · 除法捷径"
+        "lesson1": "第 1 课 · 基准数思维",
+        "lesson2": "第 2 课 · 拆分思维",
+        "lesson3": "第 3 课 · 重组思维",
+        "lesson4": "第 4 课 · 补数思维",
+        "lesson5": "第 5 课 · 数字模式思维"
       }
     },
     "math": "数学",
@@ -944,11 +940,11 @@
     },
     "mentalMathCategories": {
       "assessment": "测评摸底",
-      "makingWhole": "凑整与补全",
-      "breakIntoParts": "拆数运算",
-      "rearrange": "重排凑整",
-      "roundAndAdjust": "近似修正",
-      "leftToRightFlow": "从左到右流式心算"
+      "lesson1": "基准数思维",
+      "lesson2": "拆分思维",
+      "lesson3": "重组思维",
+      "lesson4": "补数思维",
+      "lesson5": "数字模式思维"
     },
     "makingWholeSecrets": {
       "secret1": "秘诀 1：朋友数",
@@ -963,8 +959,22 @@
       "secret10": "秘诀 10：从左到右减法"
     },
     "practice": {
+      "inProgressTitle": "练习",
+      "questionCountPill": "第 {current} / {total} 题",
+      "previousQuestion": "上一题",
+      "quitPractice": "退出练习",
+      "hintTitle": "提示 {num}",
+      "hintTooltip": "提示",
+      "aiExplainTooltip": "AI 解释",
+      "hintView": "查看",
+      "hintPrevious": "上一条提示",
+      "hintNext": "下一条提示",
+      "hintProgress": "{current} / {total}",
+      "closeHint": "关闭",
       "startPractice": "开始练习",
       "questionMapTitle": "题目地图",
+      "resetSecretProgress": "重置",
+      "viewReport": "查看报告",
       "expandQuestionMap": "展开题目地图",
       "collapseQuestionMap": "收起题目地图",
       "questionMapAttempted": "第{index}题已练习",
@@ -1010,7 +1020,11 @@
       "score": "得分：{score}/{total}",
       "totalTime": "总用时：{duration}",
       "retry": "再练一次（同分类）",
-      "nextCategory": "下一分类"
+      "nextCategory": "下一分类",
+      "practiceHistory": "练习历史",
+      "nextSecret": "下一个 Secret",
+      "historySessionLabel": "练习 {attempt}",
+      "historyBack": "返回"
     },
     "media": {
       "loading": "图片加载中...",
@@ -1132,7 +1146,6 @@
       "trendRange100n": "100条",
       "trendRangeAll": "全部",
       "trendTruncatedHint": "当前展示最近 {count} 条记录。",
-      "trendNeedMoreData": "当前范围至少需要两次记录才能形成折线。",
       "trendAverage": "平均值：{value}%"
     },
     "unlock": {

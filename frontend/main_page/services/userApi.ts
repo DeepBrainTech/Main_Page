@@ -49,6 +49,7 @@ export type {
   LearningModuleProgressData,
   LearningSubjectProgressModuleData,
   LearningSubjectProgressData,
+  LearningStudyTimeData,
 } from "@/services/learningApi";
 export {
   fetchMakingWholeSecretMedia,
@@ -57,7 +58,14 @@ export {
   fetchMakingWholeQuestionVideo,
   fetchLearningModuleProgress,
   recordLearningQuestionAttempt,
+  resetLearningTopicProgress,
   fetchLearningSubjectProgress,
+  upsertLearningPracticeReport,
+  fetchLearningPracticeReport,
+  fetchLearningPracticeReportHistory,
+  fetchLearningPracticeReportById,
+  fetchLearningStudyTime,
+  recordLearningStudyTime,
 } from "@/services/learningApi";
 
 export type {
