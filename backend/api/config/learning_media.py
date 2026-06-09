@@ -1,19 +1,13 @@
 from __future__ import annotations
 
+import re
 
-MAKING_WHOLE_MEDIA_BASE_PATH = "mental-math/making-whole"
-
-
-MAKING_WHOLE_SECRET_MEDIA_KEYS: dict[str, list[str]] = {
-    f"secret{i}": [
-        f"{MAKING_WHOLE_MEDIA_BASE_PATH}/secret{i}/secret_{i}.{'jpg' if i == 1 else 'png'}"
-    ]
-    for i in range(1, 11)
-}
+MAKING_WHOLE_MEDIA_BASE_PATH = "mental-math/"
+_SECRET_KEY_PATTERN = re.compile(r"^secret\d+$")
 
 
 def get_making_whole_question_video_key(secret_key: str, question_number: int) -> str | None:
-    if secret_key not in MAKING_WHOLE_SECRET_MEDIA_KEYS:
+    if not _SECRET_KEY_PATTERN.match(secret_key):
         return None
     if question_number < 1:
         return None

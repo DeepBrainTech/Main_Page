@@ -21,6 +21,7 @@ import {
   type AssessmentTrendPoint,
 } from "@/services/userApi";
 import { getMentalMathLesson, getMentalMathSecret } from "@/config/mental-math/catalog";
+import { isMentalMathLessonListKey } from "@/lib/mentalMathLabels";
 import {
   isMentalMathAnswerCorrect,
   parseFillInAnswer,
@@ -482,7 +483,11 @@ export default function MentalMathAssessmentPanel({ onBackToLessons }: MentalMat
       answers={answers}
       categoryStats={categoryStats}
       topicLabel={topicLabel}
-      categoryLabel={(category) => getMentalMathLesson(category)?.title ?? t(`mentalMathCategories.${category}`)}
+      categoryLabel={(category) =>
+        isMentalMathLessonListKey(category)
+          ? t(`mentalMathCategories.${category}`)
+          : (getMentalMathLesson(category)?.title ?? category)
+      }
       onOpenHistory={() => setTab("history")}
       onRetake={startTest}
     />

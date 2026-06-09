@@ -12,7 +12,6 @@ export interface MentalMathPracticeRecord {
 }
 
 interface UseMentalMathPracticeOptions {
-  generateQuestion?: () => MentalMathQuestion | null;
   questions?: MentalMathQuestion[];
   onQuestionAnswered?: (
     questionId: string,
@@ -52,7 +51,7 @@ function findSavedAnswer(recordsList: MentalMathPracticeRecord[], questionId?: s
 }
 
 export function useMentalMathPractice(options: UseMentalMathPracticeOptions) {
-  const { generateQuestion, questions, onQuestionAnswered } = options;
+  const { questions, onQuestionAnswered } = options;
   const [phase, setPhase] = useState<MentalMathPracticePhase>("ready");
   const [currentQuestion, setCurrentQuestion] = useState<MentalMathQuestion | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -122,15 +121,6 @@ export function useMentalMathPractice(options: UseMentalMathPracticeOptions) {
     setTotalAnsweredSeconds(stats.totalAnsweredSeconds);
   };
 
-  const getNextQuestion = () => {
-    if (questions) {
-      const nextQuestion = questions[questionCursorRef.current] ?? null;
-      questionCursorRef.current += 1;
-      return nextQuestion;
-    }
-    return generateQuestion?.() ?? null;
-  };
-
   const openQuestionAtIndex = (index: number) => {
     if (!questions || questions.length === 0) {
       setPhase("summary");
@@ -192,14 +182,7 @@ export function useMentalMathPractice(options: UseMentalMathPracticeOptions) {
       setPhase("inProgress");
       return;
     }
-    const firstQuestion = getNextQuestion();
-    if (!firstQuestion) {
-      setPhase("summary");
-      return;
-    }
-    setCurrentQuestion(firstQuestion);
-    setCurrentIndex(1);
-    setPhase("inProgress");
+    setPhase("summary");
   };
 
   const submitCurrentAnswer = () => {

@@ -930,7 +930,8 @@
         "lesson3": "第 3 课 · 重组思维",
         "lesson4": "第 4 课 · 补数思维",
         "lesson5": "第 5 课 · 数字模式思维"
-      }
+      },
+      "secretBreadcrumb": "秘诀 {number}：{title}"
     },
     "math": "数学",
     "mentalMath": "心算",
@@ -938,6 +939,8 @@
     "navigation": {
       "backOneLevel": "← 返回上一级"
     },
+    "secretLabel": "秘诀 {number}：{title}",
+    "lessonSecretMeta": "{lesson} · 秘诀 {number}",
     "mentalMathCategories": {
       "assessment": "测评摸底",
       "lesson1": "基准数思维",

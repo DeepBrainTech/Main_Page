@@ -42,7 +42,6 @@ export type { CurrentUserProfile, AuthMeMembership } from "@/services/authApi";
 export { fetchAuthMeMembership, fetchCurrentUserProfile } from "@/services/authApi";
 
 export type {
-  MakingWholeSecretMediaResponse,
   MakingWholeQuestionVideoResponse,
   MentalMathBundleAccessData,
   LearningTopicProgressData,
@@ -52,7 +51,6 @@ export type {
   LearningStudyTimeData,
 } from "@/services/learningApi";
 export {
-  fetchMakingWholeSecretMedia,
   fetchMentalMathBundleAccess,
   unlockMentalMathWithDiamonds,
   fetchMakingWholeQuestionVideo,

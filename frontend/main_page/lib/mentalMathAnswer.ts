@@ -257,7 +257,7 @@ function answerTexts(value: Rational): string[] {
   return Array.from(texts);
 }
 
-export function normalizeMentalMathAnswer(raw: string): string {
+function normalizeMentalMathAnswer(raw: string): string {
   return raw
     .trim()
     .replaceAll("−", "-")

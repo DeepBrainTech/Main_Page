@@ -1,7 +1,6 @@
 /**
  * Display-only diamond prices per course key. Authoritative charges: backend
  * `config/learning_commerce.py` and POST .../unlock-with-diamonds.
- * Kept next to mental-math-shop.ts for easy discovery.
  * When adding a course, extend LEARNING_BUNDLE_COMMERCE and keep numbers in sync.
  */
 export const MENTAL_MATH_COURSE_KEY = "mental_math" as const;

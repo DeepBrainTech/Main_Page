@@ -421,10 +421,6 @@ function ensureBaseCache() {
 
 ensureBaseCache();
 
-export function getPracticeProgressVersion(): number {
-  return clientVersion;
-}
-
 export function bumpPracticeProgressVersion() {
   clientVersion += 1;
   if (typeof window !== "undefined") {
@@ -495,20 +491,12 @@ export async function refreshLessonProgress(lessonKey: string): Promise<void> {
   await loadingPromises.get(lessonKey);
 }
 
-export async function refreshMakingWholeProgress(): Promise<void> {
-  await refreshLessonProgress(DEFAULT_LESSON_KEY);
-}
-
 export function getLessonQuestionTotal(lessonKey: string): number {
   const lesson = getMentalMathLesson(lessonKey);
   if (!lesson) {
     return 0;
   }
   return lesson.secrets.reduce((sum, secret) => sum + getSecretQuestionTotal(lessonKey, secret.key), 0);
-}
-
-export function getMakingWholeQuestionTotal(): number {
-  return getLessonQuestionTotal(DEFAULT_LESSON_KEY);
 }
 
 export function recordMentalMathAttempt(
@@ -548,16 +536,6 @@ export function recordMentalMathAttempt(
     timeSpentSeconds: questionDurationSeconds,
   });
   scheduleFlush();
-}
-
-export function recordMakingWholeAttempt(
-  questionId: string,
-  secretKey: string,
-  isCorrect: boolean = false,
-  userAnswer: string = "",
-  questionDurationSeconds: number = 0
-): void {
-  recordMentalMathAttempt(DEFAULT_LESSON_KEY, secretKey, questionId, isCorrect, userAnswer, questionDurationSeconds);
 }
 
 export function getSecretPracticeRecords(lessonKey: string, secretKey: string): SavedQuestionAttempt[] {
@@ -647,13 +625,6 @@ export async function saveSecretPracticeReport(
   }
 }
 
-export function getSecretPracticeReport(
-  lessonKey: string,
-  secretKey: string
-): PersistedSecretPracticeReport | null {
-  return practiceReportCache.get(cacheKey(lessonKey, secretKey)) ?? null;
-}
-
 export async function fetchSecretPracticeReportById(reportId: number): Promise<PersistedSecretPracticeReport | null> {
   try {
     const data = await fetchLearningPracticeReportById(reportId);
@@ -703,15 +674,6 @@ export function mapPracticeHistoryToTrend(list: PracticeReportHistorySummary[]):
     }));
 }
 
-export async function fetchSecretPracticeReportTrend(
-  lessonKey: string,
-  secretKey: string,
-  limit = 20
-): Promise<PracticeReportTrendPoint[]> {
-  const result = await fetchSecretPracticeReportHistory(lessonKey, secretKey, limit, 0);
-  return mapPracticeHistoryToTrend(result.list);
-}
-
 export async function fetchSecretPracticeReport(
   lessonKey: string,
   secretKey: string
@@ -737,11 +699,6 @@ export function hasSecretPracticeReport(lessonKey: string, secretKey: string): b
     return true;
   }
   return secretCache.get(key)?.hasPracticeReport ?? false;
-}
-
-export function clearSecretPracticeReport(lessonKey: string, secretKey: string): void {
-  practiceReportCache.delete(cacheKey(lessonKey, secretKey));
-  // Reports are permanent; keep View Report visible once earned.
 }
 
 export function getSecretSolvedCount(lessonKey: string, secretKey?: string): number {
@@ -802,28 +759,11 @@ function getLessonProgressFromSecretCache(lessonKey: string): number {
   return Math.min(100, Math.round((attempted / total) * 100));
 }
 
-export function getMakingWholeProgressPercent(): number {
-  return getLessonProgressFromSecretCache(DEFAULT_LESSON_KEY);
-}
-
 export function getSecretProgressPercent(lessonKey: string, secretKey?: string): number {
   const resolvedSecretKey = secretKey ?? lessonKey;
   const resolvedLessonKey = secretKey ? lessonKey : DEFAULT_LESSON_KEY;
   ensureBaseCache();
   return secretCache.get(cacheKey(resolvedLessonKey, resolvedSecretKey))?.progressPercentAttempted ?? 0;
-}
-
-export function isLessonFullyCompleteByPractice(lessonKey: string): boolean {
-  const total = getLessonQuestionTotal(lessonKey);
-  if (total <= 0) {
-    return false;
-  }
-  const lesson = getMentalMathLesson(lessonKey);
-  if (!lesson) {
-    return false;
-  }
-  const attempted = lesson.secrets.reduce((sum, secret) => sum + getSecretSolvedCount(lessonKey, secret.key), 0);
-  return attempted >= total;
 }
 
 export function getLessonProgressPercentByPractice(lessonKey: string): number {

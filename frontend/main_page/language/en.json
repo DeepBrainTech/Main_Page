@@ -931,7 +931,8 @@
         "lesson3": "Lesson 3: Rearrangement Thinking",
         "lesson4": "Lesson 4: Complement Thinking",
         "lesson5": "Lesson 5: Pattern Recognition"
-      }
+      },
+      "secretBreadcrumb": "Secret {number}: {title}"
     },
     "math": "Math",
     "mentalMath": "Mental Math",
@@ -939,6 +940,8 @@
     "navigation": {
       "backOneLevel": "← Back"
     },
+    "secretLabel": "Secret {number}: {title}",
+    "lessonSecretMeta": "{lesson} · Secret {number}",
     "mentalMathCategories": {
       "assessment": "Assessment",
       "lesson1": "Benchmark Thinking",

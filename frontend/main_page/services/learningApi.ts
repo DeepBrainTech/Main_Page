@@ -1,10 +1,5 @@
 import { credentialedFetch, getApiUrl, getAuthHeaders } from "@/services/apiClient";
 
-export interface MakingWholeSecretMediaResponse {
-  secret_key: string;
-  urls: string[];
-}
-
 export interface MakingWholeQuestionVideoResponse {
   secret_key: string;
   question_number: number;
@@ -105,20 +100,6 @@ export interface LearningStudyTimeData {
   total_seconds: number;
   total_hours: number;
   last_recorded_at: string | null;
-}
-
-export async function fetchMakingWholeSecretMedia(secretKey: string): Promise<MakingWholeSecretMediaResponse> {
-  const res = await credentialedFetch(
-    getApiUrl(`/api/user/learning/mental-math/making-whole/secret-media?secret_key=${encodeURIComponent(secretKey)}`),
-    { headers: getAuthHeaders() },
-  );
-  if (!res.ok) {
-    const j = await res.json().catch(() => ({}));
-    throw new Error(j?.detail ?? "fetch_secret_media_failed");
-  }
-  const json = await res.json();
-  if (!json?.data) throw new Error("fetch_secret_media_failed");
-  return json.data as MakingWholeSecretMediaResponse;
 }
 
 export async function fetchMentalMathBundleAccess(): Promise<MentalMathBundleAccessData> {

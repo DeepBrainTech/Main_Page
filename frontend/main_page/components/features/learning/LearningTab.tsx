@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import MentalMathAssessmentPanel from "@/components/features/learning/MentalMathAssessmentPanel";
 import MakingWholeLessonPanel from "@/components/features/learning/MakingWholeLessonPanel";
@@ -11,7 +11,8 @@ import UnlockCourseDialog from "@/components/features/learning/UnlockCourseDialo
 import { useLearningAccess } from "@/hooks/useLearningAccess";
 import CircularProgressRing from "@/components/ui/CircularProgressRing";
 import type { MentalMathSecretKey } from "@/types/learning";
-import { getMentalMathLesson, getMentalMathSecret, MENTAL_MATH_LESSONS } from "@/config/mental-math/catalog";
+import { getMentalMathSecret, MENTAL_MATH_LESSONS } from "@/config/mental-math/catalog";
+import { mentalMathLessonListKey } from "@/lib/mentalMathLabels";
 import {
   getLessonProgressPercentByPractice,
   refreshMentalMathLessonProgress,
@@ -29,10 +30,7 @@ const LESSON_ROWS = [
 const UNLOCK_BANNER_INDEX = 2;
 const BADGE_IDS = ["badgeNumberIgniter", "badgeFocusPilot", "badgeLogicExplorer"] as const;
 
-/**
- * Lesson progress shown on cards.
- * Lesson progress shown on cards.
- */
+/** Lesson progress shown on cards. */
 function lessonProgressPercent(lessonKey: string): number {
   return getLessonProgressPercentByPractice(lessonKey);
 }
@@ -106,27 +104,36 @@ export default function LearningTab() {
     return () => window.removeEventListener("learning-study-time-change", handler);
   }, []);
 
+  const lessonRowTitle = useCallback(
+    (key: string) => {
+      const listKey = mentalMathLessonListKey(key);
+      return listKey ? tLearn(`lessons.${listKey}`) : tLearn("lessonComingSoon");
+    },
+    [tLearn],
+  );
+
   const lessonCards = useMemo(
     () =>
       LESSON_ROWS.map((row) => ({
         ...row,
         pill: row.kind === "quiz" ? tLearn("pillQuiz") : tLearn("pillCourse"),
-        title:
-          row.key === "assessment"
-            ? tLearn("lessons.assessment")
-            : `${row.key.replace("lesson", "Lesson ")}: ${getMentalMathLesson(row.key)?.title ?? tLearn("lessonComingSoon")}`,
+        title: lessonRowTitle(row.key),
       })),
-    [tLearn]
+    [lessonRowTitle, tLearn],
   );
-  const activeLessonTitle =
-    activeLessonKey && activeLessonKey !== "assessment"
-      ? `${activeLessonKey.replace("lesson", "Lesson ")}: ${getMentalMathLesson(activeLessonKey)?.title ?? tLearn("lessonComingSoon")}`
-      : activeLessonKey === "assessment"
-        ? tLearn("lessons.assessment")
-        : null;
+  const activeLessonTitle = activeLessonKey ? lessonRowTitle(activeLessonKey) : null;
   const activeSecretTitle =
     activeLessonKey && activeSecretKey
-      ? `Secret ${activeSecretKey.replace("secret", "")}: ${getMentalMathSecret(activeLessonKey, activeSecretKey)?.title ?? ""}`
+      ? (() => {
+          const secret = getMentalMathSecret(activeLessonKey, activeSecretKey);
+          if (!secret) {
+            return null;
+          }
+          return tLearn("secretBreadcrumb", {
+            number: activeSecretKey.replace("secret", ""),
+            title: secret.title,
+          });
+        })()
       : null;
 
   const toBarHeight = (percent: number) => {
@@ -320,7 +327,7 @@ export default function LearningTab() {
 
             {activeLessonKey === "assessment" ? (
               <MentalMathAssessmentPanel onBackToLessons={() => setActiveLessonKey(null)} />
-            ) : activeLessonKey && activeLessonKey.startsWith("lesson") ? (
+            ) : activeLessonKey ? (
               <div>
                 <MakingWholeLessonPanel
                   lessonKey={activeLessonKey}
@@ -328,25 +335,6 @@ export default function LearningTab() {
                   onSelectedSecretChange={setActiveSecretKey}
                 />
               </div>
-            ) : activeLessonKey ? (
-              <section className="rounded-[24px] border border-white/70 bg-white/80 p-4 shadow-[0px_10px_15px_0px_rgba(0,0,0,0.1)]">
-                <div className="mb-3 flex items-center justify-between">
-                  <h3 className="text-xl font-semibold text-[#045E96]">
-                    {tLearn(`lessons.${activeLessonKey}` as "lessons.assessment")}
-                  </h3>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setActiveLessonKey(null);
-                      setActiveSecretKey(null);
-                    }}
-                    className="rounded-full bg-[#EDF4FC] px-4 py-1.5 text-sm font-semibold text-[#045E96]"
-                  >
-                    {tLearn("backToLessons")}
-                  </button>
-                </div>
-                <p className="text-sm leading-6 text-[#045E96]">{tLearn("lessonComingSoon")}</p>
-              </section>
             ) : (
               <div className="grid grid-cols-1 items-start gap-4 md:grid-cols-2 xl:grid-cols-3">
                 {lessonCards.map((card, index) => {

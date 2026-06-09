@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { getMentalMathLesson, getMentalMathSecret } from "@/config/mental-math/catalog";
+import { isMentalMathLessonListKey } from "@/lib/mentalMathLabels";
 import { useMentalMathPractice, type MentalMathPracticeRecord } from "@/hooks/useMentalMathPractice";
 import AssessmentReport from "@/components/features/learning/assessment/AssessmentReport";
 import PracticeReportHistoryPanel from "@/components/features/learning/PracticeReportHistoryPanel";
@@ -151,15 +152,28 @@ export default function MakingWholeLessonPanel({
     return ids;
   }, [lessonKey, practice.records, practiceProgressVersion, selectedSecret]);
 
+  const lessonCategoryLabel = isMentalMathLessonListKey(lessonKey)
+    ? tLearn(`mentalMathCategories.${lessonKey}`)
+    : lesson?.title ?? lessonKey;
+
+  const formatSecretLabel = useCallback(
+    (secretKey: string, title: string) =>
+      tLearn("secretLabel", {
+        number: secretKey.replace("secret", ""),
+        title,
+      }),
+    [tLearn],
+  );
+
   const practiceTopicLabel = useCallback(
     (topicKey: string) => {
       const secret = getMentalMathSecret(lessonKey, topicKey);
       if (!secret) {
         return topicKey;
       }
-      return `Secret ${secret.key.replace("secret", "")}: ${secret.title}`;
+      return formatSecretLabel(secret.key, secret.title);
     },
-    [lessonKey]
+    [formatSecretLabel, lessonKey],
   );
 
   const practiceReportAnswers = useMemo((): AssessmentAnswerPayload[] => {
@@ -534,7 +548,7 @@ export default function MakingWholeLessonPanel({
   }, [practice.phase, practice.totalDurationSeconds, viewingPersistedReport]);
 
   if (!lesson) {
-    return <p className="text-sm text-[#045E96]">{tLearn("lessonComingSoon")}</p>;
+    return <p className="text-sm text-[#045E96]">{tLearn("home.lessonComingSoon")}</p>;
   }
 
   if (!selectedSecret || !selectedSecretData) {
@@ -567,7 +581,7 @@ export default function MakingWholeLessonPanel({
                   {tLearn("home.pillCourse")}
                 </p>
                 <h3 className="mt-1 break-words text-[clamp(15px,1.35vw,20px)] font-semibold leading-[1.35] text-[#045E96]">
-                  Secret {secret.key.replace("secret", "")}: {secret.title}
+                  {formatSecretLabel(secret.key, secret.title)}
                 </h3>
               </div>
               <div className="mb-[clamp(10px,1.3vw,20px)] mt-[clamp(10px,1.1vw,16px)] h-px bg-slate-200" />
@@ -711,10 +725,13 @@ export default function MakingWholeLessonPanel({
           <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
             <div>
               <p className="text-sm font-semibold text-[#106FAA]">
-                {lesson.title} · Secret {selectedSecretData.key.replace("secret", "")}
+                {tLearn("lessonSecretMeta", {
+                  lesson: lessonCategoryLabel,
+                  number: selectedSecretData.key.replace("secret", ""),
+                })}
               </p>
               <h3 className="mt-1 text-2xl font-semibold text-[#045E96]">
-                Secret {selectedSecretData.key.replace("secret", "")}: {selectedSecretData.title}
+                {formatSecretLabel(selectedSecretData.key, selectedSecretData.title)}
               </h3>
             </div>
           </div>
@@ -915,7 +932,11 @@ export default function MakingWholeLessonPanel({
               answers={practiceReportAnswers}
               categoryStats={[]}
               topicLabel={practiceTopicLabel}
-              categoryLabel={(category) => getMentalMathLesson(category)?.title ?? category}
+              categoryLabel={(category) =>
+                isMentalMathLessonListKey(category)
+                  ? tLearn(`mentalMathCategories.${category}`)
+                  : (getMentalMathLesson(category)?.title ?? category)
+              }
               variant="practice"
               onOpenHistory={openPracticeHistory}
               onRetake={goToNextSecret}

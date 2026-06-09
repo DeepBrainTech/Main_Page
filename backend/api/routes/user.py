@@ -47,7 +47,7 @@ from schemas import (
 from auth import get_current_active_user
 from config.shop_items import SHOP_ITEMS, get_shop_items_by_game, is_item_available_for_game
 from config.learning_commerce import MENTAL_MATH_COURSE_KEY, get_learning_bundle_commerce
-from config.learning_media import MAKING_WHOLE_SECRET_MEDIA_KEYS, get_making_whole_question_video_key
+from config.learning_media import get_making_whole_question_video_key
 from utils.r2_storage import generate_object_read_url
 
 router = APIRouter(prefix="/api/user", tags=["用户"])
@@ -205,27 +205,6 @@ def _this_month_in_tz(tz: str) -> str:
         return datetime.now(ZoneInfo(tz)).strftime("%Y-%m")
     except Exception:
         return datetime.now(ZoneInfo(DEFAULT_TZ)).strftime("%Y-%m")
-
-
-@router.get("/learning/mental-math/making-whole/secret-media", response_model=APIResponse)
-async def get_making_whole_secret_media(
-    secret_key: str = Query(..., description="secret1 ... secret10"),
-    current_user: User = Depends(get_current_active_user),
-):
-    """获取 Making Whole secret 对应的私有图片签名地址。"""
-    _ = current_user
-    object_keys = MAKING_WHOLE_SECRET_MEDIA_KEYS.get(secret_key)
-    if not object_keys:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="invalid_secret_key")
-
-    try:
-        urls = [generate_object_read_url(object_key=key, expires_seconds=600) for key in object_keys]
-    except RuntimeError as exc:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
-    except Exception as exc:
-        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="media_url_generate_failed") from exc
-
-    return APIResponse(success=True, message="ok", data={"secret_key": secret_key, "urls": urls})
 
 
 @router.post("/learning/progress/question-attempt", response_model=APIResponse)

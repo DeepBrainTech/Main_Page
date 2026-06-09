@@ -46,6 +46,4 @@ export interface MentalMathQuestion {
   hints?: readonly string[];
 }
 
-export type MentalMathQuestionMap = Record<string, MentalMathQuestion[]>;
-
 export type MentalMathPracticePhase = "ready" | "inProgress" | "questionResult" | "milestone" | "summary";
