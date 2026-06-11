@@ -2,14 +2,20 @@ from __future__ import annotations
 
 import re
 
-MAKING_WHOLE_MEDIA_BASE_PATH = "mental-math/"
+MAKING_WHOLE_MEDIA_BASE_PATH = "mental-math"
+_LESSON_KEY_PATTERN = re.compile(r"^lesson\d+$")
 _SECRET_KEY_PATTERN = re.compile(r"^secret\d+$")
 
 
-def get_making_whole_question_video_key(secret_key: str, question_number: int) -> str | None:
+def get_making_whole_question_video_key(
+    lesson_key: str,
+    secret_key: str,
+    question_number: int,
+) -> str | None:
+    if not _LESSON_KEY_PATTERN.match(lesson_key):
+        return None
     if not _SECRET_KEY_PATTERN.match(secret_key):
         return None
     if question_number < 1:
         return None
-    return f"{MAKING_WHOLE_MEDIA_BASE_PATH}/{secret_key}/{question_number:02d}.mp4"
-
+    return f"{MAKING_WHOLE_MEDIA_BASE_PATH}/{lesson_key}/{secret_key}/{question_number:02d}.mp4"

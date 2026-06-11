@@ -742,13 +742,14 @@ async def record_learning_study_time(
 
 @router.get("/learning/mental-math/making-whole/question-video", response_model=APIResponse)
 async def get_making_whole_question_video(
-    secret_key: str = Query(..., description="secret1 ... secret10"),
+    lesson_key: str = Query(..., description="lesson1 ... lesson5"),
+    secret_key: str = Query(..., description="secret1 ... secret20"),
     question_number: int = Query(..., ge=1, description="1 ... 20"),
     current_user: User = Depends(get_current_active_user),
 ):
     """Get a signed video URL for a Making Whole practice question."""
     _ = current_user
-    object_key = get_making_whole_question_video_key(secret_key, question_number)
+    object_key = get_making_whole_question_video_key(lesson_key, secret_key, question_number)
     if not object_key:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="invalid_question_video_request")
 
@@ -762,7 +763,12 @@ async def get_making_whole_question_video(
     return APIResponse(
         success=True,
         message="ok",
-        data={"secret_key": secret_key, "question_number": question_number, "url": url},
+        data={
+            "lesson_key": lesson_key,
+            "secret_key": secret_key,
+            "question_number": question_number,
+            "url": url,
+        },
     )
 
 

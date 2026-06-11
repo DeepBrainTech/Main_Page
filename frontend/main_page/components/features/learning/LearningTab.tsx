@@ -336,14 +336,14 @@ export default function LearningTab() {
                 />
               </div>
             ) : (
-              <div className="grid grid-cols-1 items-start gap-4 md:grid-cols-2 xl:grid-cols-3">
+              <div className="grid grid-cols-1 items-stretch gap-4 md:grid-cols-2 xl:grid-cols-3">
                 {lessonCards.map((card, index) => {
                   const isAlwaysFreeLesson = card.key === "assessment" || card.key === "lesson1";
                   const isLocked = !learningAccess.bundleUnlocked && !isAlwaysFreeLesson;
                   void practiceProgressVersion;
                   const progressPercent = lessonProgressPercent(card.key);
                   return (
-                  <div key={card.key} className={index === UNLOCK_BANNER_INDEX ? "contents" : ""}>
+                  <div key={card.key} className={index === UNLOCK_BANNER_INDEX ? "contents" : "h-full"}>
                     {showUnlockBanner && index === UNLOCK_BANNER_INDEX ? (
                       <UnlockBanner
                         title={tLearn("unlockBannerTitle")}
@@ -354,8 +354,8 @@ export default function LearningTab() {
                       />
                     ) : null}
 
-                    <article className="relative flex flex-col overflow-hidden rounded-[24px] border border-white/70 bg-white/80 p-[clamp(12px,1.25vw,16px)] shadow-[0px_10px_15px_0px_rgba(0,0,0,0.1)]">
-                      <div className="relative overflow-hidden rounded-2xl">
+                    <article className="relative flex h-full flex-col overflow-hidden rounded-[24px] border border-white/70 bg-white/80 p-[clamp(12px,1.25vw,16px)] shadow-[0px_10px_15px_0px_rgba(0,0,0,0.1)]">
+                      <div className="relative shrink-0 overflow-hidden rounded-2xl">
                         <Image
                           src="/learning/mental_math/mental_math.png"
                           alt={card.title}
@@ -369,27 +369,27 @@ export default function LearningTab() {
                         />
                       </div>
 
-                      <div className="mt-[clamp(10px,1.1vw,16px)]">
-                        <p className="text-[14px] leading-5 text-[#106FAA]">{card.pill}</p>
-                        <h3 className="mt-1 break-words text-[clamp(16px,1.45vw,20px)] font-semibold leading-[1.35] text-[#045E96]">
+                      <div className="flex flex-1 flex-col pt-[clamp(10px,1.1vw,16px)]">
+                        <p className="shrink-0 text-[14px] leading-5 text-[#106FAA]">{card.pill}</p>
+                        <h3 className="mt-1 flex-1 break-words text-[clamp(16px,1.45vw,20px)] font-semibold leading-[1.35] text-[#045E96]">
                           {card.title}
                         </h3>
                       </div>
-                      <div className="mb-[clamp(10px,1.3vw,20px)] mt-[clamp(10px,1.1vw,16px)] h-px bg-slate-200" />
+                      <div className="h-px shrink-0 bg-slate-200" />
 
                       <div
-                        className={`mt-auto flex items-center gap-3 ${isLocked ? "justify-start" : "justify-between"}`}
+                        className={`flex min-h-[44px] shrink-0 items-center gap-3 pt-[clamp(10px,1.1vw,16px)] ${isLocked ? "justify-start" : "justify-between"}`}
                       >
-                        {card.key === "assessment" ? (
-                          <span />
-                        ) : (
-                          <div className="flex items-center gap-2">
-                            <CircularProgressRing value={progressPercent} size={28} />
-                            <p className="text-base font-semibold text-[#333]">
-                              {tLearn("progressPercent", { value: progressPercent })}
-                            </p>
-                          </div>
-                        )}
+                        <div className="flex min-h-[28px] min-w-0 flex-1 items-center gap-2">
+                          {card.key === "assessment" ? null : (
+                            <>
+                              <CircularProgressRing value={progressPercent} size={28} />
+                              <p className="text-base font-semibold text-[#333]">
+                                {tLearn("progressPercent", { value: progressPercent })}
+                              </p>
+                            </>
+                          )}
+                        </div>
                         {!isLocked ? (
                           <button
                             type="button"

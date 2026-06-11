@@ -400,7 +400,7 @@ export default function MakingWholeLessonPanel({
     const minGeneratingMs = 3000 + Math.random() * 4000;
     try {
       const [result] = await Promise.all([
-        fetchMakingWholeQuestionVideo(selectedSecret, practice.currentIndex),
+        fetchMakingWholeQuestionVideo(lessonKey, selectedSecret, practice.currentIndex),
         new Promise<true>((resolve) => {
           setTimeout(() => resolve(true), minGeneratingMs);
         }),
@@ -565,7 +565,7 @@ export default function MakingWholeLessonPanel({
               key={secret.key}
               className="relative flex h-full flex-col rounded-[24px] border border-white/70 bg-white/80 p-[clamp(12px,1.25vw,16px)] shadow-[0px_10px_15px_0px_rgba(0,0,0,0.1)]"
             >
-              <div className="relative overflow-hidden rounded-2xl">
+              <div className="relative shrink-0 overflow-hidden rounded-2xl">
                 <img
                   src="/learning/mental_math/mental_math.png"
                   alt={secret.title}
@@ -576,17 +576,17 @@ export default function MakingWholeLessonPanel({
                 </span>
               </div>
 
-              <div className="mt-[clamp(10px,1.1vw,16px)] min-h-[calc(20px+clamp(15px,1.35vw,20px)*1.35*3)]">
-                <p className="text-[14px] leading-5 text-[#106FAA]">
+              <div className="flex flex-1 flex-col pt-[clamp(10px,1.1vw,16px)]">
+                <p className="shrink-0 text-[14px] leading-5 text-[#106FAA]">
                   {tLearn("home.pillCourse")}
                 </p>
-                <h3 className="mt-1 break-words text-[clamp(15px,1.35vw,20px)] font-semibold leading-[1.35] text-[#045E96]">
+                <h3 className="mt-1 flex-1 break-words text-[clamp(15px,1.35vw,20px)] font-semibold leading-[1.35] text-[#045E96]">
                   {formatSecretLabel(secret.key, secret.title)}
                 </h3>
               </div>
-              <div className="mb-[clamp(10px,1.3vw,20px)] mt-[clamp(10px,1.1vw,16px)] h-px bg-slate-200" />
+              <div className="h-px shrink-0 bg-slate-200" />
 
-              <div className="mt-auto flex items-center justify-between gap-3">
+              <div className="flex min-h-[44px] shrink-0 items-center justify-between gap-3 pt-[clamp(10px,1.1vw,16px)]">
                 <div className="flex min-w-0 flex-1 items-center gap-2">
                   <CircularProgressRing value={progressPercent} size={28} />
                   <p className="text-base font-semibold text-[#333]">

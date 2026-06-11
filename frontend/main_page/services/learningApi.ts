@@ -1,6 +1,7 @@
 import { credentialedFetch, getApiUrl, getAuthHeaders } from "@/services/apiClient";
 
 export interface MakingWholeQuestionVideoResponse {
+  lesson_key: string;
   secret_key: string;
   question_number: number;
   url: string;
@@ -139,10 +140,12 @@ export async function unlockMentalMathWithDiamonds(
 }
 
 export async function fetchMakingWholeQuestionVideo(
+  lessonKey: string,
   secretKey: string,
   questionNumber: number,
 ): Promise<MakingWholeQuestionVideoResponse> {
   const params = new URLSearchParams({
+    lesson_key: lessonKey,
     secret_key: secretKey,
     question_number: String(questionNumber),
   });
