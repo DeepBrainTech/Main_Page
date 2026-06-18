@@ -80,6 +80,11 @@ class BillingDiamondCheckoutBody(BaseModel):
     locale: str = Field(default="en", min_length=2, max_length=5)
 
 
+class BillingCoinCheckoutBody(BaseModel):
+    bundle_id: Literal["coins100", "coins250", "coins800", "coins1500", "coins2500"]
+    locale: str = Field(default="en", min_length=2, max_length=5)
+
+
 class BillingPortalBody(BaseModel):
     locale: str = Field(default="en", min_length=2, max_length=5)
 

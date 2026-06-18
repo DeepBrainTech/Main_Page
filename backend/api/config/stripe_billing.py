@@ -8,6 +8,7 @@ from typing import Literal, Optional
 MembershipPaidPlan = Literal["plus", "premium"]
 BillingInterval = Literal["monthly", "annual"]
 DiamondBundleId = Literal["diamonds10", "diamonds25", "diamonds70", "diamonds200", "diamonds300"]
+CoinBundleId = Literal["coins100", "coins250", "coins800", "coins1500", "coins2500"]
 
 DIAMOND_BUNDLES: dict[DiamondBundleId, int] = {
     "diamonds10": 10,
@@ -15,6 +16,14 @@ DIAMOND_BUNDLES: dict[DiamondBundleId, int] = {
     "diamonds70": 70,
     "diamonds200": 200,
     "diamonds300": 300,
+}
+
+COIN_BUNDLES: dict[CoinBundleId, int] = {
+    "coins100": 100,
+    "coins250": 250,
+    "coins800": 800,
+    "coins1500": 1500,
+    "coins2500": 2500,
 }
 
 
@@ -57,6 +66,18 @@ def get_diamond_bundle_price_id(bundle_id: DiamondBundleId) -> Optional[str]:
     return val or None
 
 
+def get_coin_bundle_price_id(bundle_id: CoinBundleId) -> Optional[str]:
+    env_map = {
+        "coins100": "STRIPE_PRICE_COINS_100",
+        "coins250": "STRIPE_PRICE_COINS_250",
+        "coins800": "STRIPE_PRICE_COINS_800",
+        "coins1500": "STRIPE_PRICE_COINS_1500",
+        "coins2500": "STRIPE_PRICE_COINS_2500",
+    }
+    val = (os.getenv(env_map[bundle_id]) or "").strip()
+    return val or None
+
+
 def price_id_index() -> dict[str, tuple[MembershipPaidPlan, BillingInterval]]:
     """Reverse lookup for webhook: price_id -> (plan, interval)."""
     out: dict[str, tuple[MembershipPaidPlan, BillingInterval]] = {}
@@ -81,4 +102,6 @@ def is_stripe_billing_configured() -> bool:
 def is_stripe_shop_configured() -> bool:
     if not get_stripe_secret_key():
         return False
-    return any(get_diamond_bundle_price_id(bundle_id) for bundle_id in DIAMOND_BUNDLES)
+    diamond_ready = any(get_diamond_bundle_price_id(bundle_id) for bundle_id in DIAMOND_BUNDLES)
+    coin_ready = any(get_coin_bundle_price_id(bundle_id) for bundle_id in COIN_BUNDLES)
+    return diamond_ready or coin_ready

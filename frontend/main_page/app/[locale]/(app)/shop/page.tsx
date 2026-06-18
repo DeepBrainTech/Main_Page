@@ -1,8 +1,8 @@
 "use client";
 
 import ShopProductCard from "@/components/features/shop/ShopProductCard";
-import { shopProducts } from "@/constants/shopProducts";
-import { createDiamondCheckoutSession } from "@/services/userApi";
+import { shopProducts, type CoinBundleId, type DiamondBundleId, type ShopBundleId } from "@/constants/shopProducts";
+import { createCoinCheckoutSession, createDiamondCheckoutSession } from "@/services/userApi";
 import { useLocale, useTranslations } from "next-intl";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -33,16 +33,16 @@ export default function ShopPage() {
     }
   }, [searchParams, pathname, router]);
 
-  const handlePurchase = async (bundleId: string) => {
+  const handlePurchase = async (productId: ShopBundleId, kind: "diamond" | "coin") => {
     if (redirectingProductId) return;
     setError(null);
     setSuccessMessage(null);
-    setRedirectingProductId(bundleId);
+    setRedirectingProductId(productId);
     try {
-      const url = await createDiamondCheckoutSession({
-        bundle_id: bundleId as "diamonds10" | "diamonds25" | "diamonds70" | "diamonds200" | "diamonds300",
-        locale,
-      });
+      const url =
+        kind === "coin"
+          ? await createCoinCheckoutSession({ bundle_id: productId as CoinBundleId, locale })
+          : await createDiamondCheckoutSession({ bundle_id: productId as DiamondBundleId, locale });
       window.location.href = url;
     } catch (e) {
       const detail = e instanceof Error ? e.message : "checkout_failed";
@@ -79,7 +79,7 @@ export default function ShopPage() {
               iconAlt={title}
               badge={product.badgeKey ? tShop(product.badgeKey) : undefined}
               disabled={Boolean(redirectingProductId)}
-              onPurchase={() => void handlePurchase(product.id)}
+              onPurchase={() => void handlePurchase(product.id, product.kind)}
             />
           );
         })}

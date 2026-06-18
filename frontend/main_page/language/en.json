@@ -84,7 +84,7 @@
     }
   },
   "shop": {
-    "checkoutSuccess": "Payment completed. Diamonds may take a moment to appear.",
+    "checkoutSuccess": "Payment completed. Your purchase may take a moment to appear.",
     "checkoutCanceled": "Checkout canceled.",
     "errors": {
       "checkoutFailed": "Could not start checkout. Try again later.",
@@ -114,6 +114,26 @@
       "diamonds300": {
         "title": "300 Diamonds",
         "price": "$ 20.99"
+      },
+      "coins100": {
+        "title": "100 Coins",
+        "price": "$ 0.99"
+      },
+      "coins250": {
+        "title": "250 Coins",
+        "price": "$ 1.99"
+      },
+      "coins800": {
+        "title": "800 Coins",
+        "price": "$ 5.99"
+      },
+      "coins1500": {
+        "title": "1500 Coins",
+        "price": "$ 10.99"
+      },
+      "coins2500": {
+        "title": "2500 Coins",
+        "price": "$ 15.99"
       }
     }
   },

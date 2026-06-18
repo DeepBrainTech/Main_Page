@@ -52,6 +52,8 @@ services:
       # Stripe (optional). Set keys + price ids to enable Checkout on /membership.
       # - STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET
       # - STRIPE_PRICE_PLUS_MONTHLY, STRIPE_PRICE_PLUS_ANNUAL, STRIPE_PRICE_PREMIUM_MONTHLY, STRIPE_PRICE_PREMIUM_ANNUAL
+      # - STRIPE_PRICE_DIAMONDS_10, STRIPE_PRICE_DIAMONDS_25, STRIPE_PRICE_DIAMONDS_70, STRIPE_PRICE_DIAMONDS_200, STRIPE_PRICE_DIAMONDS_300
+      # - STRIPE_PRICE_COINS_100, STRIPE_PRICE_COINS_250, STRIPE_PRICE_COINS_800, STRIPE_PRICE_COINS_1500, STRIPE_PRICE_COINS_2500
       # - PUBLIC_APP_URL=https://your-frontend-origin (e.g. http://localhost:3000)
       # Enable Customer Portal once in Stripe Dashboard → Billing → Customer portal.
     volumes:

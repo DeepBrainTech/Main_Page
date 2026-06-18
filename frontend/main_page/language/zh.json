@@ -84,7 +84,7 @@
     }
   },
   "shop": {
-    "checkoutSuccess": "支付已完成，钻石可能需要稍等片刻后到账。",
+    "checkoutSuccess": "支付已完成，商品可能需要稍等片刻后到账。",
     "checkoutCanceled": "已取消支付。",
     "errors": {
       "checkoutFailed": "无法打开支付页面，请稍后重试。",
@@ -114,6 +114,26 @@
       "diamonds300": {
         "title": "300 钻石",
         "price": "$ 20.99"
+      },
+      "coins100": {
+        "title": "100 金币",
+        "price": "$ 0.99"
+      },
+      "coins250": {
+        "title": "250 金币",
+        "price": "$ 1.99"
+      },
+      "coins800": {
+        "title": "800 金币",
+        "price": "$ 5.99"
+      },
+      "coins1500": {
+        "title": "1500 金币",
+        "price": "$ 10.99"
+      },
+      "coins2500": {
+        "title": "2500 金币",
+        "price": "$ 15.99"
       }
     }
   },

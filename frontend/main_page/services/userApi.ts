@@ -28,6 +28,7 @@ export {
   membershipErrorKeyFromDetail,
   createStripeCheckoutSession,
   createDiamondCheckoutSession,
+  createCoinCheckoutSession,
   createStripeBillingPortalSession,
   changeStripeSubscription,
   cancelScheduledStripeSubscriptionChange,

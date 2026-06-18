@@ -13,9 +13,11 @@ from sqlalchemy.orm import Session
 
 from auth import get_current_active_user
 from config.stripe_billing import (
+    COIN_BUNDLES,
     DIAMOND_BUNDLES,
     get_price_id,
     get_public_app_url,
+    get_coin_bundle_price_id,
     get_diamond_bundle_price_id,
     get_stripe_secret_key,
     get_stripe_webhook_secret,
@@ -29,6 +31,7 @@ from schemas import (
     APIResponse,
     BillingChangeSubscriptionBody,
     BillingCheckoutBody,
+    BillingCoinCheckoutBody,
     BillingDiamondCheckoutBody,
     BillingPortalBody,
     BillingUpdatePaymentMethodBody,
@@ -561,6 +564,64 @@ def _fulfill_diamond_checkout_session(db: Session, sess, event_id: str | None = 
     )
 
 
+def _fulfill_coin_checkout_session(db: Session, sess, event_id: str | None = None) -> None:
+    session_id = sess.get("id")
+    if not session_id:
+        logger.warning("coin checkout session missing id")
+        return
+    existing = (
+        db.query(StripeCheckoutFulfillment)
+        .filter(StripeCheckoutFulfillment.stripe_session_id == session_id)
+        .first()
+    )
+    if existing:
+        return
+
+    meta = sess.get("metadata") or {}
+    if meta.get("kind") != "coin_bundle":
+        return
+    uid = meta.get("user_id") or sess.get("client_reference_id")
+    bundle_id = meta.get("bundle_id")
+    coins = COIN_BUNDLES.get(bundle_id)
+    if not uid or not coins:
+        logger.warning("coin checkout session %s missing user or bundle metadata", session_id)
+        return
+
+    user = db.query(User).filter(User.id == int(uid)).first()
+    if not user:
+        logger.warning("coin checkout session user %s not found", uid)
+        return
+
+    customer_id = sess.get("customer")
+    if customer_id and not user.stripe_customer_id:
+        user.stripe_customer_id = str(customer_id)
+
+    rewards = _get_or_create_rewards(db, user.id)
+    rewards.coins += coins
+    db.add(rewards)
+    db.add(user)
+    db.add(
+        StripeCheckoutFulfillment(
+            stripe_session_id=session_id,
+            user_id=user.id,
+            kind="coin_bundle",
+            amount=coins,
+        )
+    )
+    db.commit()
+    create_user_notification(
+        db,
+        user_id=user.id,
+        notification_type="purchase",
+        title="Purchase Successful",
+        message=f"{coins} Coins have been added to your bag.",
+        icon="purchase",
+        source="stripe",
+        source_event_id=_source_event(event_id or session_id, "purchase"),
+        metadata={"bundle_id": bundle_id, "coins": coins, "stripe_session_id": session_id},
+    )
+
+
 @router.get("/status", response_model=APIResponse)
 async def billing_status(
     current_user: User = Depends(get_current_active_user),
@@ -727,6 +788,57 @@ async def create_diamond_checkout_session(
         "user_id": str(current_user.id),
         "bundle_id": body.bundle_id,
         "diamonds": str(diamonds),
+    }
+    session = stripe.checkout.Session.create(
+        mode="payment",
+        customer=current_user.stripe_customer_id,
+        client_reference_id=str(current_user.id),
+        line_items=[{"price": price_id, "quantity": 1}],
+        success_url=success_url,
+        cancel_url=cancel_url,
+        metadata=meta,
+        payment_intent_data={"metadata": meta},
+        locale=_stripe_ui_locale(lo),
+    )
+
+    return APIResponse(success=True, message="ok", data={"url": session.url})
+
+
+@router.post("/coin-checkout-session", response_model=APIResponse)
+async def create_coin_checkout_session(
+    body: BillingCoinCheckoutBody,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+):
+    """Create a one-time Stripe Checkout session for coin bundles."""
+    if not is_stripe_shop_configured():
+        raise HTTPException(status_code=503, detail="stripe_not_configured")
+    _stripe_configure()
+
+    price_id = get_coin_bundle_price_id(body.bundle_id)
+    if not price_id:
+        raise HTTPException(status_code=503, detail="stripe_price_not_configured")
+
+    lo = _allowed_locale(body.locale)
+    base = get_public_app_url()
+    success_url = f"{base}{_shop_path(lo)}?checkout=success"
+    cancel_url = f"{base}{_shop_path(lo)}?checkout=canceled"
+
+    if not current_user.stripe_customer_id:
+        customer = stripe.Customer.create(
+            email=current_user.email,
+            metadata={"user_id": str(current_user.id)},
+        )
+        current_user.stripe_customer_id = customer.id
+        db.add(current_user)
+        db.commit()
+
+    coins = COIN_BUNDLES[body.bundle_id]
+    meta = {
+        "kind": "coin_bundle",
+        "user_id": str(current_user.id),
+        "bundle_id": body.bundle_id,
+        "coins": str(coins),
     }
     session = stripe.checkout.Session.create(
         mode="payment",
@@ -1087,6 +1199,7 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
             sess = obj
             if sess.get("mode") == "payment":
                 _fulfill_diamond_checkout_session(db, sess, event_id)
+                _fulfill_coin_checkout_session(db, sess, event_id)
                 return APIResponse(success=True, message="ok", data={"received": True})
             if sess.get("mode") != "subscription":
                 return APIResponse(success=True, message="ok", data={"received": True})
