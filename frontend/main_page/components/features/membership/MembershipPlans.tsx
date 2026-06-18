@@ -26,6 +26,9 @@ interface MembershipPlansProps {
   pendingPlan?: "plus" | "premium" | null;
   pendingBillingInterval?: MembershipBillingInterval | null;
   pendingEffectiveAtIso?: string | null;
+  trialEligible?: boolean;
+  subscriptionStatus?: "trialing" | "active" | "past_due" | null;
+  trialEndAtIso?: string | null;
   notice?: ReactNode;
 }
 
@@ -183,6 +186,9 @@ export default function MembershipPlans({
   pendingPlan = null,
   pendingBillingInterval = null,
   pendingEffectiveAtIso = null,
+  trialEligible = false,
+  subscriptionStatus = null,
+  trialEndAtIso = null,
   notice = null,
 }: MembershipPlansProps) {
   const locale = useLocale();
@@ -264,16 +270,20 @@ export default function MembershipPlans({
           let handleClick: () => void = () => void onPlanAction(plan.key);
           const pendingMatches =
             pendingPlan === plan.key && pendingBillingInterval === billingInterval && Boolean(pendingDateLabel);
+          const isPaidPlan = plan.key === "plus" || plan.key === "premium";
+          const isTrialingCurrentPlan =
+            isCurrent && subscriptionStatus === "trialing" && (plan.key === "plus" || plan.key === "premium");
+          const trialEndDateLabel = trialEndAtIso ? formatMembershipPeriodDate(trialEndAtIso, locale) : "";
           const showCurrentStatusRow =
             isCurrent &&
             (plan.key === "plus" || plan.key === "premium") &&
-            Boolean(periodDateLabel || isCanceledAtPeriodEnd || hasScheduledPlanChange);
+            Boolean(periodDateLabel || trialEndDateLabel || isCanceledAtPeriodEnd || hasScheduledPlanChange);
           const showPendingStatusRow = pendingMatches;
           const showStatusRow = showCurrentStatusRow || showPendingStatusRow;
-          const isPaidPlan = plan.key === "plus" || plan.key === "premium";
           const paidPlanChangeTiming = isPaidPlan
             ? getPaidPlanChangeTiming(currentPlan, currentBillingInterval, plan.key, billingInterval)
             : "scheduled";
+          const showFreeTrialRow = isPaidPlan && !hasStripeSubscription && trialEligible;
 
           if (hasStripeSubscription) {
             if (plan.key === "free") {
@@ -302,8 +312,9 @@ export default function MembershipPlans({
             buttonLabel = t("freePlan");
             buttonDisabled = true;
           } else {
-            buttonLabel =
-              billingInterval === "annual"
+            buttonLabel = trialEligible
+              ? t("startFreeTrial")
+              : billingInterval === "annual"
                 ? t("switchPlanAnnual", { plan: t(`plans.${plan.key}`) })
                 : t("switchPlan", { plan: t(`plans.${plan.key}`) });
             buttonDisabled = buttonDisabled || !checkoutEnabled;
@@ -378,7 +389,9 @@ export default function MembershipPlans({
                     {showPendingStatusRow ? (
                       <span>{t("planStartsOn", { date: pendingDateLabel })}</span>
                     ) : periodDateLabel ? (
-                      isCanceledAtPeriodEnd || hasScheduledPlanChange ? (
+                      isTrialingCurrentPlan && trialEndDateLabel ? (
+                        <span>{t("trialEndsOn", { date: trialEndDateLabel })}</span>
+                      ) : isCanceledAtPeriodEnd || hasScheduledPlanChange ? (
                         <span>{t("planExpiresOn", { date: periodDateLabel })}</span>
                       ) : (
                         <span>{t("planRenewOn", { date: periodDateLabel })}</span>
@@ -401,6 +414,12 @@ export default function MembershipPlans({
                     role="status"
                   >
                     {t("currentPlan")}
+                  </div>
+                ) : null}
+                {showFreeTrialRow ? (
+                  <div className="flex items-center justify-center gap-2">
+                    <Image src="/membership/freetrial.svg" alt="" width={24} height={24} className="h-6 w-6 shrink-0" />
+                    <span className="font-app-body text-base font-semibold leading-6 text-[#FFDD65]">{t("freeTrialBadge")}</span>
                   </div>
                 ) : null}
                 {buttonLabel ? (

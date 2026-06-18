@@ -3,7 +3,9 @@
 若已有 users 表，需先执行迁移再启用 Google 登录：
   PostgreSQL: ALTER TABLE users ADD COLUMN IF NOT EXISTS google_id VARCHAR(255) UNIQUE;
               ALTER TABLE users ALTER COLUMN hashed_password DROP NOT NULL;
+              ALTER TABLE users ADD COLUMN IF NOT EXISTS membership_trial_used BOOLEAN NOT NULL DEFAULT FALSE;
   MySQL:      ALTER TABLE users ADD COLUMN google_id VARCHAR(255) UNIQUE; ALTER TABLE users MODIFY hashed_password VARCHAR(255) NULL;
+              ALTER TABLE users ADD COLUMN membership_trial_used TINYINT(1) NOT NULL DEFAULT 0;
 """
 from sqlalchemy import Column, Integer, String, Boolean, DateTime, Date, Text, ForeignKey, JSON, UniqueConstraint, Index
 from sqlalchemy.orm import relationship
@@ -39,6 +41,8 @@ class User(Base):
     stripe_customer_id = Column(String(255), nullable=True, index=True)
     stripe_subscription_id = Column(String(255), nullable=True, index=True)
     stripe_subscription_schedule_id = Column(String(255), nullable=True)
+    # True after any paid subscription or trial; one lifetime trial per account.
+    membership_trial_used = Column(Boolean, default=False, nullable=False)
 
     # 关联游戏访问记录
     game_accesses = relationship("GameAccess", back_populates="user")

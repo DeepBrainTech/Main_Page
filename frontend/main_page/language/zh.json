@@ -169,6 +169,9 @@
     "planRenewOn": "将于 {date} 续订",
     "planExpiresOn": "将于 {date} 到期",
     "planStartsOn": "将于 {date} 生效",
+    "trialEndsOn": "试用将于 {date} 结束",
+    "freeTrialBadge": "7 天免费试用",
+    "startFreeTrial": "开始免费试用",
     "freePlan": "免费计划",
     "cancelSubscription": "取消订阅",
     "resumeSubscription": "恢复订阅",
@@ -207,6 +210,7 @@
       "portalUnavailable": "无法连接账单服务，请确认已登录并刷新页面后重试。"
     },
     "checkoutSuccess": "订阅已更新，感谢支持！",
+    "checkoutTrialSuccess": "免费试用已开始，尽情体验吧！",
     "portalReturn": "订阅已更新。",
     "planChangeUpdated": "订阅已更新。",
     "planChangeScheduled": "套餐变更已预约，将在当前计费周期结束后生效。",

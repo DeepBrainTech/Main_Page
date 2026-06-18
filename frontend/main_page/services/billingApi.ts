@@ -250,6 +250,9 @@ export async function fetchBillingStatus(): Promise<{
   portal_enabled: boolean;
   has_stripe_subscription: boolean;
   subscription_cancel_at_period_end: boolean | null;
+  subscription_status: "trialing" | "active" | "past_due" | null;
+  trial_eligible: boolean;
+  trial_end_at: string | null;
   pending_plan: "plus" | "premium" | null;
   pending_billing_interval: "monthly" | "annual" | null;
   pending_effective_at: string | null;
@@ -261,6 +264,9 @@ export async function fetchBillingStatus(): Promise<{
       portal_enabled: false,
       has_stripe_subscription: false,
       subscription_cancel_at_period_end: null,
+      subscription_status: null,
+      trial_eligible: false,
+      trial_end_at: null,
       pending_plan: null,
       pending_billing_interval: null,
       pending_effective_at: null,
@@ -272,18 +278,27 @@ export async function fetchBillingStatus(): Promise<{
       portal_enabled?: boolean;
       has_stripe_subscription?: boolean;
       subscription_cancel_at_period_end?: boolean | null;
+      subscription_status?: string | null;
+      trial_eligible?: boolean;
+      trial_end_at?: string | null;
       pending_plan?: string | null;
       pending_billing_interval?: string | null;
       pending_effective_at?: string | null;
     };
   };
   const d = json?.data ?? {};
+  const rawStatus = d.subscription_status;
+  const subscription_status =
+    rawStatus === "trialing" || rawStatus === "active" || rawStatus === "past_due" ? rawStatus : null;
   return {
     checkout_enabled: Boolean(d.checkout_enabled),
     portal_enabled: Boolean(d.portal_enabled),
     has_stripe_subscription: Boolean(d.has_stripe_subscription),
     subscription_cancel_at_period_end:
       typeof d.subscription_cancel_at_period_end === "boolean" ? d.subscription_cancel_at_period_end : null,
+    subscription_status,
+    trial_eligible: Boolean(d.trial_eligible),
+    trial_end_at: typeof d.trial_end_at === "string" ? d.trial_end_at : null,
     pending_plan: d.pending_plan === "plus" || d.pending_plan === "premium" ? d.pending_plan : null,
     pending_billing_interval:
       d.pending_billing_interval === "monthly" || d.pending_billing_interval === "annual"

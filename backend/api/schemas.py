@@ -60,6 +60,7 @@ class UserResponse(UserBase):
     membership_pending_effective_at: Optional[datetime] = None
     stripe_customer_id: Optional[str] = None
     stripe_subscription_id: Optional[str] = None
+    membership_trial_used: bool = False
 
     class Config:
         from_attributes = True

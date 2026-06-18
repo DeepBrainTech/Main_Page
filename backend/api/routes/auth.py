@@ -302,6 +302,7 @@ def _user_to_response(user: User) -> UserResponse:
         membership_pending_effective_at=getattr(user, "membership_pending_effective_at", None),
         stripe_customer_id=getattr(user, "stripe_customer_id", None),
         stripe_subscription_id=getattr(user, "stripe_subscription_id", None),
+        membership_trial_used=bool(getattr(user, "membership_trial_used", False)),
     )
 
 

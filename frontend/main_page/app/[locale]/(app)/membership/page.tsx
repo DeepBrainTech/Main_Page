@@ -142,7 +142,13 @@ export default function MembershipPage() {
   const [billingInterval, setBillingInterval] = useState<MembershipBillingInterval>("monthly");
   const [loadError, setLoadError] = useState<MembershipErrorKey | null>(null);
   const [successMessage, setSuccessMessage] = useState<
-    "checkoutSuccess" | "portalReturn" | "planChangeUpdated" | "planChangeScheduled" | "planChangeScheduleCanceled" | null
+    | "checkoutSuccess"
+    | "checkoutTrialSuccess"
+    | "portalReturn"
+    | "planChangeUpdated"
+    | "planChangeScheduled"
+    | "planChangeScheduleCanceled"
+    | null
   >(null);
   const [checkoutEnabled, setCheckoutEnabled] = useState(false);
   const [portalEnabled, setPortalEnabled] = useState(false);
@@ -152,6 +158,9 @@ export default function MembershipPage() {
   const [pendingPlan, setPendingPlan] = useState<"plus" | "premium" | null>(null);
   const [pendingBillingInterval, setPendingBillingInterval] = useState<MembershipBillingInterval | null>(null);
   const [pendingEffectiveAtIso, setPendingEffectiveAtIso] = useState<string | null>(null);
+  const [trialEligible, setTrialEligible] = useState(false);
+  const [subscriptionStatus, setSubscriptionStatus] = useState<"trialing" | "active" | "past_due" | null>(null);
+  const [trialEndAtIso, setTrialEndAtIso] = useState<string | null>(null);
   const [redirecting, setRedirecting] = useState(false);
   const [changePreview, setChangePreview] = useState<StripeSubscriptionChangePreview | null>(null);
   const [confirmingChange, setConfirmingChange] = useState(false);
@@ -159,7 +168,7 @@ export default function MembershipPage() {
   const [updatingPaymentMethod, setUpdatingPaymentMethod] = useState(false);
   const [paymentMethodError, setPaymentMethodError] = useState<string | null>(null);
 
-  const loadAll = useCallback(async () => {
+  const loadAll = useCallback(async (): Promise<"trialing" | "active" | "past_due" | null> => {
     try {
       const [m, st] = await Promise.all([fetchAuthMeMembership(), fetchBillingStatus()]);
       const p = m.membership_plan;
@@ -183,11 +192,16 @@ export default function MembershipPage() {
       setPendingPlan(nextPlan);
       setPendingBillingInterval(nextInterval);
       setPendingEffectiveAtIso(st.pending_effective_at ?? m.membership_pending_effective_at);
+      setTrialEligible(st.trial_eligible);
+      setSubscriptionStatus(st.subscription_status);
+      setTrialEndAtIso(st.trial_end_at);
       // Keep toggle aligned with the *active* subscription so the current plan card matches (pending interval alone is a future state).
       setBillingInterval(activeInterval);
       setLoadError(null);
+      return st.subscription_status;
     } catch {
       setLoadError("loadFailed");
+      return null;
     }
   }, []);
 
@@ -199,8 +213,9 @@ export default function MembershipPage() {
     const checkout = searchParams.get("checkout");
     const portal = searchParams.get("portal");
     if (checkout === "success") {
-      setSuccessMessage("checkoutSuccess");
-      void loadAll();
+      void loadAll().then((status) => {
+        setSuccessMessage(status === "trialing" ? "checkoutTrialSuccess" : "checkoutSuccess");
+      });
       window.dispatchEvent(new Event("membership-plan-change"));
       router.replace(pathname);
     } else if (checkout === "canceled") {
@@ -535,6 +550,9 @@ export default function MembershipPage() {
         pendingPlan={pendingPlan}
         pendingBillingInterval={pendingBillingInterval}
         pendingEffectiveAtIso={pendingEffectiveAtIso}
+        trialEligible={trialEligible}
+        subscriptionStatus={subscriptionStatus}
+        trialEndAtIso={trialEndAtIso}
         notice={notice}
       />
     </div>

@@ -15,6 +15,7 @@ from auth import get_current_active_user
 from config.stripe_billing import (
     COIN_BUNDLES,
     DIAMOND_BUNDLES,
+    get_membership_trial_days,
     get_price_id,
     get_public_app_url,
     get_coin_bundle_price_id,
@@ -82,6 +83,50 @@ def _clear_paid_membership(user: User) -> None:
     user.stripe_subscription_schedule_id = None
 
 
+def _mark_membership_trial_consumed(user: User) -> None:
+    if not getattr(user, "membership_trial_used", False):
+        user.membership_trial_used = True
+
+
+def _sync_trial_used_from_stripe_history(db: Session, user: User) -> None:
+    """Mark trial consumed if this Stripe customer ever had a subscription."""
+    if getattr(user, "membership_trial_used", False):
+        return
+    customer_id = getattr(user, "stripe_customer_id", None)
+    if not customer_id:
+        return
+    try:
+        subs = stripe.Subscription.list(customer=customer_id, status="all", limit=1)
+        if subs.data:
+            _mark_membership_trial_consumed(user)
+            db.add(user)
+            db.commit()
+    except stripe.error.StripeError as e:
+        logger.warning("stripe subscription history lookup failed for user %s: %s", user.id, e)
+
+
+def _user_eligible_for_membership_trial(db: Session, user: User) -> bool:
+    if getattr(user, "membership_trial_used", False):
+        return False
+    if getattr(user, "stripe_subscription_id", None):
+        try:
+            existing = stripe.Subscription.retrieve(user.stripe_subscription_id)
+            if existing.status in ("active", "trialing", "past_due"):
+                return False
+        except stripe.error.InvalidRequestError:
+            user.stripe_subscription_id = None
+            db.add(user)
+            db.commit()
+        except stripe.error.StripeError as e:
+            logger.warning("trial eligibility subscription retrieve failed: %s", e)
+            return False
+    if getattr(user, "stripe_customer_id", None):
+        _sync_trial_used_from_stripe_history(db, user)
+        if getattr(user, "membership_trial_used", False):
+            return False
+    return True
+
+
 def _first_subscription_price_id(sub: stripe.Subscription) -> str | None:
     try:
         items = sub["items"].data
@@ -110,6 +155,8 @@ def sync_user_from_stripe_subscription(db: Session, user: User, sub: stripe.Subs
 
     if st not in ("active", "trialing", "past_due"):
         return
+
+    _mark_membership_trial_consumed(user)
 
     resolved = _resolve_plan_from_subscription(sub)
     if not resolved:
@@ -631,12 +678,24 @@ async def billing_status(
     portal = bool(checkout and getattr(current_user, "stripe_customer_id", None))
     has_sub = bool(getattr(current_user, "stripe_subscription_id", None))
     cancel_at_period_end: bool | None = None
-    if checkout and has_sub:
+    subscription_status: str | None = None
+    trial_end_at: str | None = None
+    trial_eligible = False
+    if checkout:
         _stripe_configure()
+        if not getattr(current_user, "membership_trial_used", False) and getattr(
+            current_user, "stripe_customer_id", None
+        ):
+            _sync_trial_used_from_stripe_history(db, current_user)
+        trial_eligible = _user_eligible_for_membership_trial(db, current_user)
+    if checkout and has_sub:
         try:
             sub = stripe.Subscription.retrieve(current_user.stripe_subscription_id)
             if sub.status in ("active", "trialing", "past_due"):
+                subscription_status = sub.status
                 cancel_at_period_end = bool(getattr(sub, "cancel_at_period_end", False))
+                if sub.status == "trialing" and getattr(sub, "trial_end", None):
+                    trial_end_at = datetime.utcfromtimestamp(int(sub.trial_end)).isoformat()
                 sync_user_from_stripe_subscription(db, current_user, sub)
                 _sync_pending_from_subscription_schedule(db, current_user, sub)
         except stripe.error.StripeError as e:
@@ -651,6 +710,9 @@ async def billing_status(
             "portal_enabled": portal,
             "has_stripe_subscription": has_sub,
             "subscription_cancel_at_period_end": cancel_at_period_end,
+            "subscription_status": subscription_status,
+            "trial_eligible": trial_eligible,
+            "trial_end_at": trial_end_at,
             "pending_plan": getattr(current_user, "membership_pending_plan", None),
             "pending_billing_interval": getattr(current_user, "membership_pending_billing_interval", None),
             "pending_effective_at": (
@@ -738,6 +800,11 @@ async def create_checkout_session(
         "plan": body.plan,
         "billing_interval": body.billing_interval,
     }
+    subscription_data: dict = {"metadata": meta}
+    trial_days = get_membership_trial_days()
+    if trial_days > 0 and _user_eligible_for_membership_trial(db, current_user):
+        subscription_data["trial_period_days"] = trial_days
+
     session = stripe.checkout.Session.create(
         mode="subscription",
         customer=current_user.stripe_customer_id,
@@ -746,7 +813,7 @@ async def create_checkout_session(
         success_url=success_url,
         cancel_url=cancel_url,
         metadata=meta,
-        subscription_data={"metadata": meta},
+        subscription_data=subscription_data,
         locale=_stripe_ui_locale(lo),
     )
 
@@ -1223,12 +1290,17 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                 sync_user_from_stripe_subscription(db, user, full_sub)
                 plan = (sess.get("metadata") or {}).get("plan") or getattr(user, "membership_plan", None)
                 interval = (sess.get("metadata") or {}).get("billing_interval")
+                is_trial = full_sub.status == "trialing"
                 create_user_notification(
                     db,
                     user_id=user.id,
                     notification_type="subscription",
-                    title="Subscription Activated",
-                    message=f"Your {_plan_label(plan)} membership is now active.",
+                    title="Free Trial Started" if is_trial else "Subscription Activated",
+                    message=(
+                        f"Your {_plan_label(plan)} free trial has started."
+                        if is_trial
+                        else f"Your {_plan_label(plan)} membership is now active."
+                    ),
                     icon="subscription",
                     source="stripe",
                     source_event_id=_source_event(event_id, "subscription-activated"),
@@ -1247,6 +1319,7 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                 if uid:
                     user = db.query(User).filter(User.id == int(uid)).first()
             if user:
+                _mark_membership_trial_consumed(user)
                 _clear_paid_membership(user)
                 db.add(user)
                 db.commit()
@@ -1272,6 +1345,7 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                 logger.warning("subscription %s: user not resolved", sub_id)
                 return APIResponse(success=True, message="ok", data={"received": True})
             if full_sub.status == "canceled":
+                _mark_membership_trial_consumed(user)
                 _clear_paid_membership(user)
                 db.add(user)
                 db.commit()

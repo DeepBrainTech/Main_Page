@@ -40,6 +40,15 @@ def get_public_app_url() -> str:
     return base
 
 
+def get_membership_trial_days() -> int:
+    raw = (os.getenv("MEMBERSHIP_TRIAL_DAYS") or "7").strip()
+    try:
+        days = int(raw)
+    except ValueError:
+        days = 7
+    return max(0, days)
+
+
 def get_price_id(plan: MembershipPaidPlan, interval: BillingInterval) -> Optional[str]:
     env_map = {
         ("plus", "monthly"): "STRIPE_PRICE_PLUS_MONTHLY",
