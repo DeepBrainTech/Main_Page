@@ -26,6 +26,9 @@ from auth import (
   
     create_tourmaster_token,
     TOURMASTER_TOKEN_EXPIRE_SECONDS,
+
+    create_onlinechess_token,
+    ONLINE_CHESS_TOKEN_EXPIRE_SECONDS,
 )
 
 
@@ -89,6 +92,7 @@ SUPPORTED_GAME_KEYS = {
     "quantumgo",
     "fogchess",
     "chess-tourmaster",
+    "online-chess",
     "dash-dot-simulator",
     "stack_math_chess",
     "recon_chess",
@@ -398,6 +402,42 @@ async def issue_fogchess_token(
         current_user=current_user,
         game_token=token,
         expires_in=FOG_CHESS_TOKEN_EXPIRE_SECONDS,
+        reward_status=reward_status,
+        flowers_awarded=flowers_awarded,
+        total_flowers=total_flowers,
+        assets=assets,
+    )
+
+
+@router.post("/online-chess/token", response_model=APIResponse)
+async def issue_onlinechess_token(
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+):
+    """为当前登录用户签发 Online Chess 短期令牌
+
+    返回字段：
+    - game_token: 供 Online Chess 使用的短期 JWT（仅用于首次换取服务端会话）
+    - expires_in: 过期秒数
+    - user: 基础身份信息（可选，便于前端展示）
+    """
+    _try_insert_user_game_played(db, current_user.id, "online-chess")
+
+    claims = {
+        "sub": current_user.username,
+        "user_id": current_user.id,
+        "username": current_user.username,
+        # 可按需加入：roles、locale、avatar 等
+    }
+
+    token = create_onlinechess_token(claims)
+    _, reward_status, flowers_awarded = _record_play_and_claim_if_ready(db, current_user, "online-chess")
+    total_flowers = _total_flowers_for_user(db, current_user.id)
+    assets = _get_asset_balances(db, current_user.id)
+    return _build_token_response(
+        current_user=current_user,
+        game_token=token,
+        expires_in=ONLINE_CHESS_TOKEN_EXPIRE_SECONDS,
         reward_status=reward_status,
         flowers_awarded=flowers_awarded,
         total_flowers=total_flowers,

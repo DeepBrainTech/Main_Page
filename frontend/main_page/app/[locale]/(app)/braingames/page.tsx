@@ -10,6 +10,7 @@ export default function BrainGamesPage() {
     handleQuantumGo,
     handleChessMater,
     handleChessTourmaster,
+    handleOnlineChess,
   } = useGameLauncher();
 
   return (
@@ -20,6 +21,7 @@ export default function BrainGamesPage() {
         sudoku: handleSudoku,
         quantumGo: handleQuantumGo,
         fogChess: handleFogChess,
+        onlineChess: handleOnlineChess,
       }}
     />
   );

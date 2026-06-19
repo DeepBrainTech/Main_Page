@@ -128,6 +128,15 @@ export function useGameLauncher() {
     });
   };
 
+  const handleOnlineChess = () => {
+    launchGame({
+      gameKey: "online-chess",
+      apiEndpoint: "/api/games/online-chess/token",
+      gameUrl: process.env.NEXT_PUBLIC_ONLINE_CHESS_URL || "https://online-chess-web-production.up.railway.app",
+      openInNewTab: false,
+    });
+  };
+
   const handleSudoku = () => {
     // Pure portal-side analytics ping; sub-game has no auth contract with us.
     void postGamePlayedRecord("sudoku").catch(() => {
@@ -144,6 +153,7 @@ export function useGameLauncher() {
     handleQuantumGo,
     handleChessMater,
     handleChessTourmaster,
+    handleOnlineChess,
   };
 }
 

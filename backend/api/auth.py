@@ -97,6 +97,14 @@ TOURMASTER_ISS = os.getenv("TOURMASTER_JWT_ISS", "main-portal")
 TOURMASTER_TOKEN_EXPIRE_SECONDS = int(os.getenv("TOURMASTER_TOKEN_EXPIRE_SECONDS", "300"))
 
 
+# Online Chess 专用令牌配置
+ONLINE_CHESS_SECRET = os.getenv("ONLINE_CHESS_JWT_SECRET", "change-this-online-chess-secret")
+ONLINE_CHESS_ALG = os.getenv("ONLINE_CHESS_JWT_ALG", "HS256")
+ONLINE_CHESS_AUD = os.getenv("ONLINE_CHESS_JWT_AUD", "online-chess")
+ONLINE_CHESS_ISS = os.getenv("ONLINE_CHESS_JWT_ISS", "main-portal")
+ONLINE_CHESS_TOKEN_EXPIRE_SECONDS = int(os.getenv("ONLINE_CHESS_TOKEN_EXPIRE_SECONDS", "300"))
+
+
 # 密码加密
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -184,6 +192,21 @@ def create_chessmater_token(claims: Dict[str, Any], expires_seconds: Optional[in
     })
 
     return jwt.encode(to_encode, CHESSMATER_SECRET, algorithm=CHESSMATER_ALG)
+
+
+def create_onlinechess_token(claims: Dict[str, Any], expires_seconds: Optional[int] = None) -> str:
+    """创建 Online Chess 短期访问令牌
+    包含必要的 aud/iss，默认 300s 过期。
+    """
+    to_encode = claims.copy()
+    expire_sec = expires_seconds or ONLINE_CHESS_TOKEN_EXPIRE_SECONDS
+    expire = datetime.utcnow() + timedelta(seconds=expire_sec)
+    to_encode.update({
+        "exp": expire,
+        "iss": ONLINE_CHESS_ISS,
+        "aud": ONLINE_CHESS_AUD,
+    })
+    return jwt.encode(to_encode, ONLINE_CHESS_SECRET, algorithm=ONLINE_CHESS_ALG)
 
 
 def create_tourmaster_token(claims: Dict[str, Any], expires_seconds: Optional[int] = None) -> str:

@@ -31,6 +31,7 @@ interface BrainGamesTabProps {
     sudoku: () => void;
     quantumGo: () => void;
     fogChess: () => void;
+    onlineChess: () => void;
   };
 }
 
@@ -183,6 +184,7 @@ function launchForKey(
   if (entry.launchKey === "sudoku") return onLaunch.sudoku;
   if (entry.launchKey === "quantumGo") return onLaunch.quantumGo;
   if (entry.launchKey === "fogChess") return onLaunch.fogChess;
+  if (entry.launchKey === "onlineChess") return onLaunch.onlineChess;
   if (entry.launchKey === "external" && entry.externalUrl) {
     return () => {
       void postGamePlayedRecord(entry.key).catch(() => {
@@ -460,7 +462,7 @@ export default function BrainGamesTab({ onLaunch }: BrainGamesTabProps) {
                 ? null
                 : (GAME_COVER_MAP[entry.key] ?? `/brain-games/${entry.key}.gif`);
               const playerText =
-                entry.key === "quantumgo" || entry.key === "fogchess" ? tBrain("playersOneTwo") : tBrain("playersOne");
+                entry.key === "quantumgo" || entry.key === "fogchess" || entry.key === "online-chess" ? tBrain("playersOneTwo") : tBrain("playersOne");
               const launch = launchForKey(entry, onLaunch);
 
               return (

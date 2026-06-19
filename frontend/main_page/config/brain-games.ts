@@ -9,7 +9,7 @@ export interface GameEntry {
   /** 游戏名称 i18n key */
   nameKey: string;
   /** 启动方法：由 useGameLauncher 提供 */
-  launchKey: "chessMater" | "chessTourmaster" | "sudoku" | "quantumGo" | "fogChess" | "external";
+  launchKey: "chessMater" | "chessTourmaster" | "sudoku" | "quantumGo" | "fogChess" | "onlineChess" | "external";
   externalUrl?: string;
   /** 为 true 时不使用封面图，仅占位背景（稍后补图时可删） */
   skipCover?: boolean;
@@ -41,6 +41,7 @@ export const GAMES_BY_DIMENSION: Record<CognitiveDimensionKey, GameEntry[]> = {
     { key: "quantumgo", nameKey: "quantumGo", launchKey: "quantumGo" },
     { key: "fogchess", nameKey: "startFogChess", launchKey: "fogChess" },
     { key: "chess-tourmaster", nameKey: "chessTourmaster", launchKey: "chessTourmaster" },
+    { key: "online-chess", nameKey: "onlineChess", launchKey: "onlineChess" },
     {
       key: "stack_math_chess",
       nameKey: "stackMathChess",
