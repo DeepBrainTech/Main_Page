@@ -2,7 +2,7 @@
 认证相关工具函数
 """
 from datetime import datetime, timedelta
-from typing import Optional, Dict, Any
+from typing import Optional
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from sqlalchemy.orm import Session
@@ -60,51 +60,6 @@ def clear_access_token_cookie(response: Response) -> None:
         path=ACCESS_TOKEN_COOKIE_PATH,
     )
 
-# FogChess 专用令牌配置（建议使用不同密钥，或改用 RS256 公私钥对）
-FOG_CHESS_SECRET = os.getenv("FOG_CHESS_JWT_SECRET", "change-this-fogchess-secret")
-FOG_CHESS_ALG = os.getenv("FOG_CHESS_JWT_ALG", "HS256")
-FOG_CHESS_AUD = os.getenv("FOG_CHESS_JWT_AUD", "fogchess")
-FOG_CHESS_ISS = os.getenv("FOG_CHESS_JWT_ISS", "main-portal")
-FOG_CHESS_TOKEN_EXPIRE_SECONDS = int(os.getenv("FOG_CHESS_TOKEN_EXPIRE_SECONDS", "300"))
-
-# Sudoku 专用令牌配置
-SUDOKU_SECRET = os.getenv("SUDOKU_JWT_SECRET", "change-this-sudoku-secret")
-SUDOKU_ALG = os.getenv("SUDOKU_JWT_ALG", "HS256")
-SUDOKU_AUD = os.getenv("SUDOKU_JWT_AUD", "sudoku-battle")
-SUDOKU_ISS = os.getenv("SUDOKU_JWT_ISS", "main-portal")
-SUDOKU_TOKEN_EXPIRE_SECONDS = int(os.getenv("SUDOKU_TOKEN_EXPIRE_SECONDS", "300"))
-
-# QuantumGo 专用令牌配置
-QUANTUMGO_SECRET = os.getenv("QUANTUMGO_JWT_SECRET", "change-this-quantumgo-secret")
-QUANTUMGO_ALG = os.getenv("QUANTUMGO_JWT_ALG", "HS256")
-QUANTUMGO_AUD = os.getenv("QUANTUMGO_JWT_AUD", "quantum-go")
-QUANTUMGO_ISS = os.getenv("QUANTUMGO_JWT_ISS", "main-portal")
-QUANTUMGO_TOKEN_EXPIRE_SECONDS = int(os.getenv("QUANTUMGO_TOKEN_EXPIRE_SECONDS", "300"))
-
-# ChessMater 专用令牌配置
-CHESSMATER_SECRET = os.getenv("CHESSMATER_JWT_SECRET", "CHESSMATER")
-CHESSMATER_ALG = os.getenv("CHESSMATER_JWT_ALG", "HS256")
-CHESSMATER_AUD = os.getenv("CHESSMATER_JWT_AUD", "chessmater")
-CHESSMATER_ISS = os.getenv("CHESSMATER_JWT_ISS", "main-portal")
-CHESSMATER_TOKEN_EXPIRE_SECONDS = int(os.getenv("CHESSMATER_TOKEN_EXPIRE_SECONDS", "300"))
-
-
-# ChessTourmaster 专用配置
-TOURMASTER_SECRET = os.getenv("TOURMASTER_JWT_SECRET", "change-this-tourmaster-secret")
-TOURMASTER_ALG = os.getenv("TOURMASTER_JWT_ALG", "HS256")
-TOURMASTER_AUD = os.getenv("TOURMASTER_JWT_AUD", "chess-tourmaster")
-TOURMASTER_ISS = os.getenv("TOURMASTER_JWT_ISS", "main-portal")
-TOURMASTER_TOKEN_EXPIRE_SECONDS = int(os.getenv("TOURMASTER_TOKEN_EXPIRE_SECONDS", "300"))
-
-
-# Online Chess 专用令牌配置
-ONLINE_CHESS_SECRET = os.getenv("ONLINE_CHESS_JWT_SECRET", "change-this-online-chess-secret")
-ONLINE_CHESS_ALG = os.getenv("ONLINE_CHESS_JWT_ALG", "HS256")
-ONLINE_CHESS_AUD = os.getenv("ONLINE_CHESS_JWT_AUD", "online-chess")
-ONLINE_CHESS_ISS = os.getenv("ONLINE_CHESS_JWT_ISS", "main-portal")
-ONLINE_CHESS_TOKEN_EXPIRE_SECONDS = int(os.getenv("ONLINE_CHESS_TOKEN_EXPIRE_SECONDS", "300"))
-
-
 # 密码加密
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -130,102 +85,6 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
-
-
-def create_fogchess_token(claims: Dict[str, Any], expires_seconds: Optional[int] = None) -> str:
-    """创建 FogChess 短期访问令牌
-    包含必要的 aud/iss，默认 300s 过期。
-    """
-    to_encode = claims.copy()
-    expire_sec = expires_seconds or FOG_CHESS_TOKEN_EXPIRE_SECONDS
-    expire = datetime.utcnow() + timedelta(seconds=expire_sec)
-    to_encode.update({
-        "exp": expire,
-        "iss": FOG_CHESS_ISS,
-        "aud": FOG_CHESS_AUD,
-    })
-    return jwt.encode(to_encode, FOG_CHESS_SECRET, algorithm=FOG_CHESS_ALG)
-
-
-def create_sudoku_token(claims: Dict[str, Any], expires_seconds: Optional[int] = None) -> str:
-    """创建 Sudoku 短期访问令牌
-    包含必要的 aud/iss，默认 300s 过期。
-    """
-    to_encode = claims.copy()
-    expire_sec = expires_seconds or SUDOKU_TOKEN_EXPIRE_SECONDS
-    expire = datetime.utcnow() + timedelta(seconds=expire_sec)
-    to_encode.update({
-        "exp": expire,
-        "iss": SUDOKU_ISS,
-        "aud": SUDOKU_AUD,
-    })
-    return jwt.encode(to_encode, SUDOKU_SECRET, algorithm=SUDOKU_ALG)
-
-
-def create_quantumgo_token(claims: Dict[str, Any], expires_seconds: Optional[int] = None) -> str:
-    """创建 QuantumGo 短期访问令牌
-    包含必要的 aud/iss，默认 300s 过期。
-    """
-    to_encode = claims.copy()
-    expire_sec = expires_seconds or QUANTUMGO_TOKEN_EXPIRE_SECONDS
-    expire = datetime.utcnow() + timedelta(seconds=expire_sec)
-    to_encode.update({
-        "exp": expire,
-        "iss": QUANTUMGO_ISS,
-        "aud": QUANTUMGO_AUD,
-    })
-    return jwt.encode(to_encode, QUANTUMGO_SECRET, algorithm=QUANTUMGO_ALG)
-
-def create_chessmater_token(claims: Dict[str, Any], expires_seconds: Optional[int] = None) -> str:
-    """
-    创建 ChessMater 短期访问令牌
-    包含必要的 aud/iss，默认 300s 过期。
-    """
-    to_encode = claims.copy()
-    expire_sec = expires_seconds or CHESSMATER_TOKEN_EXPIRE_SECONDS
-    expire = datetime.utcnow() + timedelta(seconds=expire_sec)
-
-    to_encode.update({
-        "exp": expire,
-        "iss": CHESSMATER_ISS,
-        "aud": CHESSMATER_AUD,
-    })
-
-    return jwt.encode(to_encode, CHESSMATER_SECRET, algorithm=CHESSMATER_ALG)
-
-
-def create_onlinechess_token(claims: Dict[str, Any], expires_seconds: Optional[int] = None) -> str:
-    """创建 Online Chess 短期访问令牌
-    包含必要的 aud/iss，默认 300s 过期。
-    """
-    to_encode = claims.copy()
-    expire_sec = expires_seconds or ONLINE_CHESS_TOKEN_EXPIRE_SECONDS
-    expire = datetime.utcnow() + timedelta(seconds=expire_sec)
-    to_encode.update({
-        "exp": expire,
-        "iss": ONLINE_CHESS_ISS,
-        "aud": ONLINE_CHESS_AUD,
-    })
-    return jwt.encode(to_encode, ONLINE_CHESS_SECRET, algorithm=ONLINE_CHESS_ALG)
-
-
-def create_tourmaster_token(claims: Dict[str, Any], expires_seconds: Optional[int] = None) -> str:
-    """
-    创建 Chess-Tourmaster 短期访问的令牌
-    包含必要的 aud/iss 字段 默认 300s 过期。
-    """
-    to_encode = claims.copy()
-
-    expire_sec = expires_seconds or TOURMASTER_TOKEN_EXPIRE_SECONDS
-    expire = datetime.utcnow() + timedelta(seconds=expire_sec)
-
-    to_encode.update({
-        "exp": expire,
-        "iss": TOURMASTER_ISS,
-        "aud": TOURMASTER_AUD,
-    })
-
-    return jwt.encode(to_encode, TOURMASTER_SECRET, algorithm=TOURMASTER_ALG)
 
 
 def authenticate_user(db: Session, username_or_email: str, password: str) -> Optional[User]:

@@ -7,29 +7,11 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from config.shop_items import SHOP_ITEMS, get_shop_items_by_game, is_item_available_for_game
+from config.game_auth import create_game_token, get_game_auth_entry_by_api_slug
 from database import get_db
 from models import User, UserGameReward, UserGamePlayByDay, UserRewards, GameLike, UserGamePlayed
 from schemas import APIResponse, GamePlayRecordIn
-from auth import (
-    get_current_active_user,
-    create_fogchess_token,
-    FOG_CHESS_TOKEN_EXPIRE_SECONDS,
-  
-    create_sudoku_token,
-    SUDOKU_TOKEN_EXPIRE_SECONDS,
-  
-    create_quantumgo_token,
-    QUANTUMGO_TOKEN_EXPIRE_SECONDS,
-  
-    create_chessmater_token,
-    CHESSMATER_TOKEN_EXPIRE_SECONDS,
-  
-    create_tourmaster_token,
-    TOURMASTER_TOKEN_EXPIRE_SECONDS,
-
-    create_onlinechess_token,
-    ONLINE_CHESS_TOKEN_EXPIRE_SECONDS,
-)
+from auth import get_current_active_user
 
 
 router = APIRouter(prefix="/api/games", tags=["Games"])
@@ -240,27 +222,6 @@ def _build_token_response(
     )
 
 
-def _build_chessmater_session_response(current_user: User, game_token: str, expires_in: int) -> APIResponse:
-    """
-    Build lightweight ChessMater session-refresh response.
-    This endpoint is for silent refresh and should not mutate play stats.
-    """
-    return APIResponse(
-        success=True,
-        message="ok",
-        data={
-            "game_token": game_token,
-            "expires_in": expires_in,
-            "user_id": current_user.id,
-            "username": current_user.username,
-            "user": {
-                "id": current_user.id,
-                "username": current_user.username,
-            },
-        },
-    )
-
-
 def _build_game_session_response(
     current_user: User,
     game_token: str,
@@ -280,6 +241,53 @@ def _build_game_session_response(
                 "username": current_user.username,
             },
         },
+    )
+
+
+def _user_token_claims(user: User) -> dict:
+    return {
+        "sub": user.username,
+        "user_id": user.id,
+        "username": user.username,
+    }
+
+
+def _issue_game_token_response(
+    current_user: User,
+    db: Session,
+    game_key: str,
+    *,
+    track_daily: bool = False,
+    user_timezone: str | None = None,
+) -> APIResponse:
+    """Issue a short-lived game JWT and record portal-side play stats."""
+    if track_daily:
+        tz = (user_timezone or "").strip() or DEFAULT_TZ
+        _increment_daily_play(db, current_user.id, game_key, _today_in_tz(tz))
+
+    _try_insert_user_game_played(db, current_user.id, game_key)
+    token, expires_in = create_game_token(game_key, _user_token_claims(current_user))
+    _, reward_status, flowers_awarded = _record_play_and_claim_if_ready(db, current_user, game_key)
+    total_flowers = _total_flowers_for_user(db, current_user.id)
+    assets = _get_asset_balances(db, current_user.id)
+    return _build_token_response(
+        current_user=current_user,
+        game_token=token,
+        expires_in=expires_in,
+        reward_status=reward_status,
+        flowers_awarded=flowers_awarded,
+        total_flowers=total_flowers,
+        assets=assets,
+    )
+
+
+def _refresh_game_session_response(current_user: User, game_key: str) -> APIResponse:
+    """Silent refresh: issue a fresh short-lived game token without mutating play stats."""
+    token, expires_in = create_game_token(game_key, _user_token_claims(current_user))
+    return _build_game_session_response(
+        current_user=current_user,
+        game_token=token,
+        expires_in=expires_in,
     )
 
 
@@ -373,296 +381,41 @@ async def unlike_game(
     )
 
 
-@router.post("/fogchess/token", response_model=APIResponse)
-async def issue_fogchess_token(
-    current_user: User = Depends(get_current_active_user),
-    db: Session = Depends(get_db),
-):
-    """为当前登录用户签发 FogChess 短期令牌
-
-    返回字段：
-    - game_token: 供 FogChess 使用的短期 JWT（建议仅用于首次换取服务端会话）
-    - expires_in: 过期秒数
-    - user: 基础身份信息（可选，便于前端展示）
-    """
-    _try_insert_user_game_played(db, current_user.id, "fogchess")
-
-    claims = {
-        "sub": current_user.username,
-        "user_id": current_user.id,
-        "username": current_user.username,
-        # 可按需加入：roles、locale、avatar 等
-    }
-
-    token = create_fogchess_token(claims)
-    _, reward_status, flowers_awarded = _record_play_and_claim_if_ready(db, current_user, "fogchess")
-    total_flowers = _total_flowers_for_user(db, current_user.id)
-    assets = _get_asset_balances(db, current_user.id)
-    return _build_token_response(
-        current_user=current_user,
-        game_token=token,
-        expires_in=FOG_CHESS_TOKEN_EXPIRE_SECONDS,
-        reward_status=reward_status,
-        flowers_awarded=flowers_awarded,
-        total_flowers=total_flowers,
-        assets=assets,
-    )
-
-
-@router.post("/online-chess/token", response_model=APIResponse)
-async def issue_onlinechess_token(
-    current_user: User = Depends(get_current_active_user),
-    db: Session = Depends(get_db),
-):
-    """为当前登录用户签发 Online Chess 短期令牌
-
-    返回字段：
-    - game_token: 供 Online Chess 使用的短期 JWT（仅用于首次换取服务端会话）
-    - expires_in: 过期秒数
-    - user: 基础身份信息（可选，便于前端展示）
-    """
-    _try_insert_user_game_played(db, current_user.id, "online-chess")
-
-    claims = {
-        "sub": current_user.username,
-        "user_id": current_user.id,
-        "username": current_user.username,
-        # 可按需加入：roles、locale、avatar 等
-    }
-
-    token = create_onlinechess_token(claims)
-    _, reward_status, flowers_awarded = _record_play_and_claim_if_ready(db, current_user, "online-chess")
-    total_flowers = _total_flowers_for_user(db, current_user.id)
-    assets = _get_asset_balances(db, current_user.id)
-    return _build_token_response(
-        current_user=current_user,
-        game_token=token,
-        expires_in=ONLINE_CHESS_TOKEN_EXPIRE_SECONDS,
-        reward_status=reward_status,
-        flowers_awarded=flowers_awarded,
-        total_flowers=total_flowers,
-        assets=assets,
-    )
-
-
-@router.post("/sudoku/token", response_model=APIResponse)
-async def issue_sudoku_token(
-    current_user: User = Depends(get_current_active_user),
-    db: Session = Depends(get_db),
-):
-    """为当前登录用户签发 Sudoku 短期令牌
-
-    返回字段：
-    - game_token: 供 Sudoku Battle 使用的短期 JWT（建议仅用于首次换取服务端会话）
-    - expires_in: 过期秒数
-    - user: 基础身份信息（可选，便于前端展示）
-    """
-    _try_insert_user_game_played(db, current_user.id, "sudoku")
-
-    claims = {
-        "sub": current_user.username,
-        "user_id": current_user.id,
-        "username": current_user.username,
-        # 可按需加入：roles、locale、avatar 等
-    }
-
-    token = create_sudoku_token(claims)
-    _, reward_status, flowers_awarded = _record_play_and_claim_if_ready(db, current_user, "sudoku")
-    total_flowers = _total_flowers_for_user(db, current_user.id)
-    assets = _get_asset_balances(db, current_user.id)
-    return _build_token_response(
-        current_user=current_user,
-        game_token=token,
-        expires_in=SUDOKU_TOKEN_EXPIRE_SECONDS,
-        reward_status=reward_status,
-        flowers_awarded=flowers_awarded,
-        total_flowers=total_flowers,
-        assets=assets,
-    )
-
-
-@router.post("/quantumgo/token", response_model=APIResponse)
-async def issue_quantumgo_token(
-    current_user: User = Depends(get_current_active_user),
-    db: Session = Depends(get_db),
-):
-    """为当前登录用户签发 QuantumGo 短期令牌
-
-    返回字段：
-    - game_token: 供 QuantumGo 使用的短期 JWT（建议仅用于首次换取服务端会话）
-    - expires_in: 过期秒数
-    - user: 基础身份信息（可选，便于前端展示）
-    """
-    _try_insert_user_game_played(db, current_user.id, "quantumgo")
-
-    claims = {
-        "sub": current_user.username,
-        "user_id": current_user.id,
-        "username": current_user.username,
-        # 可按需加入：roles、locale、avatar 等
-    }
-
-    token = create_quantumgo_token(claims)
-    _, reward_status, flowers_awarded = _record_play_and_claim_if_ready(db, current_user, "quantumgo")
-    total_flowers = _total_flowers_for_user(db, current_user.id)
-    assets = _get_asset_balances(db, current_user.id)
-    return _build_token_response(
-        current_user=current_user,
-        game_token=token,
-        expires_in=QUANTUMGO_TOKEN_EXPIRE_SECONDS,
-        reward_status=reward_status,
-        flowers_awarded=flowers_awarded,
-        total_flowers=total_flowers,
-        assets=assets,
-    )
-
-
-@router.post("/chessmater/token", response_model=APIResponse)
-async def issue_chessmater_token(
+@router.post("/{api_slug}/token", response_model=APIResponse)
+async def issue_game_token(
+    api_slug: str,
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db),
     x_user_timezone: str | None = Header(None, alias="X-User-Timezone"),
 ):
-    """
-    为当前登录用户签发 ChessMater 短期令牌；
-    按用户当地日期记录当日点开次数，用于每日任务进度。
-    """
-    tz = (x_user_timezone or "").strip() or DEFAULT_TZ
-    today_iso = _today_in_tz(tz)
-    _increment_daily_play(db, current_user.id, "chessmater", today_iso)
+    """Issue a short-lived JWT for an embedded game (bootstrap / first paint)."""
+    entry = get_game_auth_entry_by_api_slug(api_slug)
+    if entry is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="unknown_game")
 
-    _try_insert_user_game_played(db, current_user.id, "chessmater")
-
-    claims = {
-        "sub": current_user.username,
-        "user_id": current_user.id,
-        "username": current_user.username,
-        # 可以按需加入: roles, locale, avatar 等
-    }
-
-    token = create_chessmater_token(claims)
-    _, reward_status, flowers_awarded = _record_play_and_claim_if_ready(db, current_user, "chessmater")
-    total_flowers = _total_flowers_for_user(db, current_user.id)
-    assets = _get_asset_balances(db, current_user.id)
-    return _build_token_response(
-        current_user=current_user,
-        game_token=token,
-        expires_in=CHESSMATER_TOKEN_EXPIRE_SECONDS,
-        reward_status=reward_status,
-        flowers_awarded=flowers_awarded,
-        total_flowers=total_flowers,
-        assets=assets,
+    return _issue_game_token_response(
+        current_user,
+        db,
+        entry.game_key,
+        track_daily=entry.track_daily_play,
+        user_timezone=x_user_timezone,
     )
 
 
-@router.get("/chessmater/session", response_model=APIResponse)
-async def refresh_chessmater_session(
+@router.get("/{api_slug}/session", response_model=APIResponse)
+async def refresh_game_session(
+    api_slug: str,
     response: Response,
     current_user: User = Depends(get_current_active_user),
 ):
-    """
-    Silent refresh endpoint for ChessMater.
-    Requires current portal authentication and only issues a fresh short-lived game token.
-    """
-    claims = {
-        "sub": current_user.username,
-        "user_id": current_user.id,
-        "username": current_user.username,
-    }
-    token = create_chessmater_token(claims)
-    # Prevent token responses from being cached by browsers/proxies.
+    """Silent refresh: new game_token via portal cookie; no play-stats side effects."""
+    entry = get_game_auth_entry_by_api_slug(api_slug)
+    if entry is None or not entry.has_session:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="unknown_game")
+
     response.headers["Cache-Control"] = "no-store"
     response.headers["Pragma"] = "no-cache"
-    return _build_game_session_response(
-        current_user=current_user,
-        game_token=token,
-        expires_in=CHESSMATER_TOKEN_EXPIRE_SECONDS,
-    )
-
-
-@router.get("/quantumgo/session", response_model=APIResponse)
-async def refresh_quantumgo_session(
-    response: Response,
-    current_user: User = Depends(get_current_active_user),
-):
-    """
-    Silent refresh endpoint for QuantumGo.
-    Requires current portal authentication and only issues a fresh short-lived game token.
-    """
-    claims = {
-        "sub": current_user.username,
-        "user_id": current_user.id,
-        "username": current_user.username,
-    }
-    token = create_quantumgo_token(claims)
-    response.headers["Cache-Control"] = "no-store"
-    response.headers["Pragma"] = "no-cache"
-    return _build_game_session_response(
-        current_user=current_user,
-        game_token=token,
-        expires_in=QUANTUMGO_TOKEN_EXPIRE_SECONDS,
-    )
-
-
-@router.post("/chess-tourmaster/token", response_model=APIResponse)
-async def issue_tourmaster_token(
-    current_user: User = Depends(get_current_active_user),
-    db: Session = Depends(get_db),
-    x_user_timezone: str | None = Header(None, alias="X-User-Timezone"),
-):
-    """
-    为当前登录用户签发 Chess-Tourmaster 短期令牌；
-    按用户当地日期记录当日点开次数，用于每日/每月任务进度。
-    """
-    tz = (x_user_timezone or "").strip() or DEFAULT_TZ
-    today_iso = _today_in_tz(tz)
-    _increment_daily_play(db, current_user.id, "chess-tourmaster", today_iso)
-
-    _try_insert_user_game_played(db, current_user.id, "chess-tourmaster")
-
-    claims = {
-        "sub": current_user.username,
-        "user_id": current_user.id,
-        "username": current_user.username,
-    }
-
-    token = create_tourmaster_token(claims)
-    _, reward_status, flowers_awarded = _record_play_and_claim_if_ready(db, current_user, "chess-tourmaster")
-    total_flowers = _total_flowers_for_user(db, current_user.id)
-    assets = _get_asset_balances(db, current_user.id)
-    return _build_token_response(
-        current_user=current_user,
-        game_token=token,
-        expires_in=TOURMASTER_TOKEN_EXPIRE_SECONDS,
-        reward_status=reward_status,
-        flowers_awarded=flowers_awarded,
-        total_flowers=total_flowers,
-        assets=assets,
-    )
-
-
-@router.get("/chess-tourmaster/session", response_model=APIResponse)
-async def refresh_tourmaster_session(
-    response: Response,
-    current_user: User = Depends(get_current_active_user),
-):
-    """
-    Silent refresh endpoint for Chess-Tourmaster.
-    Requires current portal authentication and only issues a fresh short-lived game token.
-    """
-    claims = {
-        "sub": current_user.username,
-        "user_id": current_user.id,
-        "username": current_user.username,
-    }
-    token = create_tourmaster_token(claims)
-    response.headers["Cache-Control"] = "no-store"
-    response.headers["Pragma"] = "no-cache"
-    return _build_game_session_response(
-        current_user=current_user,
-        game_token=token,
-        expires_in=TOURMASTER_TOKEN_EXPIRE_SECONDS,
-    )
+    return _refresh_game_session_response(current_user, entry.game_key)
 
 
 @router.post("/sudoku/play", response_model=APIResponse)

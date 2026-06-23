@@ -5,10 +5,14 @@ import { useRouter } from "@/lib/i18n-navigation";
 import { useTranslations } from "next-intl";
 import { apiFetch } from "@/lib/api-config";
 import { getUserTimezone, postGamePlayedRecord } from "@/services/userApi";
+import {
+  GAME_LAUNCH_BY_KEY,
+  GAME_LAUNCH_ENTRIES,
+  type AnalyticsGameLaunchEntry,
+  type PortalLaunchKey,
+  type TokenGameLaunchEntry,
+} from "@/config/game-launch";
 
-/**
- * Game launch configuration type
- */
 interface GameConfig {
   gameKey: string;
   apiEndpoint: string;
@@ -26,12 +30,8 @@ export function useGameLauncher() {
   const locale = params.locale as string;
   const tHome = useTranslations("dashboard");
 
-  /**
-   * Generic launcher function
-   */
   const launchGame = async (config: GameConfig) => {
     try {
-      // Auth is carried via the cross-subdomain HttpOnly cookie; no token in URL.
       const response = await apiFetch(config.apiEndpoint, {
         method: "POST",
         headers: {
@@ -61,10 +61,6 @@ export function useGameLauncher() {
         throw new Error(`Missing game URL config (${config.gameKey})`);
       }
 
-      console.log(`[${config.gameKey}] Using game URL:`, gameUrl);
-
-      // First-paint hints only. Sub-games refresh game_token via cookie-based
-      // /api/games/{game}/session, so we no longer pass portal_token/portal_api.
       const url =
         `${gameUrl}#token=${encodeURIComponent(gameToken)}` +
         `&locale=${encodeURIComponent(locale)}` +
@@ -83,77 +79,56 @@ export function useGameLauncher() {
     }
   };
 
-  const handleFogChess = () => {
-    launchGame({
-      gameKey: "fogchess",
-      apiEndpoint: "/api/games/fogchess/token",
-      gameUrl: process.env.NEXT_PUBLIC_FOGCHESS_URL || "https://fogchess.deepbraintechnology.com",
-      openInNewTab: false,
+  const launchTokenGame = (entry: TokenGameLaunchEntry) => {
+    void launchGame({
+      gameKey: entry.apiSlug,
+      apiEndpoint: `/api/games/${entry.apiSlug}/token`,
+      gameUrl: entry.gameUrl,
+      openInNewTab: entry.openInNewTab,
     });
   };
 
-  const handleSudokuBattle = () => {
-    launchGame({
-      gameKey: "sudokuBattle",
-      apiEndpoint: "/api/games/sudoku/token",
-      gameUrl: "https://sudoku-battle.deepbraintechnology.com/",
-      openInNewTab: true,
-    });
-  };
-
-  const handleQuantumGo = () => {
-    launchGame({
-      gameKey: "quantumGo",
-      apiEndpoint: "/api/games/quantumgo/token",
-      gameUrl: process.env.NEXT_PUBLIC_QUANTUMGO_URL || "https://quantumgo.deepbraintechnology.com/",
-      openInNewTab: false,
-    });
-  };
-
-  const handleChessMater = () => {
-    launchGame({
-      gameKey: "chessMater",
-      apiEndpoint: "/api/games/chessmater/token",
-      gameUrl: "https://chessmater.deepbraintechnology.com/",
-      openInNewTab: false,
-    });
-  };
-
-  const handleChessTourmaster = () => {
-    launchGame({
-      gameKey: "chessTourmaster",
-      apiEndpoint: "/api/games/chess-tourmaster/token",
-      gameUrl: "https://chess-tourmaster.deepbraintechnology.com",
-      openInNewTab: false,
-    });
-  };
-
-  const handleOnlineChess = () => {
-    launchGame({
-      gameKey: "online-chess",
-      apiEndpoint: "/api/games/online-chess/token",
-      gameUrl: process.env.NEXT_PUBLIC_ONLINE_CHESS_URL || "https://chess.deepbraintechnology.com",
-      openInNewTab: false,
-    });
-  };
-
-  const handleSudoku = () => {
-    // Pure portal-side analytics ping; sub-game has no auth contract with us.
-    void postGamePlayedRecord("sudoku").catch(() => {
+  const launchAnalyticsGame = (entry: AnalyticsGameLaunchEntry) => {
+    void postGamePlayedRecord(entry.playedRecordKey).catch(() => {
       /* still open game; count may update on next rewards fetch */
     });
-    // Must open synchronously in user gesture to avoid popup blockers
-    window.open("https://sudoku.deepbraintechnology.com/", "_blank");
+    if (entry.openInNewTab) {
+      window.open(entry.gameUrl, "_blank");
+    } else {
+      window.location.href = entry.gameUrl;
+    }
   };
+
+  const launchByKey = (key: PortalLaunchKey) => {
+    const entry = GAME_LAUNCH_BY_KEY[key];
+    if (entry.kind === "token") {
+      launchTokenGame(entry);
+    } else {
+      launchAnalyticsGame(entry);
+    }
+  };
+
+  const handlers = Object.fromEntries(
+    GAME_LAUNCH_ENTRIES.map((entry) => [
+      entry.launchKey,
+      () => {
+        if (entry.kind === "token") {
+          launchTokenGame(entry);
+        } else {
+          launchAnalyticsGame(entry);
+        }
+      },
+    ]),
+  ) as Record<PortalLaunchKey, () => void>;
 
   return {
-    handleFogChess,
-    handleSudokuBattle,
-    handleSudoku,
-    handleQuantumGo,
-    handleChessMater,
-    handleChessTourmaster,
-    handleOnlineChess,
+    launchByKey,
+    handleFogChess: handlers.fogChess,
+    handleSudokuBattle: handlers.sudokuBattle,
+    handleSudoku: handlers.sudoku,
+    handleQuantumGo: handlers.quantumGo,
+    handleChessMater: handlers.chessMater,
+    handleChessTourmaster: handlers.chessTourmaster,
+    handleOnlineChess: handlers.onlineChess,
   };
 }
-
