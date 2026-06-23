@@ -132,7 +132,7 @@ export function useGameLauncher() {
     launchGame({
       gameKey: "online-chess",
       apiEndpoint: "/api/games/online-chess/token",
-      gameUrl: process.env.NEXT_PUBLIC_ONLINE_CHESS_URL || "https://online-chess-web-production.up.railway.app",
+      gameUrl: process.env.NEXT_PUBLIC_ONLINE_CHESS_URL || "https://chess.deepbraintechnology.com",
       openInNewTab: false,
     });
   };
