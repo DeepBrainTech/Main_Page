@@ -586,29 +586,31 @@ export default function MakingWholeLessonPanel({
               </div>
               <div className="h-px shrink-0 bg-slate-200" />
 
-              <div className="flex min-h-[44px] shrink-0 items-center justify-between gap-3 pt-[clamp(10px,1.1vw,16px)]">
-                <div className="flex min-w-0 flex-1 items-center gap-2">
-                  <CircularProgressRing value={progressPercent} size={28} />
-                  <p className="text-base font-semibold text-[#333]">
+              <div className="flex min-h-[36px] shrink-0 items-center justify-between gap-2 pt-[clamp(10px,1.1vw,16px)]">
+                <div className="flex min-w-0 items-center gap-1.5">
+                  <CircularProgressRing value={progressPercent} size={22} />
+                  <p className="whitespace-nowrap text-sm font-semibold text-[#333]">
                     {solvedCount}/{totalCount}
                   </p>
+                </div>
+                <div className="flex shrink-0 items-center gap-1.5">
                   {showViewReport ? (
                     <button
                       type="button"
                       onClick={() => handleViewSecretReport(secret.key)}
-                      className="shrink-0 rounded-xl bg-indigo-50 px-3 py-1 text-sm font-medium text-sky-700 transition hover:bg-indigo-100"
+                      className="shrink-0 whitespace-nowrap rounded-lg bg-indigo-50 px-2 py-0.5 text-xs font-medium text-sky-700 transition hover:bg-indigo-100"
                     >
                       {tPractice("viewReport")}
                     </button>
                   ) : null}
+                  <button
+                    type="button"
+                    onClick={() => onSelectedSecretChange?.(secret.key)}
+                    className="shrink-0 whitespace-nowrap rounded-full bg-[#045E96] px-4 py-1 text-sm font-semibold text-[#EDF4FC]"
+                  >
+                    {tLearn("home.startLesson")}
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => onSelectedSecretChange?.(secret.key)}
-                  className="shrink-0 rounded-full bg-[#045E96] px-6 py-1.5 text-base font-semibold text-[#EDF4FC]"
-                >
-                  {tLearn("home.startLesson")}
-                </button>
               </div>
             </article>
           );
