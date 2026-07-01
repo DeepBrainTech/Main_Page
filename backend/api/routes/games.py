@@ -78,6 +78,7 @@ SUPPORTED_GAME_KEYS = {
     "dash-dot-simulator",
     "stack_math_chess",
     "recon_chess",
+    "number-blast",
 }
 
 

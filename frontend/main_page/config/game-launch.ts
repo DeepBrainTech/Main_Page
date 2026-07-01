@@ -9,7 +9,8 @@ export type TokenLaunchKey =
   | "quantumGo"
   | "fogChess"
   | "onlineChess"
-  | "sudokuBattle";
+  | "sudokuBattle"
+  | "numberBlast";
 
 export type AnalyticsLaunchKey = "sudoku";
 
@@ -91,6 +92,13 @@ export const GAME_LAUNCH_ENTRIES: GameLaunchEntry[] = [
     gameUrl: "https://sudoku.deepbraintechnology.com/",
     playedRecordKey: "sudoku",
     openInNewTab: true,
+  },
+  {
+    kind: "token",
+    launchKey: "numberBlast",
+    apiSlug: "number-blast",
+    gameUrl: "https://number-blast-production.up.railway.app",
+    openInNewTab: false,
   },
 ];
 
