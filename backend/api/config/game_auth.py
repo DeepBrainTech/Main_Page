@@ -48,6 +48,13 @@ GAME_AUTH_ENTRIES: tuple[GameAuthEntry, ...] = (
         track_daily_play=True,
         has_session=True,
     ),
+    GameAuthEntry(
+        "number-blast",
+        "number-blast",
+        "NUMBER_BLAST",
+        "number-blast",
+        has_session=True,
+    ),
 )
 
 _BY_API_SLUG = {entry.api_slug: entry for entry in GAME_AUTH_ENTRIES}

@@ -32,6 +32,7 @@ interface BrainGamesTabProps {
     quantumGo: () => void;
     fogChess: () => void;
     onlineChess: () => void;
+    numberBlast: () => void;
   };
 }
 
@@ -185,6 +186,7 @@ function launchForKey(
   if (entry.launchKey === "quantumGo") return onLaunch.quantumGo;
   if (entry.launchKey === "fogChess") return onLaunch.fogChess;
   if (entry.launchKey === "onlineChess") return onLaunch.onlineChess;
+  if (entry.launchKey === "numberBlast") return onLaunch.numberBlast;
   if (entry.launchKey === "external" && entry.externalUrl) {
     return () => {
       void postGamePlayedRecord(entry.key).catch(() => {

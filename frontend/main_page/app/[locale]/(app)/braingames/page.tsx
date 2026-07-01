@@ -11,6 +11,7 @@ export default function BrainGamesPage() {
     handleChessMater,
     handleChessTourmaster,
     handleOnlineChess,
+    handleNumberBlast,
   } = useGameLauncher();
 
   return (
@@ -22,6 +23,7 @@ export default function BrainGamesPage() {
         quantumGo: handleQuantumGo,
         fogChess: handleFogChess,
         onlineChess: handleOnlineChess,
+        numberBlast: handleNumberBlast,
       }}
     />
   );

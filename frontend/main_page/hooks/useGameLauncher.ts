@@ -130,5 +130,6 @@ export function useGameLauncher() {
     handleChessMater: handlers.chessMater,
     handleChessTourmaster: handlers.chessTourmaster,
     handleOnlineChess: handlers.onlineChess,
+    handleNumberBlast: handlers.numberBlast,
   };
 }
