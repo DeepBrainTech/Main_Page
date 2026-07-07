@@ -37,7 +37,8 @@ function renderSubTest(
   subTestKey: string,
   params: Record<string, unknown>,
   onComplete: (score: number) => void,
-  dateOfBirth?: string | null
+  dateOfBirth?: string | null,
+  challengeMode = false,
 ) {
   const formalCount = params.formalCount as number | undefined;
   const formalCounts = params.formalCounts as Partial<Record<3 | 5 | 7, number>> | undefined;
@@ -52,9 +53,9 @@ function renderSubTest(
     case "focus_flanker":    return <FlankerTask onComplete={onComplete} dateOfBirth={dateOfBirth} difficultyConfig={{ trialWindowMs: params.trialWindowMs as number | undefined, formalCount }} />;
     case "focus_stroop":     return <StroopColor onComplete={onComplete} dateOfBirth={dateOfBirth} difficultyConfig={{ formalCount }} />;
     case "focus_schulte":    return <SchulteGrid onComplete={onComplete} difficultyConfig={{ gridSizes: params.gridSizes as number[] | undefined }} />;
-    case "reaction_click":   return <ReactionClick onComplete={onComplete} dateOfBirth={dateOfBirth} />;
-    case "reaction_arrow":   return <ReactionArrowKey onComplete={onComplete} dateOfBirth={dateOfBirth} />;
-    case "reaction_pvt":     return <ReactionPVT onComplete={onComplete} dateOfBirth={dateOfBirth} />;
+    case "reaction_click":   return <ReactionClick onComplete={onComplete} dateOfBirth={dateOfBirth} challengeMode={challengeMode} />;
+    case "reaction_arrow":   return <ReactionArrowKey onComplete={onComplete} dateOfBirth={dateOfBirth} challengeMode={challengeMode} />;
+    case "reaction_pvt":     return <ReactionPVT onComplete={onComplete} dateOfBirth={dateOfBirth} challengeMode={challengeMode} />;
     case "strategy_hanoi":   return <HanoiPlanning onComplete={onComplete} dateOfBirth={dateOfBirth} difficultyConfig={{ diskSequence: params.diskSequence as number[] | undefined }} />;
     case "strategy_london":  return <LondonPlanning onComplete={onComplete} dateOfBirth={dateOfBirth} />;
     case "strategy_route":   return <RoutePlanning onComplete={onComplete} dateOfBirth={dateOfBirth} />;
@@ -200,7 +201,7 @@ export function MapChallengeRunner({
         hideSkip
       >
         <TestRunnerShell dimensionLabel={`${t("mapLevelLabel")} ${mapLevel.level}`}>
-          {renderSubTest(currentSubTest.key, cfg.params, (score) => void handleSubTestComplete(score), dateOfBirth)}
+          {renderSubTest(currentSubTest.key, cfg.params, (score) => void handleSubTestComplete(score), dateOfBirth, true)}
         </TestRunnerShell>
       </TestChromeProvider>
     </div>
@@ -283,7 +284,7 @@ export default function ChallengeRunner({
           </span>
           <span>{missionLabel}</span>
         </div>
-        {renderSubTest(mission.subTestKey, cfg.params, (score) => void handleSubTestComplete(score), dateOfBirth)}
+        {renderSubTest(mission.subTestKey, cfg.params, (score) => void handleSubTestComplete(score), dateOfBirth, true)}
       </TestRunnerShell>
     </TestChromeProvider>
   );

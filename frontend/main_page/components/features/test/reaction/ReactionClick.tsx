@@ -87,12 +87,15 @@ function mapReactionToScore(rtMs: number, ageBand: AgeBandId | null) {
 export default function ReactionClick({
   onComplete,
   dateOfBirth,
+  challengeMode = false,
 }: {
   onComplete: (score: number) => void;
   dateOfBirth?: string | null;
+  /** When true, skip intro/practice and start formal trials immediately (map challenge). */
+  challengeMode?: boolean;
 }) {
   const t = useTranslations("test.reaction");
-  const [phase, setPhase] = useState<Phase>("intro");
+  const [phase, setPhase] = useState<Phase>(challengeMode ? "formal" : "intro");
   const [screenState, setScreenState] = useState<ScreenState>("idle");
   const [formalIndex, setFormalIndex] = useState(0);
   const [trialResults, setTrialResults] = useState<number[]>([]);
@@ -101,6 +104,8 @@ export default function ReactionClick({
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lockRef = useRef(false);
   const startTimeRef = useRef<number | null>(null);
+  const signalLiveRef = useRef(false);
+  const challengeStartedRef = useRef(false);
 
   const ageBand = useMemo(() => resolveAgeBand(parseAge(dateOfBirth)), [dateOfBirth]);
 
@@ -109,6 +114,16 @@ export default function ReactionClick({
       if (timerRef.current) clearTimeout(timerRef.current);
     };
   }, []);
+
+  useEffect(() => {
+    if (!challengeMode || challengeStartedRef.current) return;
+    challengeStartedRef.current = true;
+    setTrialResults([]);
+    setFormalIndex(0);
+    setPhase("formal");
+    scheduleRound();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [challengeMode]);
 
   const clearPendingTimer = () => {
     if (timerRef.current) {
@@ -121,12 +136,14 @@ export default function ReactionClick({
     clearPendingTimer();
     lockRef.current = false;
     startTimeRef.current = null;
+    signalLiveRef.current = false;
     setScreenState("waiting");
 
     const delay = 2000 + Math.random() * 3000;
     timerRef.current = setTimeout(() => {
       setScreenState("ready");
       startTimeRef.current = performance.now();
+      signalLiveRef.current = true;
     }, delay);
   };
 
@@ -161,6 +178,7 @@ export default function ReactionClick({
     clearPendingTimer();
     lockRef.current = true;
     startTimeRef.current = null;
+    signalLiveRef.current = false;
     setScreenState("tooSoon");
     timerRef.current = setTimeout(() => {
       lockRef.current = false;
@@ -171,6 +189,8 @@ export default function ReactionClick({
   const recordReaction = (rtMs: number) => {
     clearPendingTimer();
     lockRef.current = true;
+    startTimeRef.current = null;
+    signalLiveRef.current = false;
     setScreenState("recorded");
 
     if (phase === "practice") {
@@ -201,15 +221,16 @@ export default function ReactionClick({
     if (phase !== "practice" && phase !== "formal") return;
     if (lockRef.current) return;
 
-    if (screenState === "waiting") {
-      flashTooSoon();
+    // Ref is updated synchronously when the signal goes live, avoiding stale screenState races.
+    if (signalLiveRef.current && startTimeRef.current != null) {
+      const rtMs = Math.round(Math.max(0, performance.now() - startTimeRef.current));
+      recordReaction(rtMs);
       return;
     }
 
-    if (screenState !== "ready" || startTimeRef.current == null) return;
-
-    const rtMs = Math.round(Math.max(0, performance.now() - startTimeRef.current));
-    recordReaction(rtMs);
+    if (screenState === "waiting") {
+      flashTooSoon();
+    }
   };
 
   const screenClass =

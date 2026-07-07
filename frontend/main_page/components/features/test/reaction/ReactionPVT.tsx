@@ -97,12 +97,14 @@ function resolveLapseThreshold(ageBand: AgeBandId | null) {
 export default function ReactionPVT({
   onComplete,
   dateOfBirth,
+  challengeMode = false,
 }: {
   onComplete: (score: number) => void;
   dateOfBirth?: string | null;
+  challengeMode?: boolean;
 }) {
   const t = useTranslations("test.reaction");
-  const [phase, setPhase] = useState<Phase>("intro");
+  const [phase, setPhase] = useState<Phase>(challengeMode ? "formal" : "intro");
   const [screenState, setScreenState] = useState<ScreenState>("idle");
   const [formalIndex, setFormalIndex] = useState(0);
   const [trialResults, setTrialResults] = useState<number[]>([]);
@@ -113,6 +115,8 @@ export default function ReactionPVT({
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lockRef = useRef(false);
   const startTimeRef = useRef<number | null>(null);
+  const signalLiveRef = useRef(false);
+  const challengeStartedRef = useRef(false);
 
   const ageBand = useMemo(() => resolveAgeBand(parseAge(dateOfBirth)), [dateOfBirth]);
   const lapseThreshold = useMemo(() => resolveLapseThreshold(ageBand), [ageBand]);
@@ -122,6 +126,18 @@ export default function ReactionPVT({
       if (timerRef.current) clearTimeout(timerRef.current);
     };
   }, []);
+
+  useEffect(() => {
+    if (!challengeMode || challengeStartedRef.current) return;
+    challengeStartedRef.current = true;
+    setTrialResults([]);
+    setFormalIndex(0);
+    setFormalLapseCount(0);
+    setFormalFalseStartCount(0);
+    setPhase("formal");
+    scheduleRound();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [challengeMode]);
 
   const clearPendingTimer = () => {
     if (timerRef.current) {
@@ -134,12 +150,14 @@ export default function ReactionPVT({
     clearPendingTimer();
     lockRef.current = false;
     startTimeRef.current = null;
+    signalLiveRef.current = false;
     setScreenState("waiting");
 
     const delay = WAIT_MIN_MS + Math.random() * (WAIT_MAX_MS - WAIT_MIN_MS);
     timerRef.current = setTimeout(() => {
       setScreenState("ready");
       startTimeRef.current = performance.now();
+      signalLiveRef.current = true;
     }, delay);
   };
 
@@ -181,6 +199,7 @@ export default function ReactionPVT({
     clearPendingTimer();
     lockRef.current = true;
     startTimeRef.current = null;
+    signalLiveRef.current = false;
     setScreenState("tooSoon");
     if (phase === "formal") {
       setFormalFalseStartCount((value) => value + 1);
@@ -194,6 +213,8 @@ export default function ReactionPVT({
   const recordReaction = (rtMs: number) => {
     clearPendingTimer();
     lockRef.current = true;
+    startTimeRef.current = null;
+    signalLiveRef.current = false;
     setScreenState("recorded");
 
     if (phase === "practice") {
@@ -231,20 +252,20 @@ export default function ReactionPVT({
       event.preventDefault();
       if (lockRef.current) return;
 
-      if (screenState === "waiting") {
-        flashTooSoon();
+      if (signalLiveRef.current && startTimeRef.current != null) {
+        const rtMs = Math.round(Math.max(0, performance.now() - startTimeRef.current));
+        recordReaction(rtMs);
         return;
       }
 
-      if (screenState !== "ready" || startTimeRef.current == null) return;
-
-      const rtMs = Math.round(Math.max(0, performance.now() - startTimeRef.current));
-      recordReaction(rtMs);
+      if (screenState === "waiting") {
+        flashTooSoon();
+      }
     };
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [phase, screenState, trialResults, formalIndex, formalFalseStartCount, ageBand]);
+  }, [phase, screenState]);
 
   const screenLabel =
     screenState === "waiting"

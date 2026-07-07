@@ -118,12 +118,14 @@ function randomDirection() {
 export default function ReactionArrowKey({
   onComplete,
   dateOfBirth,
+  challengeMode = false,
 }: {
   onComplete: (score: number) => void;
   dateOfBirth?: string | null;
+  challengeMode?: boolean;
 }) {
   const t = useTranslations("test.reaction");
-  const [phase, setPhase] = useState<Phase>("intro");
+  const [phase, setPhase] = useState<Phase>(challengeMode ? "formal" : "intro");
   const [screenState, setScreenState] = useState<ScreenState>("idle");
   const [targetDirection, setTargetDirection] = useState<Direction | null>(null);
   const [formalIndex, setFormalIndex] = useState(0);
@@ -133,6 +135,9 @@ export default function ReactionArrowKey({
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lockRef = useRef(false);
   const startTimeRef = useRef<number | null>(null);
+  const signalLiveRef = useRef(false);
+  const targetDirectionRef = useRef<Direction | null>(null);
+  const challengeStartedRef = useRef(false);
 
   const ageBand = useMemo(() => resolveAgeBand(parseAge(dateOfBirth)), [dateOfBirth]);
 
@@ -141,6 +146,16 @@ export default function ReactionArrowKey({
       if (timerRef.current) clearTimeout(timerRef.current);
     };
   }, []);
+
+  useEffect(() => {
+    if (!challengeMode || challengeStartedRef.current) return;
+    challengeStartedRef.current = true;
+    setTrialResults([]);
+    setFormalIndex(0);
+    setPhase("formal");
+    scheduleRound();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [challengeMode]);
 
   const clearPendingTimer = () => {
     if (timerRef.current) {
@@ -153,15 +168,19 @@ export default function ReactionArrowKey({
     clearPendingTimer();
     lockRef.current = false;
     startTimeRef.current = null;
+    signalLiveRef.current = false;
+    targetDirectionRef.current = null;
     setTargetDirection(null);
     setScreenState("waiting");
 
     const delay = 2000 + Math.random() * 3000;
     timerRef.current = setTimeout(() => {
       const direction = randomDirection();
+      targetDirectionRef.current = direction;
       setTargetDirection(direction);
       setScreenState("ready");
       startTimeRef.current = performance.now();
+      signalLiveRef.current = true;
     }, delay);
   };
 
@@ -196,6 +215,8 @@ export default function ReactionArrowKey({
     clearPendingTimer();
     lockRef.current = true;
     startTimeRef.current = null;
+    signalLiveRef.current = false;
+    targetDirectionRef.current = null;
     setTargetDirection(null);
     setScreenState("tooSoon");
     timerRef.current = setTimeout(() => {
@@ -208,6 +229,7 @@ export default function ReactionArrowKey({
     clearPendingTimer();
     lockRef.current = true;
     startTimeRef.current = null;
+    signalLiveRef.current = false;
     setScreenState("wrongKey");
     timerRef.current = setTimeout(() => {
       lockRef.current = false;
@@ -218,6 +240,8 @@ export default function ReactionArrowKey({
   const recordReaction = (rtMs: number) => {
     clearPendingTimer();
     lockRef.current = true;
+    startTimeRef.current = null;
+    signalLiveRef.current = false;
     setScreenState("recorded");
 
     if (phase === "practice") {
@@ -253,24 +277,24 @@ export default function ReactionArrowKey({
       event.preventDefault();
       if (lockRef.current) return;
 
+      if (signalLiveRef.current && startTimeRef.current != null && targetDirectionRef.current != null) {
+        if (inputDirection !== targetDirectionRef.current) {
+          flashWrongKey();
+          return;
+        }
+        const rtMs = Math.round(Math.max(0, performance.now() - startTimeRef.current));
+        recordReaction(rtMs);
+        return;
+      }
+
       if (screenState === "waiting") {
         flashTooSoon();
-        return;
       }
-
-      if (screenState !== "ready" || startTimeRef.current == null || targetDirection == null) return;
-      if (inputDirection !== targetDirection) {
-        flashWrongKey();
-        return;
-      }
-
-      const rtMs = Math.round(Math.max(0, performance.now() - startTimeRef.current));
-      recordReaction(rtMs);
     };
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [phase, screenState, targetDirection, trialResults, formalIndex, ageBand]);
+  }, [phase, screenState]);
 
   const screenClass =
     screenState === "waiting"
