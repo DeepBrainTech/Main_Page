@@ -8,6 +8,7 @@ type NBackMode = "grid" | "letter";
 interface MemoryNBackProps {
   onComplete: (score: number) => void;
   dateOfBirth?: string | null;
+  difficultyConfig?: { nLevel?: number; intervalMs?: number };
 }
 
 interface FormalStats {
@@ -204,8 +205,11 @@ function createStimulus(
   return { current: candidate, isMatch: false };
 }
 
-export default function MemoryNBack({ onComplete, dateOfBirth }: MemoryNBackProps) {
+export default function MemoryNBack({ onComplete, dateOfBirth, difficultyConfig }: MemoryNBackProps) {
   const t = useTranslations("test.memory");
+  const activeNLevel = difficultyConfig?.nLevel ?? FIXED_LEVEL;
+  const activeIntervalMs = difficultyConfig?.intervalMs ?? FORMAL_INTERVAL_MS;
+  const activeFormalLevels = Array.from({ length: 20 }, () => activeNLevel);
 
   const [phase, setPhase] = useState<"intro" | "practice" | "formal">("intro");
 
@@ -239,7 +243,7 @@ export default function MemoryNBack({ onComplete, dateOfBirth }: MemoryNBackProp
 
   // 正式阶段计分累积器。
 
-  const totalQuestions = FORMAL_LEVELS.length;
+  const totalQuestions = activeFormalLevels.length;
 
   const resetPractice = () => {
     setPracticeStream([]);
@@ -294,14 +298,14 @@ export default function MemoryNBack({ onComplete, dateOfBirth }: MemoryNBackProp
     practiceTimerRef.current = setTimeout(() => {
       setPracticeStream((prev) => {
         const idx = prev.length;
-        const canMatch = idx >= FIXED_LEVEL;
+        const canMatch = idx >= activeNLevel;
         const shouldMatch = canMatch && Math.random() < MATCH_RATE;
 
         let next = pool[Math.floor(Math.random() * pool.length)];
         if (shouldMatch) {
-          next = prev[idx - FIXED_LEVEL];
+          next = prev[idx - activeNLevel];
         } else if (canMatch) {
-          const target = prev[idx - FIXED_LEVEL];
+          const target = prev[idx - activeNLevel];
           while (next === target && pool.length > 1) {
             next = pool[Math.floor(Math.random() * pool.length)];
           }
@@ -336,7 +340,7 @@ export default function MemoryNBack({ onComplete, dateOfBirth }: MemoryNBackProp
     }
 
     const mode: NBackMode = formalFixedMode;
-    const level = FIXED_LEVEL;
+    const level = activeNLevel;
     const wantMatch = formalRandRef.current() < MATCH_RATE;
     const generated = createStimulus(mode, level, formalHistory, wantMatch, formalRandRef.current);
 
@@ -365,7 +369,7 @@ export default function MemoryNBack({ onComplete, dateOfBirth }: MemoryNBackProp
 
       if (isCorrect && generated.isMatch && clickTsRef.current != null) {
         const rt = clickTsRef.current - trialStartTsRef.current;
-        if (rt >= 50 && rt <= FORMAL_INTERVAL_MS + 200) {
+        if (rt >= 50 && rt <= activeIntervalMs + 200) {
           correctHitRtMsRef.current.push(rt);
         }
       }
@@ -391,7 +395,7 @@ export default function MemoryNBack({ onComplete, dateOfBirth }: MemoryNBackProp
       }
 
       setFormalHistory((prev) => [...prev, generated.current]);
-    }, FORMAL_INTERVAL_MS);
+    }, activeIntervalMs);
 
     return () => {
       if (timerRef.current) {
@@ -414,12 +418,12 @@ export default function MemoryNBack({ onComplete, dateOfBirth }: MemoryNBackProp
     if (!practiceRunning || !practiceCurrent) return;
 
     const idx = practiceStream.length - 1;
-    if (idx < FIXED_LEVEL) {
+    if (idx < activeNLevel) {
       setPracticeFeedback("wait");
       return;
     }
 
-    const actual = practiceStream[idx] === practiceStream[idx - FIXED_LEVEL];
+    const actual = practiceStream[idx] === practiceStream[idx - activeNLevel];
     setPracticeFeedback(actual ? "correct" : "wrong");
   };
 
@@ -516,7 +520,7 @@ export default function MemoryNBack({ onComplete, dateOfBirth }: MemoryNBackProp
           {t("nBackPracticeBadge")}
         </p>
         <p className="mb-4 text-sm text-gray-600">{t("nBackPracticeDesc")}</p>
-        <p className="mb-4 text-xs text-gray-500">{t("nBackFixedLevelHint", { level: FIXED_LEVEL })}</p>
+        <p className="mb-4 text-xs text-gray-500">{t("nBackFixedLevelHint", { level: activeNLevel })}</p>
 
         <div className="mb-3 flex gap-2">
           <button
@@ -549,10 +553,10 @@ export default function MemoryNBack({ onComplete, dateOfBirth }: MemoryNBackProp
           </button>
         </div>
 
-        <div className="mb-4">{renderSequence(practiceMode, FIXED_LEVEL, practiceCurrent)}</div>
+        <div className="mb-4">{renderSequence(practiceMode, activeNLevel, practiceCurrent)}</div>
 
         <p className="mb-3 text-sm font-medium text-gray-700">
-          {t("nBackQuestion", { level: FIXED_LEVEL })}
+          {t("nBackQuestion", { level: activeNLevel })}
         </p>
         <p className="mb-2 text-xs text-gray-500">{t("practiceStreamHint")}</p>
 
@@ -611,10 +615,10 @@ export default function MemoryNBack({ onComplete, dateOfBirth }: MemoryNBackProp
       <div className="rounded-xl bg-white p-6 shadow-md">
         <h4 className="mb-2 text-center font-semibold text-gray-800">{t("nBackTitle")}</h4>
         <p className="mb-3 text-center text-xs text-gray-500">
-          {t("nBackFixedLevelHint", { level: FIXED_LEVEL })}
+          {t("nBackFixedLevelHint", { level: activeNLevel })}
         </p>
         <div className="mb-4 flex justify-center">
-          {renderSequence(formalMode, FIXED_LEVEL, formalCurrent, false)}
+          {renderSequence(formalMode, activeNLevel, formalCurrent, false)}
         </div>
         <div className="flex flex-col items-center gap-4">
           <div className="flex items-center gap-3">

@@ -18,7 +18,7 @@ interface TestRunnerShellProps {
 
 export default function TestRunnerShell({ dimensionLabel, children }: TestRunnerShellProps) {
   const t = useTranslations("test");
-  const { sessionIndex, sessionTotal, chrome, onSkipSession } = useTestChrome();
+  const { sessionIndex, sessionTotal, chrome, onSkipSession, hideSkip } = useTestChrome();
 
   const isIntro = chrome.screen === "intro";
   const showQuestionProgress = !isIntro && (chrome.questionTotal ?? 0) > 0;
@@ -66,14 +66,16 @@ export default function TestRunnerShell({ dimensionLabel, children }: TestRunner
             )}
           </div>
 
-          {isIntro ? (
-            <button type="button" className={testChromeButtonClass} onClick={() => {}}>
-              {t("testHistory")}
-            </button>
-          ) : (
-            <button type="button" onClick={onSkipSession} className={testChromeButtonClass}>
-              {t("skipSession")}
-            </button>
+          {!hideSkip && (
+            isIntro ? (
+              <button type="button" className={testChromeButtonClass} onClick={() => {}}>
+                {t("testHistory")}
+              </button>
+            ) : (
+              <button type="button" onClick={onSkipSession} className={testChromeButtonClass}>
+                {t("skipSession")}
+              </button>
+            )
           )}
         </header>
 

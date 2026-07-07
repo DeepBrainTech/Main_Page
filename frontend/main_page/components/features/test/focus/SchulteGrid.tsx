@@ -45,8 +45,23 @@ function toLevelScore(elapsedMs: number, wrongCount: number, maxNumber: number) 
   return Math.round(100 * (speedNorm * 0.8 + errorNorm * 0.2));
 }
 
-export default function SchulteGrid({ onComplete }: { onComplete: (score: number) => void }) {
+interface SchulteGridProps {
+  onComplete: (score: number) => void;
+  difficultyConfig?: { gridSizes?: number[] };
+}
+
+export default function SchulteGrid({ onComplete, difficultyConfig }: SchulteGridProps) {
   const t = useTranslations("test.focus");
+  const activeFormalStages = useMemo<StageConfig[]>(() => {
+    const sizes = difficultyConfig?.gridSizes;
+    if (!sizes || sizes.length === 0) return FORMAL_STAGES;
+    return sizes.map((size) => ({
+      id: `formal-${size}`,
+      size,
+      maxNumber: size * size,
+    }));
+  }, [difficultyConfig]);
+
   const [phase, setPhase] = useState<"intro" | "practice" | "formal">("intro");
   const [practiceSeed, setPracticeSeed] = useState(0);
   const [practiceNext, setPracticeNext] = useState(1);
@@ -61,7 +76,7 @@ export default function SchulteGrid({ onComplete }: { onComplete: (score: number
   const [levelScores, setLevelScores] = useState<number[]>([]);
 
   const practiceCells = useMemo(() => shuffleNumbers(PRACTICE_STAGE.maxNumber), [practiceSeed]);
-  const currentFormalStage = FORMAL_STAGES[formalIndex];
+  const currentFormalStage = activeFormalStages[formalIndex];
   const formalCells = useMemo(
     () => (currentFormalStage ? shuffleNumbers(currentFormalStage.maxNumber) : []),
     [formalIndex]
@@ -137,12 +152,15 @@ export default function SchulteGrid({ onComplete }: { onComplete: (score: number
       const elapsed = now - formalStartTs;
       const levelScore = toLevelScore(elapsed, formalWrong, currentFormalStage.maxNumber);
       const nextScores = [...levelScores, levelScore];
-      if (formalIndex + 1 >= FORMAL_STAGES.length) {
-        // 三关加权：3x3 20%、4x4 30%、5x5 50%
-        const s1 = nextScores[0] ?? 0;
-        const s2 = nextScores[1] ?? 0;
-        const s3 = nextScores[2] ?? 0;
-        const finalScore = Math.round(s1 * 0.2 + s2 * 0.3 + s3 * 0.5);
+      if (formalIndex + 1 >= activeFormalStages.length) {
+        // Weighted score: smaller grids contribute less
+        const weights = activeFormalStages.map((_, i) => {
+          const total = activeFormalStages.length;
+          return total === 1 ? 1 : (i + 1) / ((total * (total + 1)) / 2);
+        });
+        const finalScore = Math.round(
+          nextScores.reduce((sum, s, i) => sum + (s ?? 0) * (weights[i] ?? 0), 0)
+        );
         onComplete(clamp(finalScore, 0, 100));
         return;
       }
@@ -241,7 +259,7 @@ export default function SchulteGrid({ onComplete }: { onComplete: (score: number
         {t("formalBadge")}
       </span>
       <p className="mb-2 text-xs text-gray-500">
-        {t("formalProgress", { current: formalIndex + 1, total: FORMAL_STAGES.length })}
+        {t("formalProgress", { current: formalIndex + 1, total: activeFormalStages.length })}
       </p>
       <div className="flex justify-center">
         <div>

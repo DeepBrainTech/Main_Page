@@ -447,6 +447,43 @@ class UserLearningPracticeReport(Base):
     )
 
 
+class UserLevelProgress(Base):
+    """Per-user per-sub-test level progress for the challenge mode."""
+    __tablename__ = "user_level_progress"
+    __table_args__ = (
+        UniqueConstraint("user_id", "sub_test_key", "level", name="uq_user_level_progress"),
+    )
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    sub_test_key = Column(String(64), nullable=False, index=True)
+    level = Column(Integer, nullable=False)  # 1–5
+    best_score = Column(Integer, default=0, nullable=False)
+    stars = Column(Integer, default=0, nullable=False)  # 0–3
+    completed_count = Column(Integer, default=0, nullable=False)
+    last_completed_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class UserMapProgress(Base):
+    """Per-user map level completion records (Training Map mode)."""
+    __tablename__ = "user_map_progress"
+    __table_args__ = (
+        UniqueConstraint("user_id", "map_level", name="uq_user_map_level"),
+    )
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    map_level = Column(Integer, nullable=False, index=True)   # 1–30
+    stars = Column(Integer, default=0, nullable=False)         # 0–3
+    best_score = Column(Integer, default=0, nullable=False)    # 0–100
+    completed_count = Column(Integer, default=0, nullable=False)
+    last_completed_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
 class UserLearningPracticeReportAnswer(Base):
     """Answer rows for a saved practice report."""
     __tablename__ = "user_learning_practice_report_answers"

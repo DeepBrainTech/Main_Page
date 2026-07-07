@@ -30,6 +30,8 @@ from models import (
     UserLearningStudyTime,
     UserLearningPracticeReport,
     UserLearningPracticeReportAnswer,
+    UserLevelProgress,
+    UserMapProgress,
 )
 from schemas import (
     APIResponse,
@@ -43,6 +45,8 @@ from schemas import (
     LearningStudyTimeCreate,
     LearningPracticeReportUpsert,
     MentalMathUnlockDiamondsBody,
+    LevelProgressSave,
+    MapLevelSave,
 )
 from auth import get_current_active_user
 from config.shop_items import SHOP_ITEMS, get_shop_items_by_game, is_item_available_for_game
@@ -60,9 +64,11 @@ STREAK_TOTAL_COINS = 200
 STREAK_DIAMONDS = 1
 STREAK_DAYS = 7
 DAILY_TASK_COINS = 10
+DAILY_TRAINING_TASK_COINS = 15
 MONTHLY_TASK_DIAMONDS = 10
 GAME_MODE_DAILY_1 = "chessmater"
 GAME_MODE_DAILY_2 = "chess-tourmaster"
+GAME_MODE_DAILY_3 = "cognitive-training"
 GAME_MODE_MONTHLY = "chess-tourmaster"
 MONTHLY_TARGET = 20
 
@@ -948,9 +954,13 @@ def _active_membership_bonus_plan(user: User) -> str | None:
 
 
 def _daily_progress_from_games(db: Session, user_id: int, today_iso: str) -> dict:
-    """从按日表读取当日点开次数，作为每日任务进度。task_id: daily-1 -> chessmater, daily-2 -> chess-tourmaster"""
+    """从按日表读取当日点开次数，作为每日任务进度。task_id: daily-1 -> chessmater, daily-2 -> chess-tourmaster, daily-3 -> cognitive-training"""
     out = {}
-    for mode, task_id in [(GAME_MODE_DAILY_1, "daily-1"), (GAME_MODE_DAILY_2, "daily-2")]:
+    for mode, task_id in [
+        (GAME_MODE_DAILY_1, "daily-1"),
+        (GAME_MODE_DAILY_2, "daily-2"),
+        (GAME_MODE_DAILY_3, "daily-3"),
+    ]:
         r = db.query(UserGamePlayByDay).filter(
             UserGamePlayByDay.user_id == user_id,
             UserGamePlayByDay.game_mode == mode,
@@ -1485,6 +1495,264 @@ async def do_check_in(
     )
 
 
+@router.post("/cognitive-training/complete", response_model=APIResponse)
+async def record_cognitive_training_complete(
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+    x_user_timezone: str | None = Header(None, alias="X-User-Timezone"),
+):
+    """Record one cognitive training session completion for daily task progress tracking."""
+    tz = (x_user_timezone or "").strip() or DEFAULT_TZ
+    today = _today_in_tz(tz)
+
+    row = (
+        db.query(UserGamePlayByDay)
+        .filter(
+            UserGamePlayByDay.user_id == current_user.id,
+            UserGamePlayByDay.game_mode == GAME_MODE_DAILY_3,
+            UserGamePlayByDay.play_date == today,
+        )
+        .first()
+    )
+    if row is None:
+        row = UserGamePlayByDay(
+            user_id=current_user.id,
+            game_mode=GAME_MODE_DAILY_3,
+            play_date=today,
+            count=1,
+        )
+        db.add(row)
+    else:
+        row.count += 1
+        db.add(row)
+    db.commit()
+    db.refresh(row)
+    return APIResponse(
+        success=True,
+        message="ok",
+        data={"game_mode": GAME_MODE_DAILY_3, "play_date": today, "count": row.count},
+    )
+
+
+STAR_THRESHOLDS: list[tuple[int, int]] = [
+    (70, 50),  # level 1: (3-star, 2-star) — used for classic sub-test levels
+    (77, 55),  # level 2
+    (83, 62),  # level 3
+    (89, 70),  # level 4
+    (94, 78),  # level 5
+]
+
+# Map levels use gentler thresholds because scores are averaged across multiple sub-tests
+MAP_STAR_THRESHOLDS: list[tuple[int, int]] = [
+    (75, 50),  # stages 1–2 (levels 1–10)
+    (75, 50),
+    (78, 55),  # stage 3 (levels 11–15)
+    (82, 60),  # stage 4 (levels 16–22)
+    (86, 65),  # stage 5 (levels 23–50)
+]
+
+
+def _compute_stars(score: int, level: int) -> int:
+    idx = max(0, min(4, level - 1))
+    three_star, two_star = STAR_THRESHOLDS[idx]
+    if score >= three_star:
+        return 3
+    if score >= two_star:
+        return 2
+    if score >= 30:
+        return 1
+    return 0
+
+
+def _compute_map_stars(score: int, map_level: int) -> int:
+    """Map levels: gentler thresholds (averaged multi-sub-test scores)."""
+    if map_level <= 10:
+        idx = 0
+    elif map_level <= 15:
+        idx = 2
+    elif map_level <= 22:
+        idx = 3
+    else:
+        idx = 4
+    three_star, two_star = MAP_STAR_THRESHOLDS[idx]
+    if score >= three_star:
+        return 3
+    if score >= two_star:
+        return 2
+    if score >= 20:
+        return 1
+    return 0
+
+
+@router.get("/level-progress", response_model=APIResponse)
+async def get_level_progress(
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+):
+    """Get all level progress for the authenticated user."""
+    rows = (
+        db.query(UserLevelProgress)
+        .filter(UserLevelProgress.user_id == current_user.id)
+        .all()
+    )
+    return APIResponse(
+        success=True,
+        message="ok",
+        data={
+            "progress": [
+                {
+                    "sub_test_key": r.sub_test_key,
+                    "level": r.level,
+                    "best_score": r.best_score,
+                    "stars": r.stars,
+                    "completed_count": r.completed_count,
+                    "last_completed_at": r.last_completed_at.isoformat() if r.last_completed_at else None,
+                }
+                for r in rows
+            ]
+        },
+    )
+
+
+@router.post("/level-progress", response_model=APIResponse)
+async def save_level_progress(
+    body: LevelProgressSave,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+):
+    """Save a completed challenge level result. Updates best score and stars."""
+    now = datetime.utcnow()
+    stars = _compute_stars(body.score, body.level)
+
+    row = (
+        db.query(UserLevelProgress)
+        .filter(
+            UserLevelProgress.user_id == current_user.id,
+            UserLevelProgress.sub_test_key == body.sub_test_key,
+            UserLevelProgress.level == body.level,
+        )
+        .first()
+    )
+    is_new = row is None
+    if row is None:
+        row = UserLevelProgress(
+            user_id=current_user.id,
+            sub_test_key=body.sub_test_key,
+            level=body.level,
+            best_score=body.score,
+            stars=stars,
+            completed_count=1,
+            last_completed_at=now,
+        )
+        db.add(row)
+    else:
+        row.completed_count = int(row.completed_count or 0) + 1
+        row.last_completed_at = now
+        if body.score > int(row.best_score or 0):
+            row.best_score = body.score
+        if stars > int(row.stars or 0):
+            row.stars = stars
+        db.add(row)
+
+    db.commit()
+    db.refresh(row)
+    return APIResponse(
+        success=True,
+        message="ok",
+        data={
+            "sub_test_key": row.sub_test_key,
+            "level": row.level,
+            "best_score": row.best_score,
+            "stars": row.stars,
+            "completed_count": row.completed_count,
+            "is_new_record": is_new or body.score >= int(row.best_score or 0),
+            "last_completed_at": row.last_completed_at.isoformat() if row.last_completed_at else None,
+        },
+    )
+
+
+@router.get("/map-progress", response_model=APIResponse)
+async def get_map_progress(
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+):
+    """Get all Training Map level progress for the authenticated user."""
+    rows = (
+        db.query(UserMapProgress)
+        .filter(UserMapProgress.user_id == current_user.id)
+        .all()
+    )
+    return APIResponse(
+        success=True,
+        message="ok",
+        data={
+            "progress": [
+                {
+                    "map_level": r.map_level,
+                    "stars": r.stars,
+                    "best_score": r.best_score,
+                    "completed_count": r.completed_count,
+                    "last_completed_at": r.last_completed_at.isoformat() if r.last_completed_at else None,
+                }
+                for r in rows
+            ]
+        },
+    )
+
+
+@router.post("/map-progress", response_model=APIResponse)
+async def save_map_progress(
+    body: MapLevelSave,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+):
+    """Save a completed Training Map level. Updates best score and star rating."""
+    now = datetime.utcnow()
+    stars = _compute_map_stars(body.score, body.map_level)
+
+    row = (
+        db.query(UserMapProgress)
+        .filter(
+            UserMapProgress.user_id == current_user.id,
+            UserMapProgress.map_level == body.map_level,
+        )
+        .first()
+    )
+    is_new = row is None
+    if row is None:
+        row = UserMapProgress(
+            user_id=current_user.id,
+            map_level=body.map_level,
+            best_score=body.score,
+            stars=stars,
+            completed_count=1,
+            last_completed_at=now,
+        )
+        db.add(row)
+    else:
+        row.completed_count = int(row.completed_count or 0) + 1
+        row.last_completed_at = now
+        if body.score > int(row.best_score or 0):
+            row.best_score = body.score
+        if stars > int(row.stars or 0):
+            row.stars = stars
+        db.add(row)
+
+    db.commit()
+    db.refresh(row)
+    return APIResponse(
+        success=True,
+        message="ok",
+        data={
+            "map_level": row.map_level,
+            "best_score": row.best_score,
+            "stars": row.stars,
+            "completed_count": row.completed_count,
+            "is_new_record": is_new or body.score >= int(row.best_score or 0),
+        },
+    )
+
+
 @router.get("/cognitive-scores", response_model=APIResponse)
 async def get_cognitive_scores(
     current_user: User = Depends(get_current_active_user),
@@ -1573,6 +1841,14 @@ async def claim_task(
         if task_id in _task_claimed_today(db, current_user.id, today):
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="already_claimed")
         rewards.coins += DAILY_TASK_COINS
+        db.add(UserTaskClaim(user_id=current_user.id, task_id=task_id, claimed_date=today))
+    elif task_id == "daily-3":
+        progress = _daily_progress_from_games(db, current_user.id, today).get("daily-3", 0)
+        if progress < 1:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="task_not_completed")
+        if task_id in _task_claimed_today(db, current_user.id, today):
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="already_claimed")
+        rewards.coins += DAILY_TRAINING_TASK_COINS
         db.add(UserTaskClaim(user_id=current_user.id, task_id=task_id, claimed_date=today))
     elif task_id == "monthly-1":
         progress = _monthly_progress_from_games(db, current_user.id, month)

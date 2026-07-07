@@ -14,7 +14,10 @@ export type { RewardsData } from "@/services/rewardsApi";
 export { fetchRewards, postCheckIn, claimTask, fetchAssets } from "@/services/rewardsApi";
 
 export type { CognitiveScoresData } from "@/services/cognitiveApi";
-export { fetchCognitiveScores, updateCognitiveScores } from "@/services/cognitiveApi";
+export { fetchCognitiveScores, updateCognitiveScores, recordCognitiveTrainingComplete } from "@/services/cognitiveApi";
+
+export type { LevelProgress, SaveLevelProgressBody, SaveLevelProgressResult } from "@/services/progressionApi";
+export { fetchLevelProgress, saveLevelProgress } from "@/services/progressionApi";
 
 export { fetchShopItems, fetchShopInventory, redeemShopItem } from "@/services/shopApi";
 

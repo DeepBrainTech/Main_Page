@@ -15,6 +15,11 @@ type SetSize = 3 | 5 | 7;
 interface SternbergMemoryScanningProps {
   onComplete: (score: number) => void;
   dateOfBirth?: string | null;
+  difficultyConfig?: {
+    memorizeMs?: number;
+    /** Override per-set-size trial counts, e.g. { 3: 3, 5: 3, 7: 3 } for challenge mode */
+    formalCounts?: Partial<Record<SetSize, number>>;
+  };
 }
 
 interface Trial {
@@ -93,13 +98,13 @@ function buildPracticeTrials(seed: number): Trial[] {
   return [buildTrial(mulberry32(seed), 3, true)];
 }
 
-function buildFormalTrials(seed: number): Trial[] {
+function buildFormalTrials(seed: number, countsOverride?: Partial<Record<SetSize, number>>): Trial[] {
   const rand = mulberry32(seed);
   const sizes: SetSize[] = [3, 5, 7];
   const trials: Trial[] = [];
   sizes.forEach((size) => {
     const block: Trial[] = [];
-    const total = FORMAL_COUNTS[size];
+    const total = countsOverride?.[size] ?? FORMAL_COUNTS[size];
     for (let i = 0; i < total; i += 1) {
       block.push(buildTrial(rand, size, i < total / 2));
     }
@@ -162,11 +167,15 @@ function regressSlopeIntercept(points: Array<{ setSize: number; rtMs: number }>)
   return { slope, intercept };
 }
 
-export default function SternbergMemoryScanning({ onComplete, dateOfBirth }: SternbergMemoryScanningProps) {
+export default function SternbergMemoryScanning({ onComplete, dateOfBirth, difficultyConfig }: SternbergMemoryScanningProps) {
   const t = useTranslations("test.memory");
 
   const practiceTrials = useMemo(() => buildPracticeTrials(PRACTICE_SEED), []);
-  const formalTrials = useMemo(() => buildFormalTrials(FORMAL_SEED), []);
+  const formalTrials = useMemo(
+    () => buildFormalTrials(FORMAL_SEED, difficultyConfig?.formalCounts),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    []
+  );
 
   const [phase, setPhase] = useState<"intro" | "practice" | "formal">("intro");
   const [stage, setStage] = useState<"memorize" | "delay" | "probe" | "feedback">("memorize");

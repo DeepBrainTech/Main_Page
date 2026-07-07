@@ -13,6 +13,7 @@ import {
 interface ChangeDetectionProps {
   onComplete: (score: number) => void;
   dateOfBirth?: string | null;
+  difficultyConfig?: { formalCount?: number };
 }
 
 interface Trial {
@@ -110,13 +111,15 @@ function buildTrial(rand: () => number, setSize: 4 | 6 | 8, hasChange: boolean):
   return { setSize, hasChange, sample, probe };
 }
 
-function buildFormalTrials(seed: number): Trial[] {
+function buildFormalTrials(seed: number, totalLimit?: number): Trial[] {
   const rand = mulberry32(seed);
   const sizes: Array<4 | 6 | 8> = [4, 6, 8];
   const trials: Trial[] = [];
+  // If a total limit is set, distribute it evenly across the 3 set sizes
+  const perSize = totalLimit ? Math.max(2, Math.floor(totalLimit / 3)) : null;
 
   sizes.forEach((size) => {
-    const total = FORMAL_COUNTS[size];
+    const total = perSize ?? FORMAL_COUNTS[size];
     const block: Trial[] = [];
     for (let i = 0; i < total; i += 1) {
       const hasChange = i < Math.floor(total / 2);
@@ -219,11 +222,15 @@ function computeAgePercentile(kOverall: number, ageBand: AgeBandId | null) {
   return Math.round(normalizeLinear(kOverall, low, high));
 }
 
-export default function ChangeDetection({ onComplete, dateOfBirth }: ChangeDetectionProps) {
+export default function ChangeDetection({ onComplete, dateOfBirth, difficultyConfig }: ChangeDetectionProps) {
   const t = useTranslations("test.memory");
 
   const practiceTrial = useMemo(() => buildPracticeTrial(PRACTICE_SEED), []);
-  const formalTrials = useMemo(() => buildFormalTrials(FORMAL_SEED), []);
+  const formalTrials = useMemo(
+    () => buildFormalTrials(FORMAL_SEED, difficultyConfig?.formalCount),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    []
+  );
 
   const [phase, setPhase] = useState<"intro" | "practice" | "formal">("intro");
   const [stage, setStage] = useState<"sample" | "blank" | "probe" | "feedback">("sample");

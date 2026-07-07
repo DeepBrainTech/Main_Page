@@ -20,7 +20,7 @@ export interface TaskConfig {
   rewardDiamonds?: number;
 }
 
-/** 每日任务：固定三个，第三个占位 */
+/** 每日任务：固定三个 */
 export const DAILY_TASKS: TaskConfig[] = [
   {
     id: "daily-1",
@@ -37,6 +37,14 @@ export const DAILY_TASKS: TaskConfig[] = [
     gameMode: "chess-tourmaster",
     targetCount: 1,
     rewardCoins: 10,
+  },
+  {
+    id: "daily-3",
+    type: "daily",
+    labelKey: "dailyCompleteCognitiveTraining",
+    gameMode: "cognitive-training",
+    targetCount: 1,
+    rewardCoins: 15,
   },
 ];
 

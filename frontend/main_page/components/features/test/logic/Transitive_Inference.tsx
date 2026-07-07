@@ -160,10 +160,15 @@ function formatChain(chain: string[]) {
 export default function TransitiveInference({
   onComplete,
   dateOfBirth,
+  difficultyConfig,
 }: {
   onComplete: (score: number) => void;
   dateOfBirth?: string | null;
+  difficultyConfig?: { formalCount?: number };
 }) {
+  const activeQuestions = difficultyConfig?.formalCount
+    ? FORMAL_QUESTIONS.slice(0, difficultyConfig.formalCount)
+    : FORMAL_QUESTIONS;
   const t = useTranslations("test.logic");
   const [phase, setPhase] = useState<"intro" | "practice" | "formal">("intro");
   const [selected, setSelected] = useState<OptionKey | null>(null);
@@ -187,7 +192,7 @@ export default function TransitiveInference({
     setPhase("formal");
   };
 
-  const currentQuestion = phase === "formal" ? FORMAL_QUESTIONS[formalIndex] : PRACTICE_QUESTION;
+  const currentQuestion = phase === "formal" ? activeQuestions[formalIndex] : PRACTICE_QUESTION;
   const options = getOptionOrder(currentQuestion.id);
   const correct = getCorrectOption(currentQuestion);
   const ageBand = useMemo(() => resolveAgeBand(parseAge(dateOfBirth)), [dateOfBirth]);
@@ -218,14 +223,14 @@ export default function TransitiveInference({
       if (isCorrect && rtMs >= 200 && rtMs <= 10000) {
         formalCorrectRtMsRef.current.push(rtMs);
       }
-      if (formalIndex + 1 >= FORMAL_QUESTIONS.length) {
-        const accuracyPct = (nextCorrectCount / FORMAL_QUESTIONS.length) * 100;
+      if (formalIndex + 1 >= activeQuestions.length) {
+        const accuracyPct = (nextCorrectCount / activeQuestions.length) * 100;
         const medianRtMs = median(formalCorrectRtMsRef.current);
         const score = computeAgeNormScore(
           accuracyPct,
           medianRtMs,
           ageBand,
-          FORMAL_QUESTIONS.length
+          activeQuestions.length
         );
         onComplete(score);
         return;
@@ -263,7 +268,7 @@ export default function TransitiveInference({
       {phase === "practice" && <p className="mb-4 text-sm text-gray-600">{t("patternDesc")}</p>}
       {phase === "formal" && (
         <p className="mb-2 text-xs text-gray-500">
-          {t("formalProgress", { current: formalIndex + 1, total: FORMAL_QUESTIONS.length })}
+          {t("formalProgress", { current: formalIndex + 1, total: activeQuestions.length })}
         </p>
       )}
       <p className="mb-2 font-mono text-lg">

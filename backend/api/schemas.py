@@ -304,6 +304,28 @@ class LearningPracticeReportUpsert(BaseModel):
     answers: List[LearningPracticeReportAnswerIn] = []
 
 
+# ========== 关卡进度（旧版：per-sub-test） ==========
+class LevelProgressSave(BaseModel):
+    """Submit a completed challenge level result."""
+    sub_test_key: str = Field(..., min_length=1, max_length=64)
+    level: int = Field(..., ge=1, le=5)
+    score: int = Field(..., ge=0, le=100)
+
+
+# ========== 地图关卡进度 ==========
+class MapLevelSave(BaseModel):
+    """Submit a completed Training Map level result."""
+    map_level: int = Field(..., ge=1, le=30)
+    score: int = Field(..., ge=0, le=100)
+
+
+class MapLevelProgressOut(BaseModel):
+    map_level: int
+    stars: int
+    best_score: int
+    completed_count: int
+
+
 # ========== API 响应 ==========
 class APIResponse(BaseModel):
     """通用 API 响应"""

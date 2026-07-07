@@ -27,3 +27,11 @@ export async function updateCognitiveScores(scores: Partial<CognitiveScoresData>
   const json = await res.json();
   return json?.data as CognitiveScoresData;
 }
+
+export async function recordCognitiveTrainingComplete(): Promise<void> {
+  const res = await credentialedFetch(getApiUrl("/api/user/cognitive-training/complete"), {
+    method: "POST",
+    headers: getAuthHeaders(),
+  });
+  if (!res.ok) throw new Error("record_training_failed");
+}

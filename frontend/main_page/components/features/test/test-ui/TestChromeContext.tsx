@@ -23,6 +23,7 @@ interface TestChromeContextValue {
   chrome: TestChromeState;
   setChrome: (state: TestChromeState) => void;
   onSkipSession: () => void;
+  hideSkip: boolean;
 }
 
 const TestChromeContext = createContext<TestChromeContextValue | null>(null);
@@ -33,6 +34,7 @@ export function TestChromeProvider({
   sessionTotal,
   sessionLabels,
   onSkipSession,
+  hideSkip = false,
   children,
 }: {
   dimension: CognitiveDimensionKey;
@@ -40,6 +42,7 @@ export function TestChromeProvider({
   sessionTotal: number;
   sessionLabels: string[];
   onSkipSession: () => void;
+  hideSkip?: boolean;
   children: ReactNode;
 }) {
   const [chrome, setChrome] = useState<TestChromeState>(DEFAULT_CHROME);
@@ -57,8 +60,9 @@ export function TestChromeProvider({
       chrome,
       setChrome,
       onSkipSession,
+      hideSkip,
     }),
-    [dimension, sessionIndex, sessionTotal, sessionLabels, chrome, onSkipSession]
+    [dimension, sessionIndex, sessionTotal, sessionLabels, chrome, onSkipSession, hideSkip]
   );
 
   return <TestChromeContext.Provider value={value}>{children}</TestChromeContext.Provider>;

@@ -70,6 +70,7 @@ const AGE_NORMS: Record<AgeBandId, AgeNormRange> = {
 interface FlankerTaskProps {
   onComplete: (score: number) => void;
   dateOfBirth?: string | null;
+  difficultyConfig?: { trialWindowMs?: number; formalCount?: number };
 }
 
 function parseAge(dateOfBirth?: string | null) {
@@ -135,7 +136,8 @@ function computeAgeNormScore(
   medianRtMs: number | null,
   interferenceMs: number | null,
   ageBand: AgeBandId,
-  trialCount: number
+  trialCount: number,
+  totalFormalCount = FORMAL_COUNT
 ) {
   const norm = AGE_NORMS[ageBand];
   const accScore = normalizeLinear(accuracyPct, norm.accMin, norm.accMax);
@@ -143,11 +145,11 @@ function computeAgeNormScore(
   const intScore =
     interferenceMs == null ? 50 : normalizeReverse(interferenceMs, norm.intMin, norm.intMax);
   const base = accScore * 0.5 + rtScore * 0.3 + intScore * 0.2;
-  const coverage = clampScore((trialCount / FORMAL_COUNT) * 100, 0, 100);
+  const coverage = clampScore((trialCount / totalFormalCount) * 100, 0, 100);
   return Math.round(base * 0.85 + coverage * 0.15);
 }
 
-export default function FlankerTask({ onComplete, dateOfBirth }: FlankerTaskProps) {
+export default function FlankerTask({ onComplete, dateOfBirth, difficultyConfig }: FlankerTaskProps) {
   const t = useTranslations("test.focus");
   const [phase, setPhase] = useState<"intro" | "practice" | "formal">("intro");
   const [practiceIndex, setPracticeIndex] = useState(0);
@@ -206,7 +208,7 @@ export default function FlankerTask({ onComplete, dateOfBirth }: FlankerTaskProp
   };
 
   const startFormal = () => {
-    setFormalTrials(shuffleTrials(FORMAL_BASE_TRIALS).slice(0, FORMAL_COUNT));
+    setFormalTrials(shuffleTrials(FORMAL_BASE_TRIALS).slice(0, difficultyConfig?.formalCount ?? FORMAL_COUNT));
     setFormalIndex(0);
     setFormalCorrectCount(0);
     correctRtMsRef.current = [];
@@ -249,7 +251,8 @@ export default function FlankerTask({ onComplete, dateOfBirth }: FlankerTaskProp
           medianRtMs,
           interferenceMs,
           ageBand,
-          formalTrials.length
+          formalTrials.length,
+          difficultyConfig?.formalCount ?? FORMAL_COUNT
         );
         onComplete(score);
         return;

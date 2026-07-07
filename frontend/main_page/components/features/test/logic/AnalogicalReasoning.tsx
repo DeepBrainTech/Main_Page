@@ -92,7 +92,16 @@ function computeScore(accuracyPct: number, medianRtMs: number | null) {
   return clamp(score, 0, 100);
 }
 
-export default function AnalogicalReasoning({ onComplete }: { onComplete: (score: number) => void }) {
+export default function AnalogicalReasoning({
+  onComplete,
+  difficultyConfig,
+}: {
+  onComplete: (score: number) => void;
+  difficultyConfig?: { formalCount?: number };
+}) {
+  const activeQuestions = difficultyConfig?.formalCount
+    ? FORMAL_QUESTIONS.slice(0, difficultyConfig.formalCount)
+    : FORMAL_QUESTIONS;
   const t = useTranslations("test.logic");
   const [phase, setPhase] = useState<"intro" | "practice" | "formal">("intro");
   const [selected, setSelected] = useState<string | null>(null);
@@ -116,7 +125,7 @@ export default function AnalogicalReasoning({ onComplete }: { onComplete: (score
     setPhase("formal");
   };
 
-  const currentQuestion = phase === "formal" ? FORMAL_QUESTIONS[formalIndex] : PRACTICE_QUESTION;
+  const currentQuestion = phase === "formal" ? activeQuestions[formalIndex] : PRACTICE_QUESTION;
   const optionOrder = getOptionOrder(currentQuestion.id, currentQuestion.options.length);
   const symbolMode =
     isSymbolHeavy(currentQuestion.leftA) ||
@@ -149,8 +158,8 @@ export default function AnalogicalReasoning({ onComplete }: { onComplete: (score
       if (isCorrect && rtMs >= 200 && rtMs <= 15000) {
         formalCorrectRtMsRef.current.push(rtMs);
       }
-      if (formalIndex + 1 >= FORMAL_QUESTIONS.length) {
-        const accuracyPct = (nextCorrectCount / FORMAL_QUESTIONS.length) * 100;
+      if (formalIndex + 1 >= activeQuestions.length) {
+        const accuracyPct = (nextCorrectCount / activeQuestions.length) * 100;
         const medianRtMs = median(formalCorrectRtMsRef.current);
         onComplete(computeScore(accuracyPct, medianRtMs));
         return;
@@ -188,7 +197,7 @@ export default function AnalogicalReasoning({ onComplete }: { onComplete: (score
       {phase === "practice" && <p className="mb-4 text-sm text-gray-600">{t("analogyDesc")}</p>}
       {phase === "formal" && (
         <p className="mb-2 text-xs text-gray-500">
-          {t("formalProgress", { current: formalIndex + 1, total: FORMAL_QUESTIONS.length })}
+          {t("formalProgress", { current: formalIndex + 1, total: activeQuestions.length })}
         </p>
       )}
 

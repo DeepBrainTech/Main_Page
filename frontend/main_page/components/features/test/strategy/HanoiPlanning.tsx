@@ -101,11 +101,14 @@ function computeFinalScore(
 export default function HanoiPlanning({
   onComplete,
   dateOfBirth,
+  difficultyConfig,
 }: {
   onComplete: (score: number) => void;
   dateOfBirth?: string | null;
+  difficultyConfig?: { diskSequence?: number[] };
 }) {
   const t = useTranslations("test.strategy");
+  const activeDiskSequence = (difficultyConfig?.diskSequence ?? [...FORMAL_DISK_SEQUENCE]) as number[];
   const [phase, setPhase] = useState<Phase>("intro");
   const [selectedPeg, setSelectedPeg] = useState<number | null>(null);
   const [errorHint, setErrorHint] = useState<string>("");
@@ -119,7 +122,7 @@ export default function HanoiPlanning({
     createInitialPegs(PRACTICE_DISK_COUNT)
   );
   const [formalPegs, setFormalPegs] = useState<number[][]>(() =>
-    createInitialPegs(FORMAL_DISK_SEQUENCE[0])
+    createInitialPegs(activeDiskSequence[0] ?? 3)
   );
   const [practiceDone, setPracticeDone] = useState(false);
 
@@ -145,7 +148,7 @@ export default function HanoiPlanning({
     setPhase("formal");
     setFormalStageIndex(0);
     setFormalScores([]);
-    setFormalPegs(createInitialPegs(FORMAL_DISK_SEQUENCE[0]));
+    setFormalPegs(createInitialPegs(activeDiskSequence[0] ?? 3));
     setFormalMoves(0);
     setFormalViolations(0);
     setSelectedPeg(null);
@@ -155,7 +158,7 @@ export default function HanoiPlanning({
 
   const startNextFormalStage = (nextStageIndex: number) => {
     setFormalStageIndex(nextStageIndex);
-    setFormalPegs(createInitialPegs(FORMAL_DISK_SEQUENCE[nextStageIndex]));
+    setFormalPegs(createInitialPegs(activeDiskSequence[nextStageIndex] ?? 3));
     setFormalMoves(0);
     setFormalViolations(0);
     setSelectedPeg(null);
@@ -194,7 +197,7 @@ export default function HanoiPlanning({
     const nextScores = [...formalScores, finalScore];
     setFormalScores(nextScores);
 
-    if (formalStageIndex + 1 >= FORMAL_DISK_SEQUENCE.length) {
+    if (formalStageIndex + 1 >= activeDiskSequence.length) {
       const avgScore = Math.round(
         nextScores.reduce((sum, value) => sum + value, 0) / nextScores.length
       );
@@ -207,7 +210,7 @@ export default function HanoiPlanning({
 
   const handleSkipFormal = () => {
     if (phase !== "formal") return;
-    const currentDiskCount = FORMAL_DISK_SEQUENCE[formalStageIndex];
+    const currentDiskCount = activeDiskSequence[formalStageIndex] ?? 3;
     submitFormalScore(currentDiskCount, formalMoves, formalViolations, true);
   };
 
@@ -265,7 +268,7 @@ export default function HanoiPlanning({
     const nextMoves = formalMoves + 1;
     setFormalPegs(next);
     setFormalMoves(nextMoves);
-    const currentDiskCount = FORMAL_DISK_SEQUENCE[formalStageIndex];
+    const currentDiskCount = activeDiskSequence[formalStageIndex] ?? 3;
     if (isSolved(next, currentDiskCount)) {
       submitFormalScore(currentDiskCount, nextMoves, formalViolations, false);
     }
@@ -314,8 +317,8 @@ export default function HanoiPlanning({
         <p className="mb-3 text-xs text-gray-500">
           {t("formalProgress", {
             current: formalStageIndex + 1,
-            total: FORMAL_DISK_SEQUENCE.length,
-            disks: FORMAL_DISK_SEQUENCE[formalStageIndex],
+            total: activeDiskSequence.length,
+            disks: activeDiskSequence[formalStageIndex] ?? 3,
           })}
         </p>
       )}

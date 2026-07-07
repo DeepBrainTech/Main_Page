@@ -4,7 +4,8 @@ import { useState, useCallback } from "react";
 import { useTranslations } from "next-intl";
 import type { CognitiveDimensionKey } from "@/types/cognitive";
 import { DEFAULT_RADAR_SCORES } from "@/config/dimensions";
-import { updateCognitiveScores } from "@/services/userApi";
+import { updateCognitiveScores, recordCognitiveTrainingComplete } from "@/services/userApi";
+import { notifyRewardsUpdated } from "@/lib/reward-events";
 import RadarChart from "@/components/features/dashboard/RadarChart";
 import { TestChromeProvider, TestRunnerShell } from "./test-ui";
 import MemoryNBack from "./memory/MemoryNBack";
@@ -100,6 +101,10 @@ export default function TestRunner({ dimension, onBack, dateOfBirth }: TestRunne
         } catch {
           setRadarScores((prev) => ({ ...prev, [dimension]: Math.round(avg) }));
         }
+        // Record training completion for daily task progress, fire-and-forget
+        recordCognitiveTrainingComplete().then(() => {
+          notifyRewardsUpdated();
+        }).catch(() => {});
       }
       setDone(true);
     },

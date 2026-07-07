@@ -91,7 +91,7 @@ function shuffleArray<T>(arr: T[]) {
   return data;
 }
 
-function buildFormalTrials() {
+function buildFormalTrials(count = FORMAL_COUNT) {
   const congruent: Trial[] = [];
   const incongruent: Trial[] = [];
 
@@ -106,7 +106,7 @@ function buildFormalTrials() {
     incongruent.push({ id: `i-${i + 1}`, type: "incongruent", word, ink });
   }
 
-  return shuffleArray([...congruent, ...incongruent]).slice(0, FORMAL_COUNT);
+  return shuffleArray([...congruent, ...incongruent]).slice(0, count);
 }
 
 function computeAgeNormScore(
@@ -143,9 +143,11 @@ function colorClass(key: ColorKey) {
 export default function StroopColor({
   onComplete,
   dateOfBirth,
+  difficultyConfig,
 }: {
   onComplete: (score: number) => void;
   dateOfBirth?: string | null;
+  difficultyConfig?: { formalCount?: number };
 }) {
   const t = useTranslations("test.focus");
   const [phase, setPhase] = useState<"intro" | "practice" | "formal">("intro");
@@ -204,7 +206,7 @@ export default function StroopColor({
   };
 
   const startFormal = () => {
-    setFormalTrials(buildFormalTrials());
+    setFormalTrials(buildFormalTrials(difficultyConfig?.formalCount));
     setFormalIndex(0);
     setFormalCorrectCount(0);
     setSelected(null);
