@@ -53,20 +53,17 @@ export function computeStars(score: number, level: number): 0 | 1 | 2 | 3 {
   return 0;
 }
 
-/**
- * Gentler star thresholds for Training Map levels.
- * Scores are averaged across multiple sub-tests so individual variance smooths out.
- */
 export function computeMapStars(score: number, mapLevel: number): 0 | 1 | 2 | 3 {
   let threeStar: number;
   let twoStar: number;
-  if (mapLevel <= 10)      { threeStar = 75; twoStar = 50; }
-  else if (mapLevel <= 15) { threeStar = 78; twoStar = 55; }
-  else if (mapLevel <= 22) { threeStar = 82; twoStar = 60; }
-  else                     { threeStar = 86; twoStar = 65; }
+  let oneStar: number;
+  if (mapLevel <= 10)      { threeStar = 75; twoStar = 55; oneStar = 25; }
+  else if (mapLevel <= 30) { threeStar = 78; twoStar = 58; oneStar = 28; }
+  else if (mapLevel <= 50) { threeStar = 80; twoStar = 60; oneStar = 30; }
+  else                     { threeStar = 82; twoStar = 62; oneStar = 32; }
   if (score >= threeStar) return 3;
   if (score >= twoStar) return 2;
-  if (score >= 20) return 1;
+  if (score >= oneStar) return 1;
   return 0;
 }
 
@@ -110,11 +107,11 @@ export const DIFFICULTY_LEVELS: Record<SubTestKey, LevelMap> = {
   memory_nback: makeLevels(
     [2, 2, 3, 3, 4],
     [
-      { nLevel: 1, intervalMs: 2500 },
-      { nLevel: 1, intervalMs: 2000 },
-      { nLevel: 2, intervalMs: 2500 },
-      { nLevel: 2, intervalMs: 2000 },
-      { nLevel: 3, intervalMs: 2500 },
+      { nLevel: 1, intervalMs: 2500, gridSize: 2 },
+      { nLevel: 1, intervalMs: 2000, gridSize: 2 },
+      { nLevel: 2, intervalMs: 2500, gridSize: 3 },
+      { nLevel: 2, intervalMs: 2000, gridSize: 3 },
+      { nLevel: 3, intervalMs: 2500, gridSize: 3 },
     ]
   ),
   // ---------- LOGIC ----------

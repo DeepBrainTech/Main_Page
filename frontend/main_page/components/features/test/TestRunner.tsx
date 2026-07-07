@@ -37,6 +37,12 @@ interface CompletedRecord {
   score: number;
 }
 
+type TestCompletion = number | { score: number };
+
+function getCompletionScore(result: TestCompletion) {
+  return typeof result === "number" ? result : result.score;
+}
+
 function formatTopPercent(
   percentile: number,
   formatter: (key: string, values?: Record<string, string | number>) => string
@@ -112,7 +118,8 @@ export default function TestRunner({ dimension, onBack, dateOfBirth }: TestRunne
   );
 
   const handleComplete = useCallback(
-    async (score: number) => {
+    async (result: TestCompletion) => {
+      const score = getCompletionScore(result);
       const nextRecords = [...records, { testIndex, score }];
       setRecords(nextRecords);
       if (testIndex + 1 >= testCount) {

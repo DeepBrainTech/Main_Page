@@ -32,6 +32,14 @@ interface AgeNormRange {
   intMax: number;
 }
 
+interface SubTestCompletion {
+  score: number;
+  total?: number;
+  correct?: number;
+  wrong?: number;
+  avgRtMs?: number | null;
+}
+
 const COLOR_KEYS: ColorKey[] = ["red", "green", "blue"];
 const PRACTICE_TRIAL: Trial = { id: "p-1", type: "incongruent", word: "red", ink: "green" };
 const FORMAL_COUNT = 24;
@@ -145,7 +153,7 @@ export default function StroopColor({
   dateOfBirth,
   difficultyConfig,
 }: {
-  onComplete: (score: number) => void;
+  onComplete: (result: number | SubTestCompletion) => void;
   dateOfBirth?: string | null;
   difficultyConfig?: { formalCount?: number };
 }) {
@@ -244,7 +252,13 @@ export default function StroopColor({
       const interferenceMs =
         meanCongruent == null || meanIncongruent == null ? null : meanIncongruent - meanCongruent;
       const score = computeAgeNormScore(accuracyPct, meanRtMs, interferenceMs, ageBand, formalTrials.length);
-      onComplete(score);
+      onComplete({
+        score,
+        total: formalTrials.length,
+        correct: nextCorrectCount,
+        wrong: formalTrials.length - nextCorrectCount,
+        avgRtMs: meanRtMs,
+      });
       return;
     }
 

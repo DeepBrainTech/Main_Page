@@ -12,6 +12,15 @@ interface AgeNormRange {
   max: number;
 }
 
+interface SubTestCompletion {
+  score: number;
+  total?: number;
+  completed?: number;
+  avgRtMs?: number | null;
+  medianRtMs?: number | null;
+  bestRtMs?: number | null;
+}
+
 const FORMAL_TRIAL_COUNT = 5;
 const TOO_SOON_FLASH_MS = 900;
 const INTER_TRIAL_DELAY_MS = 800;
@@ -89,7 +98,7 @@ export default function ReactionClick({
   dateOfBirth,
   challengeMode = false,
 }: {
-  onComplete: (score: number) => void;
+  onComplete: (result: number | SubTestCompletion) => void;
   dateOfBirth?: string | null;
   /** When true, skip intro/practice and start formal trials immediately (map challenge). */
   challengeMode?: boolean;
@@ -155,7 +164,14 @@ export default function ReactionClick({
     const stabilityScore = computeStabilityScore(results);
     const finalScore = Math.round(medianScore * 0.7 + bestScore * 0.2 + stabilityScore * 0.1);
     timerRef.current = setTimeout(() => {
-      onComplete(clamp(finalScore, 0, 100));
+      onComplete({
+        score: clamp(finalScore, 0, 100),
+        total: FORMAL_TRIAL_COUNT,
+        completed: results.length,
+        avgRtMs: Math.round(mean(results)),
+        medianRtMs: medianRt,
+        bestRtMs: bestRt,
+      });
     }, INTER_TRIAL_DELAY_MS);
   };
 

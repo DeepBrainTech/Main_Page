@@ -8,7 +8,7 @@ type NBackMode = "grid" | "letter";
 interface MemoryNBackProps {
   onComplete: (score: number) => void;
   dateOfBirth?: string | null;
-  difficultyConfig?: { nLevel?: number; intervalMs?: number };
+  difficultyConfig?: { nLevel?: number; intervalMs?: number; gridSize?: number };
 }
 
 interface FormalStats {
@@ -25,6 +25,7 @@ const FORMAL_INTERVAL_MS = 2000;
 const MATCH_RATE = 0.35;
 const FORMAL_BASE_SEED = 20260316;
 const FIXED_LEVEL = 2;
+const DEFAULT_GRID_SIZE = 2;
 const FORMAL_LEVELS: number[] = Array.from({ length: 20 }, () => FIXED_LEVEL);
 
 const AGE_NORMS_NBACK: Record<
@@ -164,10 +165,10 @@ function computeAgePercentile(
   return Math.round(accuracyScore * 0.2 + dPrimeScore * 0.5 + rtScore * 0.3);
 }
 
-function getPool(mode: NBackMode) {
+function getPool(mode: NBackMode, gridSize = DEFAULT_GRID_SIZE) {
   return mode === "letter"
     ? ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K"]
-    : Array.from({ length: 9 }, (_, i) => String(i));
+    : Array.from({ length: gridSize * gridSize }, (_, i) => String(i));
 }
 
 // 使用可复现伪随机，保证固定 seed 下题目序列可复现。
@@ -184,11 +185,12 @@ function mulberry32(seed: number) {
 function createStimulus(
   mode: NBackMode,
   level: number,
+  gridSize: number,
   history: string[],
   wantMatch: boolean,
   rand: () => number
 ) {
-  const pool = getPool(mode);
+  const pool = getPool(mode, gridSize);
   const canMatch = history.length >= level;
   const shouldMatch = canMatch && wantMatch;
   const target = canMatch ? history[history.length - level] : null;
@@ -209,6 +211,7 @@ export default function MemoryNBack({ onComplete, dateOfBirth, difficultyConfig 
   const t = useTranslations("test.memory");
   const activeNLevel = difficultyConfig?.nLevel ?? FIXED_LEVEL;
   const activeIntervalMs = difficultyConfig?.intervalMs ?? FORMAL_INTERVAL_MS;
+  const activeGridSize = Math.max(2, Math.min(3, difficultyConfig?.gridSize ?? DEFAULT_GRID_SIZE));
   const activeFormalLevels = Array.from({ length: 20 }, () => activeNLevel);
 
   const [phase, setPhase] = useState<"intro" | "practice" | "formal">("intro");
@@ -294,7 +297,7 @@ export default function MemoryNBack({ onComplete, dateOfBirth, difficultyConfig 
       return;
     }
 
-    const pool = getPool(practiceMode);
+    const pool = getPool(practiceMode, activeGridSize);
     practiceTimerRef.current = setTimeout(() => {
       setPracticeStream((prev) => {
         const idx = prev.length;
@@ -323,7 +326,7 @@ export default function MemoryNBack({ onComplete, dateOfBirth, difficultyConfig 
         practiceTimerRef.current = null;
       }
     };
-  }, [phase, practiceRunning, practiceMode, practiceStream.length]);
+  }, [phase, practiceRunning, practiceMode, practiceStream.length, activeGridSize, activeNLevel]);
 
   // 正式阶段：固定题单（20 题，全部 2-back）。
   useEffect(() => {
@@ -342,7 +345,7 @@ export default function MemoryNBack({ onComplete, dateOfBirth, difficultyConfig 
     const mode: NBackMode = formalFixedMode;
     const level = activeNLevel;
     const wantMatch = formalRandRef.current() < MATCH_RATE;
-    const generated = createStimulus(mode, level, formalHistory, wantMatch, formalRandRef.current);
+    const generated = createStimulus(mode, level, activeGridSize, formalHistory, wantMatch, formalRandRef.current);
 
     setFormalMode(mode);
     setFormalCurrent(generated.current);
@@ -409,6 +412,9 @@ export default function MemoryNBack({ onComplete, dateOfBirth, difficultyConfig 
     currentIndex,
     formalHistory,
     formalFixedMode,
+    activeGridSize,
+    activeNLevel,
+    activeIntervalMs,
     dateOfBirth,
     onComplete,
     totalQuestions,
@@ -462,13 +468,14 @@ export default function MemoryNBack({ onComplete, dateOfBirth, difficultyConfig 
     const hasValue = value !== "";
 
     if (mode === "grid") {
+      const cellClass = activeGridSize === 2 ? "h-14 w-14 text-base" : "h-10 w-10 text-sm";
       return (
         <div className="flex flex-col items-center gap-3">
-          <div className="grid grid-cols-3 gap-2">
-            {Array.from({ length: 9 }, (_, i) => (
+          <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${activeGridSize}, minmax(0, 1fr))` }}>
+            {Array.from({ length: activeGridSize * activeGridSize }, (_, i) => (
               <div
                 key={i}
-                className={`flex h-10 w-10 items-center justify-center rounded-lg border text-sm font-medium ${
+                className={`flex ${cellClass} items-center justify-center rounded-lg border font-medium ${
                   hasValue && String(i) === value
                     ? "border-[#5E81AC] bg-[#5E81AC] text-white animate-pulse"
                     : "border-gray-200 bg-gray-50 text-gray-400"

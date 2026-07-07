@@ -558,9 +558,244 @@ export const MAP_LEVELS: MapLevelConfig[] = [
       { key: "spatial_rotation", difficulty: 5 },
     ],
   },
+
+  // Stage 8: Mythic (Levels 51-60)
+  {
+    level: 51,
+    titleKey: "mapLevel.spatial_route",
+    estimatedMinutes: 11,
+    subTests: [
+      { key: "strategy_route",   difficulty: 4 },
+      { key: "spatial_rotation", difficulty: 5 },
+      { key: "reaction_arrow",   difficulty: 5 },
+    ],
+  },
+  {
+    level: 52,
+    titleKey: "mapLevel.logic_tower",
+    estimatedMinutes: 11,
+    subTests: [
+      { key: "strategy_hanoi",   difficulty: 4 },
+      { key: "logic_transitive", difficulty: 5 },
+      { key: "focus_stroop",     difficulty: 5 },
+    ],
+  },
+  {
+    level: 53,
+    titleKey: "mapLevel.folded_speed",
+    estimatedMinutes: 11,
+    subTests: [
+      { key: "spatial_fold",     difficulty: 5 },
+      { key: "reaction_click",   difficulty: 5 },
+      { key: "focus_flanker",    difficulty: 5 },
+    ],
+  },
+  {
+    level: 54,
+    titleKey: "mapLevel.london_memory",
+    estimatedMinutes: 12,
+    subTests: [
+      { key: "strategy_london",  difficulty: 4 },
+      { key: "memory_change",    difficulty: 5 },
+      { key: "logic_syllogism",  difficulty: 5 },
+    ],
+  },
+  {
+    level: 55,
+    titleKey: "mapLevel.ninth_milestone",
+    estimatedMinutes: 12,
+    subTests: [
+      { key: "strategy_route",   difficulty: 4 },
+      { key: "spatial_rotation", difficulty: 5 },
+      { key: "logic_analogy",    difficulty: 5 },
+      { key: "reaction_pvt",     difficulty: 5 },
+    ],
+  },
+  {
+    level: 56,
+    titleKey: "mapLevel.dual_strategy",
+    estimatedMinutes: 12,
+    subTests: [
+      { key: "strategy_hanoi",   difficulty: 5 },
+      { key: "strategy_london",  difficulty: 4 },
+      { key: "focus_schulte",    difficulty: 5 },
+    ],
+  },
+  {
+    level: 57,
+    titleKey: "mapLevel.spatial_storm",
+    estimatedMinutes: 11,
+    subTests: [
+      { key: "spatial_fold",     difficulty: 5 },
+      { key: "spatial_rotation", difficulty: 5 },
+      { key: "reaction_arrow",   difficulty: 5 },
+    ],
+  },
+  {
+    level: 58,
+    titleKey: "mapLevel.logic_route",
+    estimatedMinutes: 12,
+    subTests: [
+      { key: "logic_transitive", difficulty: 5 },
+      { key: "strategy_route",   difficulty: 4 },
+      { key: "reaction_click",   difficulty: 5 },
+    ],
+  },
+  {
+    level: 59,
+    titleKey: "mapLevel.focus_tower",
+    estimatedMinutes: 12,
+    subTests: [
+      { key: "focus_stroop",     difficulty: 5 },
+      { key: "focus_flanker",    difficulty: 5 },
+      { key: "strategy_hanoi",   difficulty: 5 },
+      { key: "spatial_fold",     difficulty: 5 },
+    ],
+  },
+  {
+    level: 60,
+    titleKey: "mapLevel.apex_trial",
+    estimatedMinutes: 13,
+    subTests: [
+      { key: "strategy_london",  difficulty: 5 },
+      { key: "spatial_rotation", difficulty: 5 },
+      { key: "logic_syllogism",  difficulty: 5 },
+      { key: "memory_nback",     difficulty: 5 },
+    ],
+  },
+
+  // Stage 9: Apex (Levels 61-72)
+  {
+    level: 61,
+    titleKey: "mapLevel.route_legend_plus",
+    estimatedMinutes: 12,
+    subTests: [
+      { key: "strategy_route",   difficulty: 5 },
+      { key: "reaction_pvt",     difficulty: 5 },
+      { key: "spatial_rotation", difficulty: 5 },
+    ],
+  },
+  {
+    level: 62,
+    titleKey: "mapLevel.grand_planner",
+    estimatedMinutes: 12,
+    subTests: [
+      { key: "strategy_hanoi",   difficulty: 5 },
+      { key: "strategy_london",  difficulty: 5 },
+      { key: "logic_analogy",    difficulty: 5 },
+    ],
+  },
+  {
+    level: 63,
+    titleKey: "mapLevel.spatial_logic_fusion",
+    estimatedMinutes: 12,
+    subTests: [
+      { key: "spatial_fold",     difficulty: 5 },
+      { key: "logic_transitive", difficulty: 5 },
+      { key: "focus_schulte",    difficulty: 5 },
+    ],
+  },
+  {
+    level: 64,
+    titleKey: "mapLevel.reaction_maze",
+    estimatedMinutes: 12,
+    subTests: [
+      { key: "reaction_arrow",   difficulty: 5 },
+      { key: "reaction_click",   difficulty: 5 },
+      { key: "strategy_route",   difficulty: 5 },
+      { key: "spatial_rotation", difficulty: 5 },
+    ],
+  },
+  {
+    level: 65,
+    titleKey: "mapLevel.tenth_milestone",
+    estimatedMinutes: 13,
+    subTests: [
+      { key: "strategy_hanoi",   difficulty: 5 },
+      { key: "spatial_fold",     difficulty: 5 },
+      { key: "memory_sternberg", difficulty: 5 },
+      { key: "logic_syllogism",  difficulty: 5 },
+    ],
+  },
+  {
+    level: 66,
+    titleKey: "mapLevel.precision_focus",
+    estimatedMinutes: 12,
+    subTests: [
+      { key: "focus_stroop",     difficulty: 5 },
+      { key: "focus_flanker",    difficulty: 5 },
+      { key: "reaction_pvt",     difficulty: 5 },
+    ],
+  },
+  {
+    level: 67,
+    titleKey: "mapLevel.memory_strategy",
+    estimatedMinutes: 12,
+    subTests: [
+      { key: "memory_change",    difficulty: 5 },
+      { key: "strategy_london",  difficulty: 5 },
+      { key: "strategy_route",   difficulty: 5 },
+    ],
+  },
+  {
+    level: 68,
+    titleKey: "mapLevel.folded_planner",
+    estimatedMinutes: 12,
+    subTests: [
+      { key: "spatial_fold",     difficulty: 5 },
+      { key: "strategy_hanoi",   difficulty: 5 },
+      { key: "logic_analogy",    difficulty: 5 },
+    ],
+  },
+  {
+    level: 69,
+    titleKey: "mapLevel.speed_grandmaster",
+    estimatedMinutes: 13,
+    subTests: [
+      { key: "reaction_click",   difficulty: 5 },
+      { key: "reaction_arrow",   difficulty: 5 },
+      { key: "focus_schulte",    difficulty: 5 },
+      { key: "spatial_rotation", difficulty: 5 },
+    ],
+  },
+  {
+    level: 70,
+    titleKey: "mapLevel.whole_brain_apex",
+    estimatedMinutes: 14,
+    subTests: [
+      { key: "strategy_route",   difficulty: 5 },
+      { key: "logic_syllogism",  difficulty: 5 },
+      { key: "memory_nback",     difficulty: 5 },
+      { key: "focus_flanker",    difficulty: 5 },
+      { key: "spatial_fold",     difficulty: 5 },
+    ],
+  },
+  {
+    level: 71,
+    titleKey: "mapLevel.ultimate_planning",
+    estimatedMinutes: 14,
+    subTests: [
+      { key: "strategy_hanoi",   difficulty: 5 },
+      { key: "strategy_london",  difficulty: 5 },
+      { key: "strategy_route",   difficulty: 5 },
+      { key: "reaction_pvt",     difficulty: 5 },
+    ],
+  },
+  {
+    level: 72,
+    titleKey: "mapLevel.final_apex",
+    estimatedMinutes: 15,
+    subTests: [
+      { key: "strategy_route",   difficulty: 5 },
+      { key: "strategy_hanoi",   difficulty: 5 },
+      { key: "logic_analogy",    difficulty: 5 },
+      { key: "spatial_rotation", difficulty: 5 },
+      { key: "memory_sternberg", difficulty: 5 },
+    ],
+  },
 ];
 
-export const TOTAL_MAP_LEVELS = MAP_LEVELS.length; // 50
+export const TOTAL_MAP_LEVELS = MAP_LEVELS.length; // 72
 
 /** Returns the config for a given level (1-indexed). Returns undefined if out of range. */
 export function getMapLevel(level: number): MapLevelConfig | undefined {

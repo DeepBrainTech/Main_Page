@@ -4,14 +4,18 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import type { DailyMission } from "@/types/progression";
 import type { CognitiveDimensionKey } from "@/types/cognitive";
-import { getDifficultyConfig } from "@/config/difficultyLevels";
-import type { MapLevelConfig } from "@/config/mapLevels";
+import { computeMapStars, getDifficultyConfig } from "@/config/difficultyLevels";
+import { MAP_LEVELS, type MapLevelConfig } from "@/config/mapLevels";
+import { updateCognitiveScores, type CognitiveScoresData } from "@/services/cognitiveApi";
 import { saveLevelProgress } from "@/services/progressionApi";
 import { saveMapProgress } from "@/services/mapProgressApi";
 import { notifyRewardsUpdated } from "@/lib/reward-events";
 import { recordCognitiveTrainingComplete } from "@/services/cognitiveApi";
 import { TestChromeProvider, TestRunnerShell } from "./test-ui";
-import LevelCompletePanel from "./LevelCompletePanel";
+import LevelCompletePanel, {
+  type LevelCompletePowerGain,
+  type LevelCompleteSubTestResult,
+} from "./LevelCompletePanel";
 
 // Sub-test imports
 import MemoryNBack from "./memory/MemoryNBack";
@@ -36,9 +40,8 @@ import PaperFold from "./spatial/PaperFold";
 function renderSubTest(
   subTestKey: string,
   params: Record<string, unknown>,
-  onComplete: (score: number) => void,
+  onComplete: (result: SubTestCompletion) => void,
   dateOfBirth?: string | null,
-  challengeMode = false,
 ) {
   const formalCount = params.formalCount as number | undefined;
   const formalCounts = params.formalCounts as Partial<Record<3 | 5 | 7, number>> | undefined;
@@ -46,16 +49,16 @@ function renderSubTest(
   switch (subTestKey) {
     case "memory_sternberg": return <SternbergMemoryScanning onComplete={onComplete} dateOfBirth={dateOfBirth} difficultyConfig={{ memorizeMs: params.memorizeMs as number | undefined, formalCounts }} />;
     case "memory_change":    return <ChangeDetection onComplete={onComplete} dateOfBirth={dateOfBirth} difficultyConfig={{ formalCount }} />;
-    case "memory_nback":     return <MemoryNBack onComplete={onComplete} dateOfBirth={dateOfBirth} difficultyConfig={{ nLevel: params.nLevel as number | undefined, intervalMs: params.intervalMs as number | undefined }} />;
+    case "memory_nback":     return <MemoryNBack onComplete={onComplete} dateOfBirth={dateOfBirth} difficultyConfig={{ nLevel: params.nLevel as number | undefined, intervalMs: params.intervalMs as number | undefined, gridSize: params.gridSize as number | undefined }} />;
     case "logic_transitive": return <TransitiveInference onComplete={onComplete} dateOfBirth={dateOfBirth} difficultyConfig={{ formalCount }} />;
     case "logic_syllogism":  return <SyllogisticReasoning onComplete={onComplete} dateOfBirth={dateOfBirth} difficultyConfig={{ formalCount }} />;
     case "logic_analogy":    return <AnalogicalReasoning onComplete={onComplete} difficultyConfig={{ formalCount }} />;
     case "focus_flanker":    return <FlankerTask onComplete={onComplete} dateOfBirth={dateOfBirth} difficultyConfig={{ trialWindowMs: params.trialWindowMs as number | undefined, formalCount }} />;
     case "focus_stroop":     return <StroopColor onComplete={onComplete} dateOfBirth={dateOfBirth} difficultyConfig={{ formalCount }} />;
     case "focus_schulte":    return <SchulteGrid onComplete={onComplete} difficultyConfig={{ gridSizes: params.gridSizes as number[] | undefined }} />;
-    case "reaction_click":   return <ReactionClick onComplete={onComplete} dateOfBirth={dateOfBirth} challengeMode={challengeMode} />;
-    case "reaction_arrow":   return <ReactionArrowKey onComplete={onComplete} dateOfBirth={dateOfBirth} challengeMode={challengeMode} />;
-    case "reaction_pvt":     return <ReactionPVT onComplete={onComplete} dateOfBirth={dateOfBirth} challengeMode={challengeMode} />;
+    case "reaction_click":   return <ReactionClick onComplete={onComplete} dateOfBirth={dateOfBirth} />;
+    case "reaction_arrow":   return <ReactionArrowKey onComplete={onComplete} dateOfBirth={dateOfBirth} />;
+    case "reaction_pvt":     return <ReactionPVT onComplete={onComplete} dateOfBirth={dateOfBirth} />;
     case "strategy_hanoi":   return <HanoiPlanning onComplete={onComplete} dateOfBirth={dateOfBirth} difficultyConfig={{ diskSequence: params.diskSequence as number[] | undefined }} />;
     case "strategy_london":  return <LondonPlanning onComplete={onComplete} dateOfBirth={dateOfBirth} />;
     case "strategy_route":   return <RoutePlanning onComplete={onComplete} dateOfBirth={dateOfBirth} />;
@@ -70,17 +73,211 @@ function renderSubTest(
 interface MapChallengeRunnerProps {
   mapLevel: MapLevelConfig;
   previousBestScore: number;
+  previousBestStars: number;
+  cognitiveScores: CognitiveScoresData;
   dateOfBirth?: string | null;
-  onComplete: (avgScore: number) => void;
+  onComplete: (avgScore: number) => void | Promise<void>;
   onBack: () => void;
 }
 
 type MapPhase = "running" | "complete" | "confirm-quit";
 
+type MapSubTestScore = {
+  dimension: CognitiveDimensionKey;
+  mapScore: number;
+};
+
+type SubTestCompletion =
+  | number
+  | {
+      score: number;
+      total?: number;
+      correct?: number;
+      wrong?: number;
+      completed?: number;
+      avgRtMs?: number | null;
+      medianRtMs?: number | null;
+      bestRtMs?: number | null;
+    };
+
+type NormalizedSubTestCompletion = Exclude<SubTestCompletion, number>;
+
+type DimensionPowerGain = LevelCompletePowerGain & {
+  score: number;
+  stars: 0 | 1 | 2 | 3;
+};
+
+type LevelDimensionStars = Partial<Record<CognitiveDimensionKey, 0 | 1 | 2 | 3>>;
+type StoredDimensionStars = Record<string, LevelDimensionStars>;
+
+const COGNITIVE_DIMENSIONS: CognitiveDimensionKey[] = [
+  "memory",
+  "logic",
+  "focus",
+  "reaction",
+  "strategy",
+  "spatial",
+];
+
+const MAP_SCORE_BONUS_BY_DIFFICULTY: Record<1 | 2 | 3 | 4 | 5, number> = {
+  1: 25,
+  2: 20,
+  3: 15,
+  4: 10,
+  5: 5,
+};
+
+const MAP_DIMENSION_STARS_STORAGE_KEY = "brainTraining.mapDimensionBestStars.v1";
+
+function getOverallPowerScore(scores: CognitiveScoresData): number {
+  const values = [scores.memory, scores.logic, scores.focus, scores.reaction, scores.strategy, scores.spatial];
+  return Math.round(values.reduce((sum, value) => sum + value, 0) / values.length);
+}
+
+function getDimensionFromSubTest(subTestKey: string): CognitiveDimensionKey {
+  return subTestKey.split("_")[0] as CognitiveDimensionKey;
+}
+
+function getMapLevelDimensions(mapLevel: MapLevelConfig): CognitiveDimensionKey[] {
+  return Array.from(new Set(mapLevel.subTests.map((subTest) => getDimensionFromSubTest(subTest.key))));
+}
+
+function convertRawScoreToMapScore(rawScore: number, difficulty: 1 | 2 | 3 | 4 | 5): number {
+  const bonus = MAP_SCORE_BONUS_BY_DIFFICULTY[difficulty];
+  const score = rawScore * ((100 - bonus) / 100) + bonus;
+  return Math.max(0, Math.min(100, Math.round(score)));
+}
+
+function normalizeSubTestCompletion(result: SubTestCompletion): NormalizedSubTestCompletion {
+  if (typeof result === "number") return { score: result };
+  return result;
+}
+
+function clampStars(value: number | undefined): 0 | 1 | 2 | 3 {
+  if (value === undefined || Number.isNaN(value)) return 0;
+  if (value <= 0) return 0;
+  if (value === 1) return 1;
+  if (value === 2) return 2;
+  return 3;
+}
+
+function getGainForStars(levelMaxGain: number, stars: 0 | 1 | 2 | 3): number {
+  if (stars <= 0 || levelMaxGain <= 0) return 0;
+  return Math.max(1, Math.round((levelMaxGain * stars) / 3));
+}
+
+function readStoredDimensionStars(): StoredDimensionStars {
+  if (typeof window === "undefined") return {};
+  try {
+    const raw = window.localStorage.getItem(MAP_DIMENSION_STARS_STORAGE_KEY);
+    if (!raw) return {};
+    return JSON.parse(raw) as StoredDimensionStars;
+  } catch {
+    return {};
+  }
+}
+
+function getStoredLevelDimensionStars(mapLevel: number): LevelDimensionStars {
+  return readStoredDimensionStars()[String(mapLevel)] ?? {};
+}
+
+function writeStoredLevelDimensionStars(mapLevel: number, stars: LevelDimensionStars): void {
+  if (typeof window === "undefined") return;
+  try {
+    const stored = readStoredDimensionStars();
+    stored[String(mapLevel)] = stars;
+    window.localStorage.setItem(MAP_DIMENSION_STARS_STORAGE_KEY, JSON.stringify(stored));
+  } catch {
+    // Backend progress still caps the level stars if browser storage is unavailable.
+  }
+}
+
+function buildDimensionLevelWeights(): Record<CognitiveDimensionKey, Record<number, number>> {
+  const levelsByDimension = COGNITIVE_DIMENSIONS.reduce<Record<CognitiveDimensionKey, number[]>>((acc, dimension) => {
+    acc[dimension] = [];
+    return acc;
+  }, {} as Record<CognitiveDimensionKey, number[]>);
+
+  MAP_LEVELS.forEach((level) => {
+    getMapLevelDimensions(level).forEach((dimension) => {
+      levelsByDimension[dimension].push(level.level);
+    });
+  });
+
+  return COGNITIVE_DIMENSIONS.reduce<Record<CognitiveDimensionKey, Record<number, number>>>((acc, dimension) => {
+    const levels = levelsByDimension[dimension];
+    const base = Math.floor(100 / Math.max(1, levels.length));
+    const remainder = 100 - base * levels.length;
+    acc[dimension] = {};
+    levels.forEach((level, index) => {
+      acc[dimension][level] = base + (index < remainder ? 1 : 0);
+    });
+    return acc;
+  }, {} as Record<CognitiveDimensionKey, Record<number, number>>);
+}
+
+const DIMENSION_LEVEL_WEIGHTS = buildDimensionLevelWeights();
+
+function calculateDimensionPowerGains(
+  currentScores: CognitiveScoresData,
+  mapLevel: MapLevelConfig,
+  subTestScores: MapSubTestScore[],
+  previousDimensionStars: LevelDimensionStars,
+  previousBestStars: number,
+): DimensionPowerGain[] {
+  const groupedScores = subTestScores.reduce<Partial<Record<CognitiveDimensionKey, number[]>>>((acc, item) => {
+    acc[item.dimension] = [...(acc[item.dimension] ?? []), item.mapScore];
+    return acc;
+  }, {});
+
+  return getMapLevelDimensions(mapLevel).flatMap((dimension) => {
+    const dimensionScores = groupedScores[dimension] ?? [];
+    if (dimensionScores.length === 0) return [];
+
+    const dimensionAverage = Math.round(
+      dimensionScores.reduce((sum, value) => sum + value, 0) / dimensionScores.length
+    );
+    const dimensionStars = computeMapStars(dimensionAverage, mapLevel.level);
+    const priorStars = clampStars(previousDimensionStars[dimension] ?? previousBestStars);
+    const current = currentScores[dimension] ?? 0;
+    const levelMaxGain = DIMENSION_LEVEL_WEIGHTS[dimension][mapLevel.level] ?? 0;
+    const gain = Math.max(0, getGainForStars(levelMaxGain, dimensionStars) - getGainForStars(levelMaxGain, priorStars));
+    const after = Math.min(100, current + gain);
+
+    return [
+      {
+        dimension,
+        score: dimensionAverage,
+        stars: dimensionStars,
+        before: current,
+        after,
+        gain: after - current,
+      },
+    ];
+  });
+}
+
+function calculateNextCognitiveScores(
+  currentScores: CognitiveScoresData,
+  mapLevel: MapLevelConfig,
+  subTestScores: MapSubTestScore[],
+  previousDimensionStars: LevelDimensionStars,
+  previousBestStars: number,
+): CognitiveScoresData {
+  const next: CognitiveScoresData = { ...currentScores };
+  calculateDimensionPowerGains(currentScores, mapLevel, subTestScores, previousDimensionStars, previousBestStars).forEach((item) => {
+    next[item.dimension] = item.after;
+  });
+
+  return next;
+}
+
 /** Runs a Training Map level: cycles through each sub-test, then shows results. */
 export function MapChallengeRunner({
   mapLevel,
   previousBestScore,
+  previousBestStars,
+  cognitiveScores,
   dateOfBirth,
   onComplete,
   onBack,
@@ -88,21 +285,71 @@ export function MapChallengeRunner({
   const t = useTranslations("test");
   const [subTestIdx, setSubTestIdx] = useState(0);
   const [scores, setScores] = useState<number[]>([]);
+  const [subTestResults, setSubTestResults] = useState<LevelCompleteSubTestResult[]>([]);
+  const [powerGains, setPowerGains] = useState<LevelCompletePowerGain[]>([]);
+  const [powerScoreAfter, setPowerScoreAfter] = useState<number | undefined>(undefined);
   const [phase, setPhase] = useState<MapPhase>("running");
 
   const subTests = mapLevel.subTests;
   const currentSubTest = subTests[subTestIdx];
+  const powerScoreBefore = getOverallPowerScore(cognitiveScores);
 
-  const handleSubTestComplete = async (score: number) => {
-    const newScores = [...scores, score];
+  const handleSubTestComplete = async (completion: SubTestCompletion) => {
+    const normalized = normalizeSubTestCompletion(completion);
+    const mapScore = convertRawScoreToMapScore(normalized.score, currentSubTest.difficulty);
+    const newScores = [...scores, mapScore];
+    const currentResult: LevelCompleteSubTestResult = {
+      subTestKey: currentSubTest.key,
+      dimension: getDimensionFromSubTest(currentSubTest.key),
+      difficulty: currentSubTest.difficulty,
+      rawScore: Math.round(normalized.score),
+      mapScore,
+      stars: computeMapStars(mapScore, mapLevel.level),
+      total: normalized.total,
+      correct: normalized.correct,
+      wrong: normalized.wrong,
+      completed: normalized.completed,
+      avgRtMs: normalized.avgRtMs,
+      medianRtMs: normalized.medianRtMs,
+      bestRtMs: normalized.bestRtMs,
+    };
+    const newResults = [...subTestResults, currentResult];
     setScores(newScores);
+    setSubTestResults(newResults);
 
     const isLast = subTestIdx >= subTests.length - 1;
     if (isLast) {
       const avgScore = Math.round(newScores.reduce((a, b) => a + b, 0) / newScores.length);
-      setPhase("complete");
+      const subTestScores = newResults.map((result) => ({
+        dimension: result.dimension,
+        mapScore: result.mapScore,
+      }));
+      const previousDimensionStars = getStoredLevelDimensionStars(mapLevel.level);
+      const nextPowerGains = calculateDimensionPowerGains(
+        cognitiveScores,
+        mapLevel,
+        subTestScores,
+        previousDimensionStars,
+        previousBestStars
+      );
+      const nextScores = calculateNextCognitiveScores(
+        cognitiveScores,
+        mapLevel,
+        subTestScores,
+        previousDimensionStars,
+        previousBestStars
+      );
+      setPowerGains(nextPowerGains);
+      setPowerScoreAfter(getOverallPowerScore(nextScores));
       try {
         await saveMapProgress(mapLevel.level, avgScore);
+        await updateCognitiveScores(nextScores);
+        const updatedDimensionStars = { ...previousDimensionStars };
+        nextPowerGains.forEach((item) => {
+          const priorStars = clampStars(updatedDimensionStars[item.dimension] ?? previousBestStars);
+          updatedDimensionStars[item.dimension] = Math.max(priorStars, item.stars) as 0 | 1 | 2 | 3;
+        });
+        writeStoredLevelDimensionStars(mapLevel.level, updatedDimensionStars);
         if (mapLevel.level === 1) {
           await recordCognitiveTrainingComplete();
           notifyRewardsUpdated();
@@ -110,6 +357,7 @@ export function MapChallengeRunner({
       } catch {
         // silent
       }
+      setPhase("complete");
     } else {
       setSubTestIdx((i) => i + 1);
     }
@@ -126,6 +374,10 @@ export function MapChallengeRunner({
         score={avgScore}
         previousBestScore={previousBestScore}
         mapLevel={mapLevel.level}
+        powerScoreBefore={powerScoreBefore}
+        powerScoreAfter={powerScoreAfter ?? powerScoreBefore}
+        subTestResults={subTestResults}
+        powerGains={powerGains}
         onContinue={() => onComplete(avgScore)}
         onBack={onBack}
       />
@@ -201,7 +453,7 @@ export function MapChallengeRunner({
         hideSkip
       >
         <TestRunnerShell dimensionLabel={`${t("mapLevelLabel")} ${mapLevel.level}`}>
-          {renderSubTest(currentSubTest.key, cfg.params, (score) => void handleSubTestComplete(score), dateOfBirth, true)}
+          {renderSubTest(currentSubTest.key, cfg.params, (score) => void handleSubTestComplete(score), dateOfBirth)}
         </TestRunnerShell>
       </TestChromeProvider>
     </div>
@@ -234,7 +486,8 @@ export default function ChallengeRunner({
   const [phase, setPhase] = useState<Phase>("running");
   const [finalScore, setFinalScore] = useState(0);
 
-  const handleSubTestComplete = async (score: number) => {
+  const handleSubTestComplete = async (completion: SubTestCompletion) => {
+    const { score } = normalizeSubTestCompletion(completion);
     setFinalScore(score);
     setPhase("complete");
     try {
@@ -284,7 +537,7 @@ export default function ChallengeRunner({
           </span>
           <span>{missionLabel}</span>
         </div>
-        {renderSubTest(mission.subTestKey, cfg.params, (score) => void handleSubTestComplete(score), dateOfBirth, true)}
+        {renderSubTest(mission.subTestKey, cfg.params, (score) => void handleSubTestComplete(score), dateOfBirth)}
       </TestRunnerShell>
     </TestChromeProvider>
   );
