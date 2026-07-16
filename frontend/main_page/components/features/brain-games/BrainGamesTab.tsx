@@ -14,6 +14,7 @@ import chessTourmasterGif from "../../../public/brain-games/chessTourmaster.gif"
 import quantumGoGif from "../../../public/brain-games/quantumgo.gif";
 import fogChessGif from "../../../public/brain-games/fogchess.gif";
 import intercontinentalChessGif from "../../../public/brain-games/intercontinental-chess.gif";
+import numberBlastGif from "../../../public/brain-games/number-blast.gif";
 
 const GAME_COVER_MAP: Record<string, string | StaticImageData> = {
   chessmater: chessmaterGif,
@@ -22,6 +23,7 @@ const GAME_COVER_MAP: Record<string, string | StaticImageData> = {
   quantumgo: quantumGoGif,
   fogchess: fogChessGif,
   "intercontinental-chess": intercontinentalChessGif,
+  "number-blast": numberBlastGif,
 };
 
 interface BrainGamesTabProps {

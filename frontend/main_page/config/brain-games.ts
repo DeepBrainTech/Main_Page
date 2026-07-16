@@ -21,7 +21,7 @@ export const GAMES_BY_DIMENSION: Record<CognitiveDimensionKey, GameEntry[]> = {
   ],
   logic: [
     { key: "sudoku", nameKey: "sudoku", launchKey: "sudoku" },
-    { key: "number-blast", nameKey: "numberBlast", launchKey: "numberBlast", skipCover: true },
+    { key: "number-blast", nameKey: "numberBlast", launchKey: "numberBlast" },
     {
       key: "intercontinental-chess",
       nameKey: "intercontinentalChess",
