@@ -97,7 +97,7 @@ export const GAME_LAUNCH_ENTRIES: GameLaunchEntry[] = [
     kind: "token",
     launchKey: "numberBlast",
     apiSlug: "number-blast",
-    gameUrl: "https://number-blast-production.up.railway.app",
+    gameUrl: "https://number-blast.deepbraintechnology.com",
     openInNewTab: false,
   },
 ];

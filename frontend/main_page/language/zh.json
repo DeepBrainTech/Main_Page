@@ -1032,6 +1032,7 @@
       "spatial": "空间游戏"
     },
     "categoryListing": {
+      "all": "全部游戏",
       "memory": "记忆游戏",
       "logic": "逻辑游戏",
       "focus": "专注游戏",

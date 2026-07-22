@@ -14,6 +14,7 @@ import chessTourmasterGif from "../../../public/brain-games/chessTourmaster.gif"
 import quantumGoGif from "../../../public/brain-games/quantumgo.gif";
 import fogChessGif from "../../../public/brain-games/fogchess.gif";
 import intercontinentalChessGif from "../../../public/brain-games/intercontinental-chess.gif";
+import numberBlastGif from "../../../public/brain-games/number-blast.gif";
 
 const GAME_COVER_MAP: Record<string, string | StaticImageData> = {
   chessmater: chessmaterGif,
@@ -22,6 +23,7 @@ const GAME_COVER_MAP: Record<string, string | StaticImageData> = {
   quantumgo: quantumGoGif,
   fogchess: fogChessGif,
   "intercontinental-chess": intercontinentalChessGif,
+  "number-blast": numberBlastGif,
 };
 
 interface BrainGamesTabProps {
@@ -146,6 +148,23 @@ const CATEGORY_ORDER: (typeof COGNITIVE_DIMENSION_KEYS)[number][] = [
   "reaction",
 ];
 
+type GameCategoryFilter = (typeof COGNITIVE_DIMENSION_KEYS)[number] | null;
+
+function allPortalGames(): GameEntry[] {
+  const seen = new Set<string>();
+  const out: GameEntry[] = [];
+  for (const dim of CATEGORY_ORDER) {
+    for (const entry of GAMES_BY_DIMENSION[dim]) {
+      if (seen.has(entry.key)) continue;
+      seen.add(entry.key);
+      out.push(entry);
+    }
+  }
+  return out;
+}
+
+const ALL_PORTAL_GAMES = allPortalGames();
+
 const CATEGORY_META: Record<
   (typeof COGNITIVE_DIMENSION_KEYS)[number],
   { sticker: string; bgClass: string }
@@ -204,7 +223,7 @@ function launchForKey(
 export default function BrainGamesTab({ onLaunch }: BrainGamesTabProps) {
   const tHome = useTranslations("dashboard");
   const tBrain = useTranslations("brainGames");
-  const [activeCategory, setActiveCategory] = useState<(typeof COGNITIVE_DIMENSION_KEYS)[number]>("strategy");
+  const [activeCategory, setActiveCategory] = useState<GameCategoryFilter>(null);
   const [featuredIndex, setFeaturedIndex] = useState(0);
   const { likeStates } = useGameLikes();
   /** New shuffle on browser refresh / remount — zeros slots follow this order among chessmater / quantumgo / fogchess. */
@@ -225,7 +244,8 @@ export default function BrainGamesTab({ onLaunch }: BrainGamesTabProps) {
     return computeRibbonTopThree(likeCount, PORTAL_LIKEABLE_GAME_KEYS, ribbonZeroFillOrder);
   }, [likeStates, ribbonZeroFillOrder]);
 
-  const selectedGames = GAMES_BY_DIMENSION[activeCategory] ?? [];
+  const selectedGames =
+    activeCategory === null ? ALL_PORTAL_GAMES : (GAMES_BY_DIMENSION[activeCategory] ?? []);
 
   return (
     <div className="space-y-5 pb-8 font-app-body">
@@ -378,7 +398,9 @@ export default function BrainGamesTab({ onLaunch }: BrainGamesTabProps) {
             <button
               key={dimKey}
               type="button"
-              onClick={() => setActiveCategory(dimKey)}
+              onClick={() =>
+                setActiveCategory((prev) => (prev === dimKey ? null : dimKey))
+              }
               className={`group relative w-full cursor-pointer overflow-visible text-left outline-none transition ${
                 isActive ? "" : "hover:-translate-y-0.5"
               }`}
@@ -450,7 +472,9 @@ export default function BrainGamesTab({ onLaunch }: BrainGamesTabProps) {
 
       <section className="space-y-3">
         <h2 className="text-[22px] font-semibold text-[#106FAA]">
-          {tBrain(`categoryListing.${activeCategory}` as "categoryListing.memory")}
+          {activeCategory === null
+            ? tBrain("categoryListing.all")
+            : tBrain(`categoryListing.${activeCategory}` as "categoryListing.memory")}
         </h2>
 
         {selectedGames.length === 0 ? (
