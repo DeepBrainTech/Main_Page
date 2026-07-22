@@ -870,6 +870,7 @@
       "spatial": "Spatial Game"
     },
     "categoryListing": {
+      "all": "All Games",
       "memory": "Memory Games",
       "logic": "Logic Games",
       "focus": "Focus Games",
