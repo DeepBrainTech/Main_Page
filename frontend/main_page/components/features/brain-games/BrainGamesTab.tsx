@@ -488,7 +488,7 @@ export default function BrainGamesTab({ onLaunch }: BrainGamesTabProps) {
                 ? null
                 : (GAME_COVER_MAP[entry.key] ?? `/brain-games/${entry.key}.gif`);
               const playerText =
-                entry.key === "quantumgo" || entry.key === "fogchess" || entry.key === "online-chess" ? tBrain("playersOneTwo") : tBrain("playersOne");
+                entry.key === "quantumgo" || entry.key === "dark-light-queens" || entry.key === "fogchess" || entry.key === "soccer_chess" || entry.key === "online-chess" ? tBrain("playersOneTwo") : tBrain("playersOne");
               const launch = launchForKey(entry, onLaunch);
 
               return (
