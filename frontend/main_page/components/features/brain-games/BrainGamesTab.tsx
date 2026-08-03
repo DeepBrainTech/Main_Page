@@ -4,6 +4,7 @@ import Image, { type StaticImageData } from "next/image";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { GAMES_BY_DIMENSION } from "@/config/brain-games";
+import type { PortalLaunchKey } from "@/config/game-launch";
 import { COGNITIVE_DIMENSION_KEYS } from "@/types/cognitive";
 import type { GameEntry } from "@/config/brain-games";
 import { useGameLikes } from "@/hooks/useGameLikes";
@@ -27,15 +28,7 @@ const GAME_COVER_MAP: Record<string, string | StaticImageData> = {
 };
 
 interface BrainGamesTabProps {
-  onLaunch: {
-    chessMater: () => void;
-    chessTourmaster: () => void;
-    sudoku: () => void;
-    quantumGo: () => void;
-    fogChess: () => void;
-    onlineChess: () => void;
-    numberBlast: () => void;
-  };
+  launchByKey: (key: PortalLaunchKey) => void;
 }
 
 type FeaturedKey = "fogchess" | "quantumgo";
@@ -197,16 +190,11 @@ const CATEGORY_META: Record<
 
 function launchForKey(
   entry: GameEntry,
-  onLaunch: BrainGamesTabProps["onLaunch"]
+  launchByKey: BrainGamesTabProps["launchByKey"]
 ): () => void {
-  if (entry.launchKey === "chessMater") return onLaunch.chessMater;
-  if (entry.launchKey === "chessTourmaster") return onLaunch.chessTourmaster;
-  if (entry.launchKey === "sudoku") return onLaunch.sudoku;
-  if (entry.launchKey === "quantumGo") return onLaunch.quantumGo;
-  if (entry.launchKey === "fogChess") return onLaunch.fogChess;
-  if (entry.launchKey === "onlineChess") return onLaunch.onlineChess;
-  if (entry.launchKey === "numberBlast") return onLaunch.numberBlast;
-  if (entry.launchKey === "external" && entry.externalUrl) {
+  const launchKey = entry.launchKey;
+  if (launchKey === "external") {
+    if (!entry.externalUrl) return () => {};
     return () => {
       void postGamePlayedRecord(entry.key).catch(() => {
         /* open game even if record fails */
@@ -214,13 +202,13 @@ function launchForKey(
       window.open(entry.externalUrl, "_blank");
     };
   }
-  return () => {};
+  return () => launchByKey(launchKey);
 }
 
 /**
  * Brain games tab with featured carousel and category explorer.
  */
-export default function BrainGamesTab({ onLaunch }: BrainGamesTabProps) {
+export default function BrainGamesTab({ launchByKey }: BrainGamesTabProps) {
   const tHome = useTranslations("dashboard");
   const tBrain = useTranslations("brainGames");
   const [activeCategory, setActiveCategory] = useState<GameCategoryFilter>(null);
@@ -304,7 +292,7 @@ export default function BrainGamesTab({ onLaunch }: BrainGamesTabProps) {
                       {launchEntry ? (
                         <button
                           type="button"
-                          onClick={launchForKey(launchEntry, onLaunch)}
+                          onClick={launchForKey(launchEntry, launchByKey)}
                           className="h-[45px] min-w-[125px] rounded-full bg-[#045E96] px-6 text-[16px] font-semibold text-white shadow-[0px_3.2px_4.8px_rgba(4,94,150,0.3)]"
                         >
                           {tBrain("ribbon.playNow")}
@@ -351,7 +339,7 @@ export default function BrainGamesTab({ onLaunch }: BrainGamesTabProps) {
                 <button
                   key={gameKey}
                   type="button"
-                  onClick={launchForKey(rankingEntry, onLaunch)}
+                  onClick={launchForKey(rankingEntry, launchByKey)}
                   className="flex w-full shrink-0 items-center gap-3 rounded-[16px] border border-white/80 bg-white p-3 text-left shadow-[0px_10px_15px_0px_rgba(0,0,0,0.10)] transition hover:translate-y-[-1px]"
                 >
                   <div className="relative h-8 w-8 shrink-0">
@@ -489,7 +477,7 @@ export default function BrainGamesTab({ onLaunch }: BrainGamesTabProps) {
                 : (GAME_COVER_MAP[entry.key] ?? `/brain-games/${entry.key}.gif`);
               const playerText =
                 entry.key === "quantumgo" || entry.key === "fogchess" || entry.key === "online-chess" ? tBrain("playersOneTwo") : tBrain("playersOne");
-              const launch = launchForKey(entry, onLaunch);
+              const launch = launchForKey(entry, launchByKey);
 
               return (
                 <div
