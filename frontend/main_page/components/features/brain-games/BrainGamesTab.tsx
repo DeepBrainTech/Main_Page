@@ -474,9 +474,9 @@ export default function BrainGamesTab({ launchByKey }: BrainGamesTabProps) {
             {selectedGames.map((entry) => {
               const imageSrc = entry.skipCover
                 ? null
-                : (GAME_COVER_MAP[entry.key] ?? `/brain-games/${entry.key}.gif`);
+                : (GAME_COVER_MAP[entry.key] ?? `/brain-games/${entry.key}.gif`); 
               const playerText =
-                entry.key === "quantumgo" || entry.key === "fogchess" || entry.key === "online-chess" ? tBrain("playersOneTwo") : tBrain("playersOne");
+                entry.key === "quantumgo" || entry.key === "no-king-chess" || entry.key === "fogchess" || entry.key === "online-chess" ? tBrain("playersOneTwo") : tBrain("playersOne");
               const launch = launchForKey(entry, launchByKey);
 
               return (
