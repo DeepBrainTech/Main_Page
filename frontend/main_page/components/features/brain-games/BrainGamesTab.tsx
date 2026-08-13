@@ -477,7 +477,7 @@ export default function BrainGamesTab({ launchByKey }: BrainGamesTabProps) {
                 : (GAME_COVER_MAP[entry.key] ?? `/brain-games/${entry.key}.gif`);
               const playerText =
                 entry.key === "quantumgo" || entry.key === "fogchess" || entry.key === "online-chess" ? tBrain("playersOneTwo") : tBrain("playersOne");
-              const launch = launchForKey(entry, onLaunch);
+              const launch = launchForKey(entry, launchByKey);
 
               return (
                 <div
