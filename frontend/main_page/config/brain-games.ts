@@ -57,8 +57,8 @@ export const GAMES_BY_DIMENSION: Record<CognitiveDimensionKey, GameEntry[]> = {
       externalUrl: "https://rbc.deepbraintechnology.com/",
     },
     {
-      key: "dark-light-queens",
-      nameKey: "darkLightQueens",
+      key: "no-king-chess",
+      nameKey: " NoKingChess",
       launchKey: "external",
       externalUrl: "https://no-king-chess.deepbraintechnology.com/",
     },
