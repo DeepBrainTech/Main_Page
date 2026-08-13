@@ -10,6 +10,7 @@ import { AuthedUserProvider } from "@/components/layout/AuthedUserContext";
 const SEGMENT_TO_TAB: Record<string, AppTab> = {
   dashboard: "dashboard",
   braingames: "brainGames",
+  training: "training",
   leaderboard: "leaderboard",
   test: "test",
   learning: "learning",
@@ -25,12 +26,17 @@ export default function AuthedAppLayout({ children }: { children: React.ReactNod
   const pathname = usePathname();
   const { username, email, dateOfBirth, country, avatarUrl, loading, needsProfileCompletion, refetch, logout } = useAuth();
 
-  const currentSegment = pathname.split("/").filter(Boolean).pop()?.toLowerCase() ?? "dashboard";
-  const activeTab = SEGMENT_TO_TAB[currentSegment] ?? null;
+  const pathSegments = pathname.split("/").filter(Boolean);
+  const activeTab = pathSegments.includes("training")
+    ? "training"
+    : pathSegments.includes("braingames")
+      ? "brainGames"
+      : (SEGMENT_TO_TAB[pathSegments[pathSegments.length - 1]?.toLowerCase() ?? ""] ?? null);
 
   const tabHrefMap: Record<AppTab, string> = {
     dashboard: "/dashboard",
     brainGames: "/braingames",
+    training: "/training",
     leaderboard: "/leaderboard",
     test: "/test",
     learning: "/learning",

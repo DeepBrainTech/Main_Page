@@ -21,6 +21,7 @@
   "nav": {
     "home": "主页",
     "learning": "学习",
+    "training": "闯关训练",
     "test": "认知测试",
     "brainGames": "脑力训练游戏",
     "leaderboard": "排行榜",
@@ -877,6 +878,23 @@
       "strategy": "策略游戏",
       "spatial": "空间游戏"
     }
+  },
+  "training": {
+    "title": "闯关训练",
+    "subtitle": "12 个大世界渐进挑战——类似多邻国的闯关路径，每关可获星级。",
+    "catalogSummary": "{worlds} 个大世界 · 共 {stages} 关",
+    "worldLabel": "世界 {n}",
+    "stageRange": "第 {start}–{end} 关",
+    "worldProgress": "已通关 {cleared}/{total}",
+    "enterWorld": "进入",
+    "locked": "未解锁",
+    "backToWorlds": "全部世界",
+    "backToWorld": "返回世界",
+    "stageNode": "第 {n} 关",
+    "globalStage": "总第 {n} 关",
+    "resultHint": "星级保存为历史最佳。仅当最佳星级提升时才加维度分（目前 3★ 时每个标注维度 +1）。",
+    "taggedDimensions": "关联维度",
+    "retry": "再试一次"
   },
   "learning": {
     "title": "学习",

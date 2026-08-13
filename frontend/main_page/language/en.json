@@ -21,6 +21,7 @@
   "nav": {
     "home": "Home",
     "learning": "Learning",
+    "training": "Training",
     "test": "Cognitive Test",
     "brainGames": "Games",
     "leaderboard": "Leaderboard",
@@ -878,6 +879,23 @@
       "strategy": "Strategy Games",
       "spatial": "Spatial Games"
     }
+  },
+  "training": {
+    "title": "Training",
+    "subtitle": "Climb 12 worlds of progressive brain challenges — Duolingo-style stages with stars.",
+    "catalogSummary": "{worlds} worlds · {stages} stages",
+    "worldLabel": "World {n}",
+    "stageRange": "Stages {start}–{end}",
+    "worldProgress": "{cleared}/{total} cleared",
+    "enterWorld": "Enter",
+    "locked": "Locked",
+    "backToWorlds": "All worlds",
+    "backToWorld": "Back to world",
+    "stageNode": "Stage {n}",
+    "globalStage": "Stage {n}",
+    "resultHint": "Stars save as your best. Dimension points only rise when you improve your best (3★ grants +1 per tagged dimension).",
+    "taggedDimensions": "Tagged dimensions",
+    "retry": "Try again"
   },
   "learning": {
     "title": "Learning",

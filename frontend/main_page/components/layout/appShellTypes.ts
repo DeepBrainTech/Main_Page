@@ -1,1 +1,7 @@
-export type AppTab = "dashboard" | "learning" | "test" | "brainGames" | "leaderboard";
+export type AppTab =
+  | "dashboard"
+  | "learning"
+  | "training"
+  | "test"
+  | "brainGames"
+  | "leaderboard";

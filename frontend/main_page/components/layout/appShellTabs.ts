@@ -31,6 +31,12 @@ export function buildAppShellTabs(
       iconAlt: tNav("brainGames"),
     },
     {
+      key: "training",
+      label: tNav("training"),
+      iconSrc: "/dashboard/level.svg",
+      iconAlt: tNav("training"),
+    },
+    {
       key: "leaderboard",
       label: tNav("leaderboard"),
       iconSrc: "/dashboard/leaderboard.svg",

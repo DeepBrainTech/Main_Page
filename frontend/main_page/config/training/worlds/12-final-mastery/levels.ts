@@ -1,0 +1,77 @@
+import type { TrainingLevelDefinition } from "@/types/training";
+
+/** World 12 — Final Mastery (stages 75–80). Domain finals + integrated mission. */
+export const finalMasteryLevels: TrainingLevelDefinition[] = [
+  {
+    id: "level-01",
+    order: 1,
+    globalStage: 75,
+    titleKey: "memoryMastery",
+    titleFallback: "Memory Mastery",
+    mechanicId: "challenge-mix",
+    dimensions: ["memory"],
+    descriptionFallback: "N-back, change detection, Sternberg.",
+    params: { mechanics: ["n-back", "change-detection", "sternberg"] },
+  },
+  {
+    id: "level-02",
+    order: 2,
+    globalStage: 76,
+    titleKey: "logicMastery",
+    titleFallback: "Logic Mastery",
+    mechanicId: "challenge-mix",
+    dimensions: ["logic"],
+    descriptionFallback: "Transitive, syllogistic, and analogical reasoning.",
+    params: {
+      mechanics: ["transitive-inference", "syllogistic-reasoning", "analogical-reasoning"],
+    },
+  },
+  {
+    id: "level-03",
+    order: 3,
+    globalStage: 77,
+    titleKey: "focusAndSpeedMastery",
+    titleFallback: "Focus and Speed Mastery",
+    mechanicId: "challenge-mix",
+    dimensions: ["focus", "reaction"],
+    descriptionFallback: "Flanker, Stroop, Schulte, reaction time.",
+    params: {
+      mechanics: ["flanker", "stroop", "schulte-grid", "simple-reaction", "choice-reaction"],
+    },
+  },
+  {
+    id: "level-04",
+    order: 4,
+    globalStage: 78,
+    titleKey: "strategyMastery",
+    titleFallback: "Strategy Mastery",
+    mechanicId: "challenge-mix",
+    dimensions: ["strategy"],
+    descriptionFallback: "Hanoi, London, and route planning.",
+    params: { mechanics: ["hanoi", "london", "route-planning"] },
+  },
+  {
+    id: "level-05",
+    order: 5,
+    globalStage: 79,
+    titleKey: "spatialMastery",
+    titleFallback: "Spatial Mastery",
+    mechanicId: "challenge-mix",
+    dimensions: ["spatial"],
+    descriptionFallback: "Rotation, folding, construction, and orientation.",
+    params: {
+      mechanics: ["mental-rotation", "paper-fold", "spatial-construction", "spatial-orientation"],
+    },
+  },
+  {
+    id: "level-06",
+    order: 6,
+    globalStage: 80,
+    titleKey: "finalIntegratedMission",
+    titleFallback: "Final Integrated Mission",
+    mechanicId: "challenge-mix",
+    dimensions: ["memory", "logic", "focus", "reaction", "strategy", "spatial"],
+    descriptionFallback: "All six domains.",
+    params: { allDomains: true },
+  },
+];
