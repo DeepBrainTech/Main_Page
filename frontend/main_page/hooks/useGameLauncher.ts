@@ -7,7 +7,6 @@ import { apiFetch } from "@/lib/api-config";
 import { getUserTimezone, postGamePlayedRecord } from "@/services/userApi";
 import {
   GAME_LAUNCH_BY_KEY,
-  GAME_LAUNCH_ENTRIES,
   type AnalyticsGameLaunchEntry,
   type PortalLaunchKey,
   type TokenGameLaunchEntry,
@@ -108,28 +107,7 @@ export function useGameLauncher() {
     }
   };
 
-  const handlers = Object.fromEntries(
-    GAME_LAUNCH_ENTRIES.map((entry) => [
-      entry.launchKey,
-      () => {
-        if (entry.kind === "token") {
-          launchTokenGame(entry);
-        } else {
-          launchAnalyticsGame(entry);
-        }
-      },
-    ]),
-  ) as Record<PortalLaunchKey, () => void>;
-
   return {
     launchByKey,
-    handleFogChess: handlers.fogChess,
-    handleSudokuBattle: handlers.sudokuBattle,
-    handleSudoku: handlers.sudoku,
-    handleQuantumGo: handlers.quantumGo,
-    handleChessMater: handlers.chessMater,
-    handleChessTourmaster: handlers.chessTourmaster,
-    handleOnlineChess: handlers.onlineChess,
-    handleNumberBlast: handlers.numberBlast,
   };
 }
