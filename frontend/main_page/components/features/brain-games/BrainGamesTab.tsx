@@ -55,6 +55,8 @@ const BACKEND_LIKE_GAME_KEYS = new Set<string>([
   "dash-dot-simulator",
   "stack_math_chess",
   "recon_chess",
+  "soccer_chess",
+  "no-king-chess",
 ]);
 
 function shuffleInPlace<T>(arr: T[]): T[] {
@@ -476,7 +478,7 @@ export default function BrainGamesTab({ launchByKey }: BrainGamesTabProps) {
                 ? null
                 : (GAME_COVER_MAP[entry.key] ?? `/brain-games/${entry.key}.gif`); 
               const playerText =
-                entry.key === "quantumgo" || entry.key === "no-king-chess" || entry.key === "fogchess" || entry.key === "online-chess" ? tBrain("playersOneTwo") : tBrain("playersOne");
+                entry.key === "quantumgo" || entry.key === "no-king-chess" || entry.key === "soccer_chess" || entry.key === "fogchess" || entry.key === "online-chess" ? tBrain("playersOneTwo") : tBrain("playersOne");
               const launch = launchForKey(entry, launchByKey);
 
               return (

@@ -60,7 +60,13 @@ export const GAMES_BY_DIMENSION: Record<CognitiveDimensionKey, GameEntry[]> = {
       key: "soccer_chess",
       nameKey: "soccerChess",
       launchKey: "external",
-      externalUrl: "https://soccer-chess.pages.dev/",
+      externalUrl: "https://soccer-chess.deepbraintechnology.com/",
+    },
+    {
+      key: "no-king-chess",
+      nameKey: "nokingchess",
+      launchKey: "external",
+      externalUrl: "https://no-king-chess.deepbraintechnology.com/",
     },
   ],
   spatial: [
@@ -69,12 +75,6 @@ export const GAMES_BY_DIMENSION: Record<CognitiveDimensionKey, GameEntry[]> = {
       nameKey: "dashDotSimulator",
       launchKey: "external",
       externalUrl: "https://dash-dot-simulator.deepbraintechnology.com/",
-    },
-    {
-      key: "no-king-chess",
-      nameKey: "nokingchess",
-      launchKey: "external",
-      externalUrl: "https://no-king-chess.deepbraintechnology.com/",
     },
   ],
 };

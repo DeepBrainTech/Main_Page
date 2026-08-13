@@ -79,6 +79,8 @@ SUPPORTED_GAME_KEYS = {
     "stack_math_chess",
     "recon_chess",
     "number-blast",
+    "soccer_chess",
+    "no-king-chess",
 }
 
 
