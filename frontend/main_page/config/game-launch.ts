@@ -14,7 +14,7 @@ export type TokenLaunchKey =
 
 export type AnalyticsLaunchKey = "sudoku";
 
-/** Keys wired through useGameLauncher → BrainGamesTab `onLaunch`. */
+/** Portal game launch identifiers. */
 export type PortalLaunchKey = TokenLaunchKey | AnalyticsLaunchKey;
 
 export interface TokenGameLaunchEntry {
@@ -107,7 +107,7 @@ export const GAME_LAUNCH_BY_KEY: Record<PortalLaunchKey, GameLaunchEntry> =
     GAME_LAUNCH_ENTRIES.map((entry) => [entry.launchKey, entry]),
   ) as Record<PortalLaunchKey, GameLaunchEntry>;
 
-/** BrainGamesTab `launchKey` values that use the token launch flow. */
+/** Launch identifiers that use the token launch flow. */
 export type BrainGamesTokenLaunchKey = Exclude<
   PortalLaunchKey,
   AnalyticsLaunchKey
