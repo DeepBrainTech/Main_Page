@@ -5,19 +5,15 @@ import { useParams } from "next/navigation";
 import { useRouter } from "@/lib/i18n-navigation";
 import { apiFetch } from "@/lib/api-config";
 import {
-  DecorativeBackground,
   LandingHeader,
-  HeroSection,
-  AudienceSection,
-  GameCategorySection,
-  BenefitStorySection,
   LandingFooter,
+  BrainTrainingPrinciples,
+  FigmaHero,
+  FinalTrainingCta,
+  GameShowcase,
+  PricingSection,
+  TrustMarquee,
 } from "@/components/landing";
-import {
-  LANDING_AUDIENCES,
-  LANDING_GAME_CATEGORIES,
-  LANDING_BENEFIT_STORIES,
-} from "@/config/landing";
 
 /**
  * Landing 页面入口
@@ -50,20 +46,17 @@ export default function Home() {
   };
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[var(--background)]">
-      <DecorativeBackground />
-
-      <div className="relative z-10">
+    <div id="top" className="min-h-screen overflow-hidden bg-white">
+      <div>
         <LandingHeader onLogin={goLogin} onRegister={goRegister} />
 
-        <main className="space-y-2">
-          <HeroSection />
-          <AudienceSection items={LANDING_AUDIENCES} />
-          <GameCategorySection
-            items={LANDING_GAME_CATEGORIES}
-            onPlayClick={goLogin}
-          />
-          <BenefitStorySection items={LANDING_BENEFIT_STORIES} />
+        <main>
+          <FigmaHero onStart={goLogin} />
+          <GameShowcase />
+          <TrustMarquee />
+          <BrainTrainingPrinciples />
+          <PricingSection />
+          <FinalTrainingCta onStart={goLogin} />
         </main>
 
         <LandingFooter />

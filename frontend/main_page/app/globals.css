@@ -21,6 +21,7 @@
   /* 卡片色 */
   --card-bg: #ffffff;
   --card-border: #f3f4f6;
+  --landing-content-width: 110rem;
 }
 
 html {
@@ -57,6 +58,40 @@ body {
   /** Replaces literal Outfit utility — switches under `.locale-zh` via rules above */
   .font-app-body {
     font-family: var(--font-outfit), ui-sans-serif, system-ui, sans-serif;
+  }
+
+  .font-figma-heading {
+    font-family: var(--font-bricolage-grotesque), ui-sans-serif, system-ui, sans-serif;
+  }
+
+  @keyframes landing-marquee {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(-50%);
+    }
+  }
+
+  .animate-landing-marquee {
+    animation: landing-marquee 40s linear infinite;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .animate-landing-marquee {
+      animation-play-state: paused;
+    }
+  }
+
+  .landing-container {
+    width: min(100% - 2.5rem, var(--landing-content-width));
+    margin-inline: auto;
+  }
+
+  @media (min-width: 640px) {
+    .landing-container {
+      width: min(100% - 4rem, var(--landing-content-width));
+    }
   }
 
   .notification-panel-scroll-hide {

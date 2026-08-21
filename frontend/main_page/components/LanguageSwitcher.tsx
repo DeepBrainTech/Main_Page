@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { usePathname, useRouter } from "@/lib/i18n-navigation";
@@ -11,9 +12,11 @@ export default function LanguageSwitcher() {
   const params = useParams();
   const currentLocale = params.locale as string;
   const tCommon = useTranslations("common");
+  const [isOpen, setIsOpen] = useState(false);
 
   const switchLanguage = (newLocale: string) => {
     setNextLocaleCookie(newLocale);
+    setIsOpen(false);
     router.push(pathname || "/", { locale: newLocale });
   };
 
@@ -22,33 +25,35 @@ export default function LanguageSwitcher() {
     currentLocale === "zh" ? tCommon("localeZh") : tCommon("localeEn");
 
   return (
-    <button
-      type="button"
-      onClick={() => switchLanguage(nextLocale)}
-      className="font-app-body inline-flex min-h-[clamp(1.75rem,calc(1.35rem+2.75vw),3.5rem)] w-fit max-w-full items-center justify-center gap-[clamp(0.25rem,calc(0.12rem+1.1vw),0.625rem)] rounded-full border border-slate-300 bg-white px-[clamp(0.5rem,calc(0.35rem+2.5vw),1.75rem)] text-[clamp(0.6875rem,calc(0.5rem+1.15vw),1.0625rem)] font-semibold text-slate-700 transition hover:border-slate-400"
-      aria-label={`Switch language, current ${currentLocaleLabel}`}
-      title={`Switch language, current ${currentLocaleLabel}`}
-    >
-      <span
-        className="relative size-[clamp(0.75rem,calc(0.45rem+1.85vw),1.25rem)] shrink-0 overflow-hidden"
-        aria-hidden="true"
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setIsOpen((open) => !open)}
+        className="font-app-body inline-flex h-11 items-center justify-center gap-2 rounded-lg px-5 text-base font-normal text-[#1c1917] transition hover:bg-slate-50"
+        aria-expanded={isOpen}
+        aria-haspopup="menu"
+        aria-label={`Select language, current ${currentLocaleLabel}`}
       >
-        <svg
-          viewBox="0 0 24 24"
-          className="h-full w-full text-slate-700"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <circle cx="12" cy="12" r="9" />
-          <path d="M3 12h18" />
-          <path d="M12 3a14 14 0 0 1 0 18" />
-          <path d="M12 3a14 14 0 0 0 0 18" />
-        </svg>
-      </span>
-      <span className="leading-none text-slate-700">{currentLocaleLabel}</span>
-    </button>
+        <span className="relative size-5 shrink-0 overflow-hidden rounded-sm bg-[repeating-linear-gradient(to_bottom,#fff_0,#fff_2px,#b91c1c_2px,#b91c1c_4px)]" aria-hidden="true"><span className="absolute left-0 top-0 size-2.5 bg-[#075985]" /></span>
+        <span className="leading-none">{currentLocale.toUpperCase()}</span>
+        <span
+          aria-hidden="true"
+          className={`mb-1 size-2.5 rotate-45 border-b-[1.5px] border-r-[1.5px] border-[#27272a] transition-transform ${isOpen ? "rotate-[225deg]" : ""}`}
+        />
+      </button>
+      {isOpen && (
+        <div role="menu" className="font-app-body absolute left-0 top-[calc(100%+0.375rem)] z-50 min-w-28 overflow-hidden rounded-lg border border-slate-200 bg-white p-1 shadow-lg">
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => switchLanguage(nextLocale)}
+            className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-[#1c1917] transition hover:bg-[#edf4fa]"
+          >
+            <span aria-hidden="true">{nextLocale === "zh" ? "🇨🇳" : "🇺🇸"}</span>
+            {nextLocale === "zh" ? tCommon("localeZh") : tCommon("localeEn")}
+          </button>
+        </div>
+      )}
+    </div>
   );
 }

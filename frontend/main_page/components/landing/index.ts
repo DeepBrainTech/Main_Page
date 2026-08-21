@@ -13,3 +13,12 @@ export { default as BenefitStoryCard } from "./play_smarter/BenefitStoryCard";
 export { default as BenefitStorySection } from "./play_smarter/BenefitStorySection";
 export { default as FinalCtaSection } from "./play_smarter/FinalCtaSection";
 export { default as LandingFooter } from "./LandingFooter";
+export {
+  AiLearningSection,
+  BrainTrainingPrinciples,
+  FigmaHero,
+  FinalTrainingCta,
+  GameShowcase,
+  PricingSection,
+  TrustMarquee,
+} from "./figma-home";
