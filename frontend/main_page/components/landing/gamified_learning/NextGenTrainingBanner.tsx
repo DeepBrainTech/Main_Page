@@ -12,7 +12,7 @@ export default function NextGenTrainingBanner() {
       <div className="relative mx-auto h-full w-full max-w-[120rem] 2xl:max-w-none">
         <div className="relative -mx-5 aspect-[1920/1996] w-[clamp(18rem,45vw,55rem)] max-w-full sm:-mx-8 lg:-mx-12 2xl:absolute 2xl:left-0 2xl:top-[5.5%] 2xl:mx-0 2xl:aspect-[1920/1996] 2xl:h-auto 2xl:w-1/2 2xl:max-w-none">
           <Image
-            src="/landing/next_gen/Group 1695.png"
+          src="/landing/next_gen/group-1695.png"
             alt=""
             fill
             sizes="(min-width: 1536px) 50vw, (min-width: 640px) 45vw, 100vw"

@@ -66,7 +66,7 @@ export default function GameCategoriesShowcase() {
 
         <div className="w-full max-w-[71.6rem]">
           <Image
-            src="/landing/gamified_learning/Group 1682.png"
+              src="/landing/gamified_learning/group-1682.png"
             alt={tHome("gameCategoriesTitle")}
             width={2292}
             height={1408}

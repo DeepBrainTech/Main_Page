@@ -13,8 +13,8 @@ const HERO_PIECES = [
   { src: "/landing/hero/Pawn.svg", alt: "Armored pawn", width: 34, height: 40 },
   { src: "/landing/hero/Rook.svg", alt: "Armored rook", width: 34, height: 40 },
   { src: "/landing/hero/Knight.svg", alt: "Purple knight", width: 34, height: 45 },
-  { src: "/landing/hero/Red King.svg", alt: "Red king", width: 34, height: 43 },
-  { src: "/landing/hero/Dark King.svg", alt: "Dark king", width: 34, height: 48 },
+  { src: "/landing/hero/red-king.svg", alt: "Red king", width: 34, height: 43 },
+  { src: "/landing/hero/dark-king.svg", alt: "Dark king", width: 34, height: 48 },
 ] as const;
 
 export default function FigmaHero({ onStart }: FigmaHeroProps) {
