@@ -9,6 +9,10 @@ import {
   LandingFooter,
   BrainTrainingPrinciples,
   FigmaHero,
+  GameCategoriesShowcase,
+  GamifiedLearningHighlights,
+  NextGenTrainingBanner,
+  AIPoweredTools,
   FinalTrainingCta,
   GameShowcase,
   PricingSection,
@@ -55,6 +59,10 @@ export default function Home() {
           <GameShowcase />
           <TrustMarquee />
           <BrainTrainingPrinciples />
+          <GameCategoriesShowcase />
+          <GamifiedLearningHighlights />
+          <NextGenTrainingBanner />
+          <AIPoweredTools />
           <PricingSection />
           <FinalTrainingCta onStart={goLogin} />
         </main>

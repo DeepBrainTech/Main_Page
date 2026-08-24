@@ -5,20 +5,14 @@
 export { default as DecorativeBackground } from "./hero/DecorativeBackground";
 export { default as LandingHeader } from "./hero/LandingHeader";
 export { default as HeroSection } from "./hero/HeroSection";
-export { default as AudienceCard } from "./who_is_this_for/AudienceCard";
-export { default as AudienceSection } from "./who_is_this_for/AudienceSection";
-export { default as GameCategoryCard } from "./brain_training/GameCategoryCard";
-export { default as GameCategorySection } from "./brain_training/GameCategorySection";
-export { default as BenefitStoryCard } from "./play_smarter/BenefitStoryCard";
-export { default as BenefitStorySection } from "./play_smarter/BenefitStorySection";
-export { default as FinalCtaSection } from "./play_smarter/FinalCtaSection";
-export { default as LandingFooter } from "./LandingFooter";
-export {
-  AiLearningSection,
-  BrainTrainingPrinciples,
-  FigmaHero,
-  FinalTrainingCta,
-  GameShowcase,
-  PricingSection,
-  TrustMarquee,
-} from "./figma-home";
+export { default as LandingFooter } from "./footer/LandingFooter";
+export { default as BrainTrainingPrinciples } from "./brain_training/BrainTrainingPrinciples";
+export { default as FigmaHero } from "./hero/FigmaHero";
+export { default as FinalTrainingCta } from "./final_training/FinalTrainingCta";
+export { default as GameShowcase } from "./game_showcase/GameShowcase";
+export { default as GameCategoriesShowcase } from "./gamified_learning/GameCategoriesShowcase";
+export { default as GamifiedLearningHighlights } from "./gamified_learning/GamifiedLearningHighlights";
+export { default as NextGenTrainingBanner } from "./gamified_learning/NextGenTrainingBanner";
+export { default as AIPoweredTools } from "./AI-Powered/AIPoweredTools";
+export { default as PricingSection } from "./pricing/PricingSection";
+export { default as TrustMarquee } from "./trust_marquee/TrustMarquee";

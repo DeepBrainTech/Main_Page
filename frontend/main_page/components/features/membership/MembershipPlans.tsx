@@ -7,8 +7,11 @@ import { useLocale, useTranslations } from "next-intl";
 
 export type MembershipPlan = "free" | "plus" | "premium";
 export type MembershipBillingInterval = "monthly" | "annual";
+export type MembershipPlansVariant = "account" | "landing";
 
 interface MembershipPlansProps {
+  variant?: MembershipPlansVariant;
+  className?: string;
   currentPlan: MembershipPlan;
   currentBillingInterval: MembershipBillingInterval | null;
   billingInterval: MembershipBillingInterval;
@@ -135,6 +138,36 @@ const planStyles = {
   },
 };
 
+const landingPlanStyles = {
+  free: {
+    card: "border-[#e0ecf5] bg-white text-[#045e96]",
+    title: "text-[#002c42]",
+    price: "text-[#045e96]",
+    subtext: "text-[#106faa]",
+    featureTitle: "text-[#045e96]",
+    featureDescription: "text-[#106faa]",
+    button: "bg-indigo-50 text-sky-700",
+  },
+  plus: {
+    card: "border-transparent bg-[linear-gradient(127deg,#38acff_0%,#2d88f3_100%)] text-white",
+    title: "text-white",
+    price: "text-white",
+    subtext: "text-white/90",
+    featureTitle: "text-white",
+    featureDescription: "text-white/80",
+    button: "bg-white text-[#2d88f3]",
+  },
+  premium: {
+    card: "border-transparent bg-[linear-gradient(127deg,#106faa_0%,#0075ff_100%)] text-white",
+    title: "text-white",
+    price: "text-white",
+    subtext: "text-white/90",
+    featureTitle: "text-white",
+    featureDescription: "text-white/80",
+    button: "bg-white text-[#0373d3]",
+  },
+};
+
 function formatMembershipPeriodDate(iso: string, siteLocale: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "";
@@ -169,6 +202,8 @@ function CancelDialogLoseRowGlyph() {
 }
 
 export default function MembershipPlans({
+  variant = "account",
+  className = "",
   currentPlan,
   currentBillingInterval,
   billingInterval,
@@ -194,6 +229,7 @@ export default function MembershipPlans({
   const locale = useLocale();
   const t = useTranslations("membership");
   const tCommon = useTranslations("common");
+  const isLanding = variant === "landing";
   const periodKey = billingInterval === "annual" ? "perYear" : "perMonth";
 
   const isCanceledAtPeriodEnd = subscriptionCancelAtPeriodEnd === true;
@@ -209,19 +245,41 @@ export default function MembershipPlans({
         : ([] as const);
 
   return (
-    <section className="mx-auto w-full max-w-6xl px-1 py-6 sm:px-3 lg:py-10">
-      <div className="mx-auto mb-7 max-w-2xl text-center sm:mb-9">
-        <h1 className="font-app-body text-3xl font-bold leading-tight text-[#0070C8] sm:text-4xl lg:text-5xl">
+    <section
+      className={`${
+        isLanding ? "w-full max-w-none px-0 py-0" : "mx-auto w-full max-w-6xl px-1 py-6 sm:px-3 lg:py-10"
+      } ${className}`}
+    >
+      <div className={`mx-auto text-center ${isLanding ? "mb-8 max-w-4xl sm:mb-10" : "mb-7 max-w-2xl sm:mb-9"}`}>
+        <h1
+          className={
+            isLanding
+              ? "font-figma-heading text-[clamp(2rem,2.5vw,3rem)] font-bold leading-[1.25] text-black"
+              : "font-app-body text-3xl font-bold leading-tight text-[#0070C8] sm:text-4xl lg:text-5xl"
+          }
+        >
           {t("title")}
         </h1>
-        <p className="mt-2 font-app-body text-sm font-normal leading-6 text-sky-700 sm:text-lg">{t("subtitle")}</p>
+        <p
+          className={
+            isLanding
+              ? "mt-3 font-app-body text-[clamp(1rem,1.25vw,1.5rem)] font-normal leading-normal text-black"
+              : "mt-2 font-app-body text-sm font-normal leading-6 text-sky-700 sm:text-lg"
+          }
+        >
+          {t("subtitle")}
+        </p>
       </div>
 
-      {notice ? <div className="mb-5">{notice}</div> : null}
+      {!isLanding && notice ? <div className="mb-5">{notice}</div> : null}
 
-      <div className="mb-8 flex flex-col items-center gap-1.5 px-2">
+      <div className={`${isLanding ? "mb-10" : "mb-8"} flex flex-col items-center gap-1.5 px-2`}>
         <div
-          className="flex h-12 w-full max-w-[489px] items-center gap-0 rounded-2xl border-[0.82px] border-slate-300/40 bg-white/55 p-1 shadow-sm backdrop-blur-sm"
+          className={`flex w-full items-center gap-0 border border-white/60 bg-[#f4f8fb]/90 p-1 backdrop-blur-[10px] ${
+            isLanding
+              ? "h-[3.75rem] max-w-[37.5rem] rounded-[1.2rem]"
+              : "h-12 max-w-[489px] rounded-2xl border-slate-300/40 bg-white/55 shadow-sm"
+          }`}
           role="tablist"
           aria-label={t("billingToggleAria")}
         >
@@ -230,7 +288,9 @@ export default function MembershipPlans({
             role="tab"
             aria-selected={billingInterval === "monthly"}
             disabled={redirecting}
-            className={`flex h-10 min-w-0 flex-1 items-center justify-center rounded-2xl px-6 font-app-body text-base font-semibold leading-6 transition sm:px-10 ${
+            className={`flex min-w-0 flex-1 items-center justify-center font-app-body text-base font-semibold leading-6 transition ${
+              isLanding ? "h-[3.125rem] rounded-[1rem] px-4" : "h-10 rounded-2xl px-6 sm:px-10"
+            } ${
               billingInterval === "monthly"
                 ? "bg-gradient-to-r from-sky-700 to-blue-600 text-white shadow-md"
                 : "text-sky-700 hover:text-sky-900"
@@ -244,7 +304,9 @@ export default function MembershipPlans({
             role="tab"
             aria-selected={billingInterval === "annual"}
             disabled={redirecting}
-            className={`flex h-10 min-w-0 flex-1 items-center justify-center rounded-2xl px-6 font-app-body text-base font-semibold leading-6 transition sm:px-10 ${
+            className={`flex min-w-0 flex-1 items-center justify-center font-app-body text-base font-semibold leading-6 transition ${
+              isLanding ? "h-[3.125rem] rounded-[1rem] px-4" : "h-10 rounded-2xl px-6 sm:px-10"
+            } ${
               billingInterval === "annual"
                 ? "bg-gradient-to-r from-sky-700 to-blue-600 text-white shadow-md"
                 : "text-sky-700 hover:text-sky-900"
@@ -256,10 +318,15 @@ export default function MembershipPlans({
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3 lg:gap-6">
+      <div
+        className={`grid ${
+          isLanding ? "grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 lg:gap-20" : "gap-4 md:grid-cols-3 lg:gap-6"
+        }`}
+      >
         {planConfigs.map((plan) => {
-          const styles = planStyles[plan.key];
+          const styles = (isLanding ? landingPlanStyles : planStyles)[plan.key];
           const isCurrent =
+            !isLanding &&
             currentPlan === plan.key &&
             (plan.key === "free" || currentBillingInterval === billingInterval);
           const isFreePreview = plan.key === "free" && currentPlan !== "free";
@@ -279,11 +346,11 @@ export default function MembershipPlans({
             (plan.key === "plus" || plan.key === "premium") &&
             Boolean(periodDateLabel || trialEndDateLabel || isCanceledAtPeriodEnd || hasScheduledPlanChange);
           const showPendingStatusRow = pendingMatches;
-          const showStatusRow = showCurrentStatusRow || showPendingStatusRow;
+          const showStatusRow = !isLanding && (showCurrentStatusRow || showPendingStatusRow);
           const paidPlanChangeTiming = isPaidPlan
             ? getPaidPlanChangeTiming(currentPlan, currentBillingInterval, plan.key, billingInterval)
             : "scheduled";
-          const showFreeTrialRow = isPaidPlan && !hasStripeSubscription && trialEligible;
+          const showFreeTrialRow = isLanding ? isPaidPlan : isPaidPlan && !hasStripeSubscription && trialEligible;
 
           if (hasStripeSubscription) {
             if (plan.key === "free") {
@@ -321,12 +388,20 @@ export default function MembershipPlans({
             handleClick = () => void onSubscribe(plan.key as "plus" | "premium");
           }
 
+          if (isLanding) {
+            buttonLabel = null;
+          }
+
           const showLoadingOnButton = redirecting && !buttonDisabled;
 
           return (
             <article
               key={plan.key}
-              className={`relative flex min-h-[34rem] flex-col rounded-3xl border-2 p-5 font-app-body sm:p-6 ${styles.card}`}
+              className={`relative flex flex-col font-app-body ${
+                isLanding
+                  ? "min-h-[34rem] rounded-[1.8rem] border-2 p-6 sm:min-h-[36.25rem] sm:p-7"
+                  : "min-h-[34rem] rounded-3xl border-2 p-5 sm:p-6"
+              } ${styles.card}`}
             >
               {plan.bestValue ? (
                 <div className="absolute left-1/2 top-0 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-yellow-600 bg-amber-400 px-5 py-1.5 text-xs font-bold leading-4 text-yellow-900">
@@ -335,44 +410,82 @@ export default function MembershipPlans({
               ) : null}
 
               <div>
-                <h2 className={`text-2xl font-semibold leading-8 ${styles.title}`}>{t(`plans.${plan.key}`)}</h2>
-                <div className="mt-3 flex items-end gap-1.5">
-                  <span className={`font-app-body text-4xl font-bold leading-10 ${styles.price}`}>{price}</span>
-                  <span className={`pb-1 font-app-body text-sm font-normal leading-6 sm:text-base ${styles.subtext}`}>
+                <h2 className={`${isLanding ? "text-[1.8rem] leading-[2.4rem]" : "text-2xl leading-8"} font-semibold ${styles.title}`}>
+                  {t(`plans.${plan.key}`)}
+                </h2>
+                <div className="mt-3 flex items-end gap-2">
+                  <span className={`${isLanding ? "text-[2.7rem] leading-[3rem]" : "text-4xl leading-10"} font-app-body font-bold ${styles.price}`}>
+                    {price}
+                  </span>
+                  <span className={`${isLanding ? "pb-0.5 text-[1.35rem] leading-[2.1rem]" : "pb-1 text-sm leading-6 sm:text-base"} font-app-body font-normal ${styles.subtext}`}>
                     {t(periodKey)}
                   </span>
                 </div>
               </div>
 
-              <div className="mt-7 flex flex-1 flex-col gap-4">
+              <div className={`${isLanding ? "mt-7 gap-[1.2rem]" : "mt-7 gap-4"} flex flex-1 flex-col`}>
                 {plan.features.map((feature) => (
                   <div key={feature.titleKey} className="flex gap-3">
-                    <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center text-xs font-bold" aria-hidden>
+                    <span className="relative mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center" aria-hidden>
                       {feature.marker === "lock" ? (
-                        <Image src="/membership/lock.svg" alt="" width={16} height={16} className="h-4 w-4" />
+                        isLanding ? (
+                          <>
+                            <Image src="/landing/pricing/lock.svg" alt="" width={20} height={13} className="absolute bottom-0 h-[0.8rem] w-5" />
+                            <Image src="/landing/pricing/lock-shackle.svg" alt="" width={12} height={11} className="absolute top-0 h-[0.7rem] w-3" />
+                          </>
+                        ) : (
+                          <Image src="/membership/lock.svg" alt="" width={16} height={16} className="h-4 w-4" />
+                        )
                       ) : feature.enabled ? (
-                        <Image src="/membership/include.svg" alt="" width={16} height={16} className="h-4 w-4" />
+                        <Image
+                          src={isLanding ? "/landing/pricing/check.svg" : "/membership/include.svg"}
+                          alt=""
+                          width={isLanding ? 19 : 16}
+                          height={isLanding ? 14 : 16}
+                          className={isLanding ? "h-3.5 w-5" : "h-4 w-4"}
+                        />
                       ) : (
-                        <Image src="/membership/notinclude.svg" alt="" width={16} height={16} className="h-4 w-4" />
+                        isLanding ? (
+                          <>
+                            <Image src="/landing/pricing/not-included.svg" alt="" width={14} height={14} className="absolute h-3.5 w-3.5" />
+                            <Image src="/landing/pricing/not-included-fill.svg" alt="" width={14} height={14} className="absolute h-3.5 w-3.5" />
+                          </>
+                        ) : (
+                          <Image src="/membership/notinclude.svg" alt="" width={16} height={16} className="h-4 w-4" />
+                        )
                       )}
                     </span>
                     <div className="min-w-0">
                       <div
-                        className={`flex flex-wrap items-center gap-1.5 font-app-body text-base font-semibold leading-6 ${styles.featureTitle}`}
+                        className={`flex flex-wrap items-center gap-1.5 font-app-body ${
+                          isLanding ? "text-[1.2rem] leading-[1.8rem]" : "text-base leading-6"
+                        } font-semibold ${styles.featureTitle}`}
                       >
                         {feature.icon === "diamond" ? (
-                          <Image src="/dashboard/dimond.svg" alt="" width={16} height={16} className="h-4 w-4 shrink-0" />
+                          <Image
+                            src={isLanding ? "/landing/pricing/diamond.svg" : "/dashboard/dimond.svg"}
+                            alt=""
+                            width={16}
+                            height={16}
+                            className="h-4 w-4 shrink-0"
+                          />
                         ) : null}
                         <span>{t(feature.titleKey)}</span>
                         {feature.titleKey === "features.premiumRewards.title" ? (
                           <>
-                            <Image src="/dashboard/coin.svg" alt="" width={16} height={16} className="h-4 w-4 shrink-0" />
+                            <Image
+                              src={isLanding ? "/landing/pricing/coin.svg" : "/dashboard/coin.svg"}
+                              alt=""
+                              width={16}
+                              height={16}
+                              className="h-4 w-4 shrink-0"
+                            />
                             <span>{t("features.premiumRewards.coins")}</span>
                           </>
                         ) : null}
                       </div>
                       {feature.descriptionKey ? (
-                        <p className={`mt-1 font-app-body text-sm font-normal leading-5 ${styles.featureDescription}`}>
+                        <p className={`mt-1 font-app-body ${isLanding ? "text-[1.05rem] leading-6" : "text-sm leading-5"} font-normal ${styles.featureDescription}`}>
                           {t(feature.descriptionKey)}
                         </p>
                       ) : null}
@@ -382,7 +495,9 @@ export default function MembershipPlans({
               </div>
 
               <div
-                className={`mt-auto flex w-full flex-col gap-3 pt-8 ${showStatusRow || isCurrent ? "min-h-[9rem]" : "min-h-[6.25rem]"} justify-end`}
+                className={`mt-auto flex w-full flex-col gap-3 ${isLanding ? "pt-8" : "pt-8"} ${
+                  showStatusRow || isCurrent ? "min-h-[9rem]" : isLanding ? "min-h-[4rem]" : "min-h-[6.25rem]"
+                } justify-end`}
               >
                 {showStatusRow ? (
                   <div className="text-center font-['Outfit'] text-base font-normal leading-6 text-amber-300">
@@ -418,8 +533,16 @@ export default function MembershipPlans({
                 ) : null}
                 {showFreeTrialRow ? (
                   <div className="flex items-center justify-center gap-2">
-                    <Image src="/membership/freetrial.svg" alt="" width={24} height={24} className="h-6 w-6 shrink-0" />
-                    <span className="font-app-body text-base font-semibold leading-6 text-[#FFDD65]">{t("freeTrialBadge")}</span>
+                    <Image
+                      src={isLanding ? "/landing/pricing/gift.svg" : "/membership/freetrial.svg"}
+                      alt=""
+                      width={isLanding ? 29 : 24}
+                      height={isLanding ? 29 : 24}
+                      className={isLanding ? "h-7 w-7 shrink-0" : "h-6 w-6 shrink-0"}
+                    />
+                    <span className={`font-app-body font-semibold leading-6 text-[#FFDD65] ${isLanding ? "text-[1.2rem]" : "text-base"}`}>
+                      {t("freeTrialBadge")}
+                    </span>
                   </div>
                 ) : null}
                 {buttonLabel ? (
