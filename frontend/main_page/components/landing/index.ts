@@ -2,9 +2,7 @@
  * Landing 组件统一导出
  */
 
-export { default as DecorativeBackground } from "./hero/DecorativeBackground";
 export { default as LandingHeader } from "./hero/LandingHeader";
-export { default as HeroSection } from "./hero/HeroSection";
 export { default as LandingFooter } from "./footer/LandingFooter";
 export { default as BrainTrainingPrinciples } from "./brain_training/BrainTrainingPrinciples";
 export { default as FigmaHero } from "./hero/FigmaHero";
