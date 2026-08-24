@@ -39,7 +39,7 @@ export default function BrainTrainingPrinciples() {
       <div className="relative mx-auto grid w-full max-w-[120rem] items-center gap-12 2xl:grid-cols-[minmax(0,49.6875rem)_minmax(0,1fr)] 2xl:gap-[clamp(4rem,4.4vw,5.3125rem)]">
         <div className="max-w-[42rem] lg:max-w-[49.6875rem] 2xl:max-w-[49.6875rem]">
           <Image
-            src="/landing/brain_training/logo.svg"
+            src="/landing/logo.svg"
             alt=""
             width={59}
             height={56}
