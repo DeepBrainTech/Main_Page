@@ -66,7 +66,7 @@ interface ProfileDialogProps {
   country?: string | null;
   /** Current user avatar URL */
   avatarUrl?: string | null;
-  onLogout: () => void;
+  onLogout: () => void | Promise<void>;
   /** 资料更新后回调（如刷新 useAuth），用于用户名/出生日期修改后同步展示 */
   onProfileUpdate?: () => void;
 }
@@ -96,6 +96,7 @@ export default function ProfileDialog({
   const [editDateValue, setEditDateValue] = useState(dateOfBirth ?? "");
   const [editCountryValue, setEditCountryValue] = useState((country ?? "").toUpperCase());
   const [saving, setSaving] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [avatarFailed, setAvatarFailed] = useState(false);
   const [error, setError] = useState("");
@@ -137,9 +138,18 @@ export default function ProfileDialog({
     });
   };
 
-  const handleLogout = () => {
-    onClose();
-    onLogout();
+  const handleLogout = async () => {
+    if (loggingOut) return;
+    setLoggingOut(true);
+    setError("");
+    try {
+      await onLogout();
+      onClose();
+    } catch {
+      setError(tCommon("logoutFailed"));
+    } finally {
+      setLoggingOut(false);
+    }
   };
 
   const handleAvatarFileChange = async (evt: ChangeEvent<HTMLInputElement>) => {
@@ -457,10 +467,11 @@ export default function ProfileDialog({
             <button
               type="button"
               onClick={handleLogout}
+              disabled={loggingOut}
               className="inline-flex items-center justify-center gap-2 self-center text-base font-medium text-stone-500 transition-colors hover:text-stone-700"
             >
               <img src="/profile/logout.svg" alt="" width={16} height={16} className="h-4 w-4 shrink-0" aria-hidden />
-              {tCommon("logout")}
+              {loggingOut ? "…" : tCommon("logout")}
             </button>
           </div>
         </div>

@@ -48,6 +48,7 @@ export default function LoginPage() {
       const formData = new FormData();
       formData.append("username", username);
       formData.append("password", password);
+      formData.append("remember_me", String(rememberMe));
 
       const response = await apiFetch("/api/auth/login", {
         method: "POST",
@@ -63,12 +64,6 @@ export default function LoginPage() {
       // Auth state now lives in the HttpOnly cookie set by the response.
       // We still consume the body to keep error handling consistent.
       await response.json().catch(() => null);
-
-      if (rememberMe) {
-        localStorage.setItem("remember_me", "true");
-      } else {
-        localStorage.removeItem("remember_me");
-      }
 
       router.push("/dashboard");
     } catch (err: any) {
@@ -167,6 +162,7 @@ export default function LoginPage() {
             <div className="flex justify-center">
             <GoogleLoginButton
               variant="signin"
+              rememberMe={rememberMe}
               onSuccess={(opts) => {
                 if (opts.needsProfileCompletion) {
                   setCompleteProfileUsername(opts.username ?? "");

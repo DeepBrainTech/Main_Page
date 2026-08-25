@@ -4,7 +4,7 @@
 from uuid import uuid4
 from typing import Optional
 
-from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Response, UploadFile, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from datetime import timedelta
@@ -26,6 +26,7 @@ from auth import (
     create_access_token,
     get_password_hash,
     ACCESS_TOKEN_EXPIRE_MINUTES,
+    REMEMBER_ME_EXPIRE_MINUTES,
     get_current_active_user,
     set_access_token_cookie,
     clear_access_token_cookie,
@@ -159,6 +160,7 @@ async def register(user_data: UserCreate, response: Response, db: Session = Depe
 async def login(
     response: Response,
     form_data: OAuth2PasswordRequestForm = Depends(),
+    remember_me: bool = Form(False),
     db: Session = Depends(get_db),
 ):
     """用户登录，凭据通过 HttpOnly Cookie 下发；响应体不再回传令牌。"""
@@ -169,12 +171,18 @@ async def login(
             detail="AUTH_INVALID_CREDENTIALS",
         )
 
-    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    token_expire_minutes = REMEMBER_ME_EXPIRE_MINUTES if remember_me else ACCESS_TOKEN_EXPIRE_MINUTES
+    access_token_expires = timedelta(minutes=token_expire_minutes)
     access_token = create_access_token(
         data={"sub": user.username},
         expires_delta=access_token_expires,
     )
-    set_access_token_cookie(response, access_token)
+    set_access_token_cookie(
+        response,
+        access_token,
+        max_age_seconds=token_expire_minutes * 60 if remember_me else None,
+        persistent=remember_me,
+    )
 
     return APIResponse(
         success=True,
@@ -264,12 +272,23 @@ async def google_login(request: GoogleTokenRequest, response: Response, db: Sess
         db.commit()
         db.refresh(user)
 
-    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    remember_me = request.remember_me
+    token_expire_minutes = REMEMBER_ME_EXPIRE_MINUTES if remember_me is True else ACCESS_TOKEN_EXPIRE_MINUTES
+    access_token_expires = timedelta(minutes=token_expire_minutes)
     access_token = create_access_token(
         data={"sub": user.username},
         expires_delta=access_token_expires,
     )
-    set_access_token_cookie(response, access_token)
+    if remember_me is True:
+        set_access_token_cookie(
+            response,
+            access_token,
+            max_age_seconds=REMEMBER_ME_EXPIRE_MINUTES * 60,
+        )
+    elif remember_me is False:
+        set_access_token_cookie(response, access_token, persistent=False)
+    else:
+        set_access_token_cookie(response, access_token)
     return APIResponse(
         success=True,
         message="AUTH_LOGIN_SUCCESS",

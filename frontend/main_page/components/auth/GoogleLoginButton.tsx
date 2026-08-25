@@ -14,6 +14,7 @@ export type GoogleSuccessOptions = {
 
 type GoogleLoginButtonProps = {
   variant: GoogleButtonVariant;
+  rememberMe?: boolean;
   onSuccess: (opts: GoogleSuccessOptions) => void;
   onError: (message: string) => void;
   disabled?: boolean;
@@ -25,6 +26,7 @@ type GoogleLoginButtonProps = {
  */
 export default function GoogleLoginButton({
   variant,
+  rememberMe,
   onSuccess,
   onError,
   disabled,
@@ -37,7 +39,10 @@ export default function GoogleLoginButton({
       const res = await apiFetch("/api/auth/google", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id_token: credential }),
+        body: JSON.stringify({
+          id_token: credential,
+          ...(rememberMe === undefined ? {} : { remember_me: rememberMe }),
+        }),
       });
       if (!res.ok) {
         const data = await res.json();

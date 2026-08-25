@@ -19,6 +19,7 @@ load_dotenv()
 SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-change-in-production")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 7天
+REMEMBER_ME_EXPIRE_MINUTES = 60 * 24 * 30
 
 # ----- Cross-subdomain HttpOnly cookie config -----
 # Cookie name carrying the portal access token across *.deepbraintechnology.com
@@ -34,16 +35,25 @@ ACCESS_TOKEN_COOKIE_SECURE = os.getenv("ACCESS_TOKEN_COOKIE_SECURE", "false").lo
 ACCESS_TOKEN_COOKIE_PATH = os.getenv("ACCESS_TOKEN_COOKIE_PATH", "/")
 
 
-def set_access_token_cookie(response: Response, token: str, max_age_seconds: Optional[int] = None) -> None:
+def set_access_token_cookie(
+    response: Response,
+    token: str,
+    max_age_seconds: Optional[int] = None,
+    *,
+    persistent: bool = True,
+) -> None:
     """Attach the portal access token as an HttpOnly cookie on the response.
 
     Sub-games on sibling subdomains can reuse this cookie automatically when
     they hit the portal API with credentials:"include".
     """
+    if max_age_seconds is None and persistent:
+        max_age_seconds = ACCESS_TOKEN_EXPIRE_MINUTES * 60
+
     response.set_cookie(
         key=ACCESS_TOKEN_COOKIE_NAME,
         value=token,
-        max_age=max_age_seconds if max_age_seconds is not None else ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+        max_age=max_age_seconds,
         httponly=True,
         secure=ACCESS_TOKEN_COOKIE_SECURE,
         samesite=ACCESS_TOKEN_COOKIE_SAMESITE,

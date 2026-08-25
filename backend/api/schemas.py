@@ -118,6 +118,7 @@ class CompleteProfileBody(BaseModel):
 class GoogleTokenRequest(BaseModel):
     """Google 登录请求：前端传入 Google ID Token"""
     id_token: str = Field(..., min_length=1)
+    remember_me: Optional[bool] = None
 
 
 class SendVerificationCode(BaseModel):

@@ -68,9 +68,9 @@ export default function AuthedAppLayout({ children }: { children: React.ReactNod
         dateOfBirth={dateOfBirth}
         country={country}
         avatarUrl={avatarUrl}
-        onLogout={() => {
-          logout();
-          router.push("/login");
+        onLogout={async () => {
+          await logout();
+          router.replace("/login");
         }}
         onProfileUpdate={refetch}
       >

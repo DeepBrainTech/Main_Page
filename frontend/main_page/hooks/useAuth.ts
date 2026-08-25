@@ -62,12 +62,10 @@ export function useAuth() {
   }, [locale, router]);
 
   const logout = async () => {
-    try {
-      await apiFetch("/api/auth/logout", { method: "POST" });
-    } catch {
-      // Server may be unreachable; the user still expects to be logged out locally.
+    const response = await apiFetch("/api/auth/logout", { method: "POST" });
+    if (!response.ok) {
+      throw new Error("logout_failed");
     }
-    router.push("/", { locale });
   };
 
   return {

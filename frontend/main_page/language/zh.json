@@ -4,6 +4,7 @@
     "login": "登录",
     "register": "注册",
     "logout": "退出登录",
+    "logoutFailed": "退出登录失败，请重试",
     "home": "首页",
     "back": "返回",
     "loading": "加载中...",
