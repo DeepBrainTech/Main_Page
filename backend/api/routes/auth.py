@@ -6,6 +6,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Response, UploadFile, status
 from fastapi.security import OAuth2PasswordRequestForm
+from pydantic import EmailStr
 from sqlalchemy.orm import Session
 from datetime import timedelta
 
@@ -94,6 +95,42 @@ async def send_verification_code(request: SendVerificationCode):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="VERIFICATION_CODE_SEND_FAILED"
         )
+
+
+@router.get("/check-availability", response_model=APIResponse)
+async def check_availability(
+    username: Optional[str] = None,
+    email: Optional[EmailStr] = None,
+    db: Session = Depends(get_db),
+):
+    """Check whether a registration username or email is available."""
+    if username is None and email is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="AUTH_AVAILABILITY_FIELD_REQUIRED",
+        )
+
+    data = {}
+    if username is not None:
+        normalized_username = username.strip()
+        if not 3 <= len(normalized_username) <= 50:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="AUTH_USERNAME_INVALID",
+            )
+        data["username_available"] = (
+            db.query(User).filter(User.username == normalized_username).first() is None
+        )
+
+    if email is not None:
+        normalized_email = str(email).strip()
+        data["email_available"] = db.query(User).filter(User.email == normalized_email).first() is None
+
+    return APIResponse(
+        success=True,
+        message="AUTH_AVAILABILITY_CHECKED",
+        data=data,
+    )
 
 
 @router.post("/register", response_model=APIResponse, status_code=status.HTTP_201_CREATED)

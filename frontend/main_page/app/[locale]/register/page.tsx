@@ -56,6 +56,8 @@ export default function RegisterPage() {
   const passwordRef = useRef<HTMLInputElement>(null);
   const confirmPasswordRef = useRef<HTMLInputElement>(null);
   const agreeTermsRef = useRef<HTMLInputElement>(null);
+  const usernameAvailabilityRequestRef = useRef(0);
+  const emailAvailabilityRequestRef = useRef(0);
 
   const focusField = (field: FormField) => {
     let target: HTMLInputElement | HTMLButtonElement | null = null;
@@ -178,6 +180,76 @@ export default function RegisterPage() {
         : "border-[#9e9e9e] focus:border-[#3692f6] focus:ring-2 focus:ring-[#3692f6]/15"
     }`;
 
+  useEffect(() => {
+    const username = formData.username.trim();
+    const requestId = usernameAvailabilityRequestRef.current + 1;
+    usernameAvailabilityRequestRef.current = requestId;
+
+    if (!username || username.length < 3 || username.length > 50) return;
+
+    const timer = window.setTimeout(async () => {
+      try {
+        const response = await apiFetch(
+          `/api/auth/check-availability?username=${encodeURIComponent(username)}`
+        );
+        if (!response.ok || usernameAvailabilityRequestRef.current !== requestId) return;
+
+        const result = await response.json();
+        if (usernameAvailabilityRequestRef.current !== requestId) return;
+
+        if (result?.data?.username_available === false) {
+          setFieldErrors((prev) => ({ ...prev, username: t("auth.AUTH_USERNAME_EXISTS") }));
+        } else {
+          setFieldErrors((prev) => {
+            if (prev.username !== t("auth.AUTH_USERNAME_EXISTS")) return prev;
+            const next = { ...prev };
+            delete next.username;
+            return next;
+          });
+        }
+      } catch {
+        // Availability checks are advisory; registration still performs the authoritative check.
+      }
+    }, 400);
+
+    return () => window.clearTimeout(timer);
+  }, [formData.username, t]);
+
+  useEffect(() => {
+    const email = formData.email.trim();
+    const requestId = emailAvailabilityRequestRef.current + 1;
+    emailAvailabilityRequestRef.current = requestId;
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    if (!email || !emailRegex.test(email)) return;
+
+    const timer = window.setTimeout(async () => {
+      try {
+        const response = await apiFetch(
+          `/api/auth/check-availability?email=${encodeURIComponent(email)}`
+        );
+        if (!response.ok || emailAvailabilityRequestRef.current !== requestId) return;
+
+        const result = await response.json();
+        if (emailAvailabilityRequestRef.current !== requestId) return;
+
+        if (result?.data?.email_available === false) {
+          setFieldErrors((prev) => ({ ...prev, email: t("auth.AUTH_EMAIL_EXISTS") }));
+        } else {
+          setFieldErrors((prev) => {
+            if (prev.email !== t("auth.AUTH_EMAIL_EXISTS")) return prev;
+            const next = { ...prev };
+            delete next.email;
+            return next;
+          });
+        }
+      } catch {
+        // Availability checks are advisory; registration still performs the authoritative check.
+      }
+    }, 400);
+
+    return () => window.clearTimeout(timer);
+  }, [formData.email, t]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const field = e.target.name as FormField;
