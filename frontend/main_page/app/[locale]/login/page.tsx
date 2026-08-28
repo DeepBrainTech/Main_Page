@@ -1,11 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import Image from "next/image";
 import { useRouter } from "@/lib/i18n-navigation";
 import { useTranslations } from "next-intl";
 import { apiFetch } from "@/lib/api-config";
 import GoogleLoginButton from "@/components/auth/GoogleLoginButton";
+import AuthPageShell from "@/components/auth/AuthPageShell";
+import AuthTextField from "@/components/auth/AuthTextField";
 import CompleteProfileDialog from "@/components/features/profile/CompleteProfileDialog";
 
 export default function LoginPage() {
@@ -74,70 +75,59 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-br from-sky-100 via-blue-50 to-white px-4 py-10">
-      <div className="pointer-events-none absolute -left-16 bottom-12 h-56 w-56 rounded-full bg-gradient-to-br from-sky-200 to-blue-300 opacity-50 blur-3xl" />
-      <div className="pointer-events-none absolute right-0 top-0 h-72 w-72 rounded-full bg-gradient-to-br from-blue-100 to-cyan-200 opacity-40 blur-3xl" />
-
-      <main className="relative w-full max-w-[430px] overflow-hidden rounded-[30px] border border-white/50 bg-white/95 p-7 shadow-[0_30px_60px_-16px_rgba(15,23,42,0.28)] backdrop-blur-sm sm:p-9">
-        <div className="mb-8 text-center">
-          <div className="mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-full bg-blue-500 shadow-[0_10px_30px_-10px_rgba(37,99,235,0.6)]">
-            <Image src="/login/Icon.svg" alt="DBT icon" width={46} height={46} priority />
-          </div>
-          <h1 className="text-3xl font-bold tracking-wide text-slate-900">{t("login.title")}</h1>
-          <p className="mt-2 text-base text-slate-500">{t("login.subtitle")}</p>
-        </div>
+    <AuthPageShell>
+      <div className="w-full">
+        <header className="mb-8 text-center">
+          <h1 className="text-2xl font-semibold leading-8 tracking-[-0.018em] text-[#080808]">
+            {t("login.subtitle")}
+          </h1>
+          <p className="mt-2 text-base leading-6 text-[#636363]">{t("login.welcomeBack")}</p>
+        </header>
 
         <form onSubmit={handleSubmit} className="space-y-5">
           {error && (
-            <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-600">
+            <div className="rounded-[7px] border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-600" role="alert">
               {error}
             </div>
           )}
 
-          <div className="space-y-2">
-            <label htmlFor="username" className="block text-base font-medium text-slate-700">
-              {t("login.username")}
-            </label>
-            <input
-              id="username"
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              required
-              placeholder={t("login.usernamePlaceholder")}
-              className="h-14 w-full rounded-2xl border-2 border-slate-200 bg-white px-4 text-[15px] text-slate-900 outline-none transition focus:border-blue-500"
-            />
-          </div>
+          <AuthTextField
+            id="username"
+            label={t("login.username")}
+            icon="email"
+            value={username}
+            onChange={(event) => setUsername(event.target.value)}
+            required
+            autoComplete="username"
+            placeholder={t("login.usernamePlaceholder")}
+          />
 
-          <div className="space-y-2">
-            <label htmlFor="password" className="block text-base font-medium text-slate-700">
-              {t("login.password")}
-            </label>
-            <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              placeholder={t("login.passwordPlaceholder")}
-              className="h-14 w-full rounded-2xl border-2 border-slate-200 bg-white px-4 text-[15px] text-slate-900 outline-none transition focus:border-blue-500"
-            />
-          </div>
+          <AuthTextField
+            id="password"
+            label={t("login.password")}
+            icon="password"
+            type="password"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            required
+            autoComplete="current-password"
+            placeholder={t("login.passwordPlaceholder")}
+          />
 
-          <div className="flex items-center justify-between pt-1">
-            <label className="inline-flex cursor-pointer items-center gap-2 text-sm text-slate-500">
+          <div className="flex items-center justify-between gap-3 text-sm leading-5">
+            <label className="inline-flex cursor-pointer items-center gap-2 text-[#636363]">
               <input
                 type="checkbox"
                 checked={rememberMe}
-                onChange={(e) => setRememberMe(e.target.checked)}
-                className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                onChange={(event) => setRememberMe(event.target.checked)}
+                className="h-4 w-4 rounded border-[#9e9e9e] text-[#3692f6] focus:ring-[#3692f6]"
               />
-              <span>Remember me</span>
+              <span>{t("login.rememberMe")}</span>
             </label>
             <button
               type="button"
               onClick={() => router.push("/forgot-password")}
-              className="text-sm font-medium text-blue-600 hover:underline"
+              className="font-medium text-[#3692f6] transition hover:text-[#106faa] hover:underline"
             >
               {t("login.forgotPassword")}
             </button>
@@ -146,23 +136,18 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="h-14 w-full rounded-2xl bg-blue-500 text-base font-semibold text-white shadow-[0_12px_24px_-8px_rgba(37,99,235,0.55)] transition hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-60"
+            className="h-12 w-full rounded-[7px] bg-[#3692f6] px-8 text-[1.0625rem] font-medium text-white transition hover:bg-[#197fe5] focus:outline-none focus:ring-2 focus:ring-[#3692f6]/30 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {loading ? t("login.buttonLoading") : t("login.button")}
           </button>
         </form>
 
         {isGoogleLoginEnabled && (
-          <>
-            <div className="my-6 flex items-center gap-4">
-              <div className="h-px flex-1 bg-slate-200" />
-              <span className="text-sm text-slate-400">{t("login.orContinueWith")}</span>
-              <div className="h-px flex-1 bg-slate-200" />
-            </div>
-            <div className="flex justify-center">
+          <div className="mt-3">
             <GoogleLoginButton
               variant="signin"
               rememberMe={rememberMe}
+              width={480}
               onSuccess={(opts) => {
                 if (opts.needsProfileCompletion) {
                   setCompleteProfileUsername(opts.username ?? "");
@@ -174,28 +159,19 @@ export default function LoginPage() {
               onError={(code) => setError(t(`auth.${code}`))}
               disabled={loading}
             />
-            </div>
-          </>
+          </div>
         )}
 
-        <div className="mt-7 text-center text-sm text-slate-600">
-          <span>{t("login.noAccount")} </span>
+        <p className="mt-3 flex items-center justify-center gap-2 text-center text-sm leading-5 text-[#818181]">
+          <span>{t("login.noAccount")}</span>
           <button
+            type="button"
             onClick={() => router.push("/register")}
-            className="font-semibold text-blue-600 hover:underline"
+            className="text-[#3692f6] transition hover:text-[#106faa] hover:underline"
           >
             {t("login.registerLink")}
           </button>
-        </div>
-
-        <div className="mt-4 text-center">
-          <button
-            onClick={() => router.push("/")}
-            className="text-sm text-slate-500 hover:text-slate-700 hover:underline"
-          >
-            {t("common.back")}
-          </button>
-        </div>
+        </p>
 
         <CompleteProfileDialog
           open={showCompleteProfile}
@@ -206,7 +182,7 @@ export default function LoginPage() {
             router.push("/dashboard");
           }}
         />
-      </main>
-    </div>
+      </div>
+    </AuthPageShell>
   );
 }

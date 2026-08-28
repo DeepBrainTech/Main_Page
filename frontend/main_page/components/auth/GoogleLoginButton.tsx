@@ -1,14 +1,17 @@
 "use client";
 
 import { GoogleLogin } from "@react-oauth/google";
+import Image from "next/image";
+import { useEffect, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import { apiFetch } from "@/lib/api-config";
 
 export type GoogleButtonVariant = "signin" | "signup";
 
 export type GoogleSuccessOptions = {
-  /** 是否需要补全资料（无出生日期时为 true） */
+  /** Whether profile completion is required when the date of birth is missing. */
   needsProfileCompletion: boolean;
-  /** 当前用户名，补全资料时预填 */
+  /** Current username used to prefill the profile dialog. */
   username?: string;
 };
 
@@ -18,21 +21,39 @@ type GoogleLoginButtonProps = {
   onSuccess: (opts: GoogleSuccessOptions) => void;
   onError: (message: string) => void;
   disabled?: boolean;
+  width?: number;
 };
 
-/**
- * 使用 Google 登录/注册按钮。成功后调用 onSuccess，失败调用 onError。
- * 需在 GoogleOAuthProvider 内使用；未配置 Client ID 时不渲染。
- */
+/** Google Identity button scaled to the 48px-high Figma control. */
 export default function GoogleLoginButton({
   variant,
   rememberMe,
   onSuccess,
   onError,
   disabled,
+  width = 480,
 }: GoogleLoginButtonProps) {
+  const t = useTranslations();
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [availableWidth, setAvailableWidth] = useState(width);
   const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const updateWidth = () => setAvailableWidth(Math.min(width, container.clientWidth));
+    updateWidth();
+
+    const observer = new ResizeObserver(updateWidth);
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, [width]);
+
   if (!clientId) return null;
+
+  const googleButtonScale = 1.2;
+  const googleButtonWidth = Math.max(120, Math.floor(availableWidth / googleButtonScale));
 
   const handleCredential = async (credential: string) => {
     try {
@@ -62,7 +83,7 @@ export default function GoogleLoginButton({
           }
         }
       } catch {
-        // 忽略，直接进入首页
+        // Ignore profile lookup failures and continue to the dashboard.
       }
       onSuccess({ needsProfileCompletion: false });
     } catch {
@@ -72,27 +93,44 @@ export default function GoogleLoginButton({
 
   return (
     <div
-      className={`flex items-center justify-center ${disabled ? "pointer-events-none opacity-60" : ""}`}
+      ref={containerRef}
+      className={`relative flex h-12 w-full items-center justify-center overflow-hidden rounded-[7px] border-[1.5px] border-[#dfdfdf] bg-white ${disabled ? "pointer-events-none opacity-60" : ""}`}
       aria-hidden={!!disabled}
     >
-      <GoogleLogin
-        onSuccess={(res) => {
-          if (res.credential) handleCredential(res.credential);
-          else onError("AUTH_GOOGLE_TOKEN_INVALID");
-        }}
-        onError={() => onError("AUTH_GOOGLE_TOKEN_INVALID")}
-        theme="outline"
-        size="large"
-        text={variant === "signup" ? "signup_with" : "signin_with"}
-        type="standard"
-        shape="pill"
-        logo_alignment="left"
-        width="200"
-        containerProps={{
-          style: { display: "flex", justifyContent: "center" },
-          "aria-disabled": disabled,
-        }}
-      />
+      <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center gap-3 px-8 text-[1.0625rem] font-medium text-[#818181]">
+        <Image src="/auth/google.svg" alt="" width={24} height={24} className="h-6 w-6 shrink-0" />
+        <span>{t(variant === "signup" ? "register.signInWithGoogle" : "login.signInWithGoogle")}</span>
+      </div>
+
+      <div className="absolute inset-0 z-20 flex items-center justify-center opacity-[0.001]">
+        <div
+          className="shrink-0"
+          style={{
+            width: googleButtonWidth,
+            transform: `scale(${googleButtonScale})`,
+            transformOrigin: "center",
+          }}
+        >
+          <GoogleLogin
+            onSuccess={(res) => {
+              if (res.credential) handleCredential(res.credential);
+              else onError("AUTH_GOOGLE_TOKEN_INVALID");
+            }}
+            onError={() => onError("AUTH_GOOGLE_TOKEN_INVALID")}
+            theme="outline"
+            size="large"
+            text="signin_with"
+            type="standard"
+            shape="rectangular"
+            logo_alignment="center"
+            width={String(googleButtonWidth)}
+            containerProps={{
+              style: { display: "flex", justifyContent: "center" },
+              "aria-disabled": disabled,
+            }}
+          />
+        </div>
+      </div>
     </div>
   );
 }

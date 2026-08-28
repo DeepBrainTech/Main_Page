@@ -1,12 +1,15 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import { useParams } from "next/navigation";
-import { useRouter } from "@/lib/i18n-navigation";
+import { Link, useRouter } from "@/lib/i18n-navigation";
 import { useTranslations } from "next-intl";
 import { apiFetch } from "@/lib/api-config";
 import CountrySelect from "@/components/ui/CountrySelect";
 import GoogleLoginButton from "@/components/auth/GoogleLoginButton";
+import AuthPageShell from "@/components/auth/AuthPageShell";
+import AuthTextField from "@/components/auth/AuthTextField";
 import CompleteProfileDialog from "@/components/features/profile/CompleteProfileDialog";
 
 type FormField =
@@ -45,7 +48,6 @@ export default function RegisterPage() {
   const [showCompleteProfile, setShowCompleteProfile] = useState(false);
   const [completeProfileUsername, setCompleteProfileUsername] = useState("");
   const isGoogleLoginEnabled = Boolean(process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID);
-
   const usernameRef = useRef<HTMLInputElement>(null);
   const countryRef = useRef<HTMLButtonElement>(null);
   const dateOfBirthRef = useRef<HTMLInputElement>(null);
@@ -167,11 +169,13 @@ export default function RegisterPage() {
     return { message: fallback };
   };
 
-  const inputClassName = (field: FormField) =>
-    `h-12 w-full rounded-2xl border-2 bg-white px-4 text-sm text-slate-900 outline-none transition ${
+  const controlClassName = (field: FormField, hasLeadingIcon = false) =>
+    `h-12 w-full rounded-[5px] border bg-white py-3 text-base leading-6 text-[#080808] outline-none transition placeholder:text-[#818181] ${
+      hasLeadingIcon ? "pl-[3.25rem] pr-4" : "px-4"
+    } ${
       fieldErrors[field]
         ? "border-rose-400 ring-2 ring-rose-100"
-        : "border-slate-200 focus:border-blue-500"
+        : "border-[#9e9e9e] focus:border-[#3692f6] focus:ring-2 focus:ring-[#3692f6]/15"
     }`;
 
 
@@ -259,6 +263,16 @@ export default function RegisterPage() {
     const verificationCode = formData.verificationCode.trim();
     setFormData((prev) => ({ ...prev, username, country, email, verificationCode }));
 
+    if (!formData.dateOfBirth) {
+      raiseFieldError("dateOfBirth", t("register.dateOfBirthRequired"));
+      return;
+    }
+
+    if (!country) {
+      raiseFieldError("country", t("register.countryRequired"));
+      return;
+    }
+
     if (formData.password !== formData.confirmPassword) {
       raiseFieldError("confirmPassword", t("register.passwordMismatch"));
       return;
@@ -320,125 +334,126 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-br from-sky-100 via-blue-50 to-white px-4 py-10">
-      <div className="pointer-events-none absolute -left-16 bottom-4 h-56 w-56 rounded-full bg-gradient-to-br from-sky-200 to-blue-300 opacity-45 blur-3xl" />
-      <div className="pointer-events-none absolute -right-10 top-0 h-52 w-52 rounded-full bg-gradient-to-br from-blue-200 to-cyan-200 opacity-50 blur-3xl" />
-
-      <main className="relative w-full max-w-[440px] overflow-hidden rounded-[30px] border border-white/50 bg-white/95 p-7 shadow-[0_30px_60px_-16px_rgba(15,23,42,0.28)] backdrop-blur-sm sm:p-9">
-        <div className="mb-7 text-center">
-          <h1 className="text-4xl font-bold tracking-wide text-[#2B7FFF]">{t("register.heading")}</h1>
-          <p className="mt-2 text-sm text-slate-500">{t("register.subtitle")}</p>
-        </div>
+    <AuthPageShell contentClassName="items-start py-10 lg:py-16">
+      <div className="w-full">
+        <header className="mb-7 text-center">
+          <h1 className="text-2xl font-semibold leading-8 tracking-[-0.018em] text-[#080808]">
+            {t("register.heading")}
+          </h1>
+          <p className="mt-2 text-base leading-6 text-[#636363]">{t("register.subtitle")}</p>
+        </header>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {successMessage && (
-            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+            <div className="rounded-[7px] border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700" role="status">
               {successMessage}
             </div>
           )}
 
-          <div className="space-y-2">
-            <label htmlFor="username" className="block text-sm font-medium text-slate-700">
-              {t("register.username")}
-            </label>
-            <input
-              ref={usernameRef}
-              id="username"
-              name="username"
-              type="text"
-              value={formData.username}
-              onChange={handleChange}
-              required
-              minLength={3}
-              maxLength={50}
-              autoComplete="username"
-              placeholder={t("register.usernamePlaceholder")}
-              className={inputClassName("username")}
-            />
-            {fieldErrors.username && <p className="text-xs text-rose-600">{fieldErrors.username}</p>}
-          </div>
+          <AuthTextField
+            inputRef={usernameRef}
+            id="username"
+            name="username"
+            label={t("register.username")}
+            icon="email"
+            value={formData.username}
+            onChange={handleChange}
+            error={fieldErrors.username}
+            required
+            minLength={3}
+            maxLength={50}
+            autoComplete="username"
+            placeholder={t("register.usernamePlaceholder")}
+          />
 
-          <div className="space-y-2">
-            <label htmlFor="dateOfBirth" className="block text-sm font-medium text-slate-700">
-              {t("register.dateOfBirth")}
-            </label>
-            <input
-              ref={dateOfBirthRef}
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+            <AuthTextField
+              inputRef={dateOfBirthRef}
               id="dateOfBirth"
               name="dateOfBirth"
+              label={t("register.dateOfBirth")}
               type="date"
               value={formData.dateOfBirth}
               onChange={handleChange}
-              className={inputClassName("dateOfBirth")}
-            />
-            {fieldErrors.dateOfBirth && <p className="text-xs text-rose-600">{fieldErrors.dateOfBirth}</p>}
-          </div>
-
-          <div className="space-y-2">
-            <label htmlFor="country" className="block text-sm font-medium text-slate-700">
-              {t("register.country")}
-            </label>
-            <CountrySelect
-              value={formData.country}
-              onChange={(code) => {
-                setFormData({ ...formData, country: code });
-                clearFieldError("country");
-                setGeneralError("");
-              }}
-              locale={locale}
-              placeholder={t("register.countryPlaceholder")}
-              className={inputClassName("country")}
-              buttonRef={countryRef}
-            />
-            {fieldErrors.country && <p className="text-xs text-rose-600">{fieldErrors.country}</p>}
-          </div>
-
-          <div className="space-y-2">
-            <label htmlFor="email" className="block text-sm font-medium text-slate-700">
-              {t("register.email")}
-            </label>
-            <input
-              ref={emailRef}
-              id="email"
-              name="email"
-              type="email"
-              value={formData.email}
-              onChange={handleChange}
+              error={fieldErrors.dateOfBirth}
               required
-              autoComplete="email"
-              placeholder={t("register.emailPlaceholder")}
-              className={inputClassName("email")}
             />
-            {fieldErrors.email && <p className="text-xs text-rose-600">{fieldErrors.email}</p>}
+
+            <div className="min-w-0 space-y-1.5">
+              <label htmlFor="country" className="block text-sm font-medium leading-none text-[#123a64]">
+                {t("register.country")}
+              </label>
+              <CountrySelect
+                value={formData.country}
+                onChange={(code) => {
+                  setFormData({ ...formData, country: code });
+                  clearFieldError("country");
+                  setGeneralError("");
+                }}
+                locale={locale}
+                placeholder={t("register.countryPlaceholder")}
+                className={`${controlClassName("country")} flex items-center text-left`}
+                dropdownClassName="right-0 sm:left-0"
+                buttonRef={countryRef}
+              />
+              {fieldErrors.country && (
+                <p className="text-xs leading-4 text-rose-600" role="alert">
+                  {fieldErrors.country}
+                </p>
+              )}
+            </div>
           </div>
 
-          <div className="space-y-2">
-            <label htmlFor="verificationCode" className="block text-sm font-medium text-slate-700">
+          <AuthTextField
+            inputRef={emailRef}
+            id="email"
+            name="email"
+            label={t("register.email")}
+            icon="email"
+            type="email"
+            value={formData.email}
+            onChange={handleChange}
+            error={fieldErrors.email}
+            required
+            autoComplete="email"
+            placeholder={t("register.emailPlaceholder")}
+          />
+
+          <div className="space-y-1.5">
+            <label htmlFor="verificationCode" className="block text-sm font-medium leading-none text-[#123a64]">
               {t("register.verificationCode")}
             </label>
             <div className="flex gap-2">
-              <input
-                ref={verificationCodeRef}
-                id="verificationCode"
-                name="verificationCode"
-                type="text"
-                value={formData.verificationCode}
-                onChange={handleChange}
-                required
-                maxLength={6}
-                autoComplete="off"
-                placeholder={t("register.verificationCodePlaceholder")}
-                className={`h-12 flex-1 rounded-2xl border-2 bg-white px-4 text-sm text-slate-900 outline-none transition ${
-                  fieldErrors.verificationCode
-                    ? "border-rose-400 ring-2 ring-rose-100"
-                    : "border-slate-200 focus:border-blue-500"
-                }`}
-              />
+              <div className="relative min-w-0 flex-1">
+                <Image
+                  src="/auth/email.svg"
+                  alt=""
+                  width={24}
+                  height={24}
+                  aria-hidden="true"
+                  className="pointer-events-none absolute left-4 top-1/2 h-6 w-6 -translate-y-1/2"
+                />
+                <input
+                  ref={verificationCodeRef}
+                  id="verificationCode"
+                  name="verificationCode"
+                  type="text"
+                  value={formData.verificationCode}
+                  onChange={handleChange}
+                  required
+                  maxLength={6}
+                  autoComplete="off"
+                  aria-invalid={Boolean(fieldErrors.verificationCode)}
+                  aria-describedby={fieldErrors.verificationCode ? "verificationCode-error" : undefined}
+                  placeholder={t("register.verificationCodePlaceholder")}
+                  className={controlClassName("verificationCode", true)}
+                />
+              </div>
               <button
                 type="button"
                 onClick={handleSendCode}
                 disabled={sendingCode || countdown > 0}
-                className="h-12 shrink-0 rounded-2xl border border-blue-200 bg-blue-50 px-4 text-sm font-medium text-blue-600 transition hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-60"
+                className="h-12 shrink-0 rounded-[7px] border border-[#dfdfdf] bg-white px-4 text-sm font-medium text-[#3692f6] transition hover:bg-sky-50 focus:outline-none focus:ring-2 focus:ring-[#3692f6]/20 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {sendingCode
                   ? t("register.sendingCode")
@@ -448,82 +463,80 @@ export default function RegisterPage() {
               </button>
             </div>
             {fieldErrors.verificationCode && (
-              <p className="text-xs text-rose-600">{fieldErrors.verificationCode}</p>
+              <p id="verificationCode-error" className="text-xs leading-4 text-rose-600" role="alert">
+                {fieldErrors.verificationCode}
+              </p>
             )}
           </div>
 
-          <div className="space-y-2">
-            <label htmlFor="password" className="block text-sm font-medium text-slate-700">
-              {t("register.password")}
-            </label>
-            <input
-              ref={passwordRef}
-              id="password"
-              name="password"
-              type="password"
-              value={formData.password}
-              onChange={handleChange}
-              required
-              minLength={6}
-              autoComplete="new-password"
-              placeholder={t("register.passwordPlaceholder")}
-              className={inputClassName("password")}
-            />
-            {fieldErrors.password && <p className="text-xs text-rose-600">{fieldErrors.password}</p>}
-          </div>
+          <AuthTextField
+            inputRef={passwordRef}
+            id="password"
+            name="password"
+            label={t("register.password")}
+            icon="password"
+            type="password"
+            value={formData.password}
+            onChange={handleChange}
+            error={fieldErrors.password}
+            required
+            minLength={6}
+            autoComplete="new-password"
+            placeholder={t("register.passwordPlaceholder")}
+          />
 
-          <div className="space-y-2">
-            <label htmlFor="confirmPassword" className="block text-sm font-medium text-slate-700">
-              {t("register.confirmPassword")}
-            </label>
-            <input
-              ref={confirmPasswordRef}
-              id="confirmPassword"
-              name="confirmPassword"
-              type="password"
-              value={formData.confirmPassword}
-              onChange={handleChange}
-              required
-              minLength={6}
-              autoComplete="new-password"
-              placeholder={t("register.confirmPasswordPlaceholder")}
-              className={inputClassName("confirmPassword")}
-            />
-            {fieldErrors.confirmPassword && (
-              <p className="text-xs text-rose-600">{fieldErrors.confirmPassword}</p>
-            )}
-          </div>
+          <AuthTextField
+            inputRef={confirmPasswordRef}
+            id="confirmPassword"
+            name="confirmPassword"
+            label={t("register.confirmPassword")}
+            icon="password"
+            type="password"
+            value={formData.confirmPassword}
+            onChange={handleChange}
+            error={fieldErrors.confirmPassword}
+            required
+            minLength={6}
+            autoComplete="new-password"
+            placeholder={t("register.confirmPasswordPlaceholder")}
+          />
 
-          <div
-            className={`flex items-start gap-2 rounded-lg pt-1 text-xs leading-5 ${
-              fieldErrors.agreeTerms ? "text-rose-600" : "text-slate-500"
-            }`}
-          >
+          <div className={`flex items-start gap-2 pt-1 text-xs leading-5 ${fieldErrors.agreeTerms ? "text-rose-600" : "text-[#636363]"}`}>
             <input
               ref={agreeTermsRef}
               id="agreeTerms"
               type="checkbox"
               checked={agreedToTerms}
-              onChange={(e) => {
-                setAgreedToTerms(e.target.checked);
+              onChange={(event) => {
+                setAgreedToTerms(event.target.checked);
                 clearFieldError("agreeTerms");
                 setGeneralError("");
               }}
-              className="mt-0.5 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+              className="mt-0.5 h-4 w-4 shrink-0 rounded border-[#9e9e9e] text-[#3692f6] focus:ring-[#3692f6]"
             />
             <label htmlFor="agreeTerms">
-              <span>I agree to the </span>
-              <span className="font-medium text-blue-600">Terms of Service</span>
-              <span> and </span>
-              <span className="font-medium text-blue-600">Privacy Policy</span>
+              <span>{t("register.termsAgreementPrefix")} </span>
+              <span className="font-medium text-[#3692f6]">{t("register.termsOfService")}</span>
+              <span> {t("register.termsAgreementAnd")} </span>
+              <Link
+                href="/privacy-policy"
+                className="font-medium text-[#3692f6] underline-offset-2 hover:underline"
+              >
+                {t("register.privacyPolicy")}
+              </Link>
+              <span>{t("register.termsAgreementSuffix")}</span>
             </label>
           </div>
-          {fieldErrors.agreeTerms && <p className="text-xs text-rose-600">{fieldErrors.agreeTerms}</p>}
+          {fieldErrors.agreeTerms && (
+            <p className="text-xs leading-4 text-rose-600" role="alert">
+              {fieldErrors.agreeTerms}
+            </p>
+          )}
 
           <button
             type="submit"
             disabled={loading}
-            className="h-12 w-full rounded-2xl bg-blue-500 text-sm font-semibold text-white shadow-[0_12px_24px_-8px_rgba(37,99,235,0.55)] transition hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-60"
+            className="h-12 w-full rounded-[7px] bg-[#3692f6] px-8 text-[1.0625rem] font-medium text-white transition hover:bg-[#197fe5] focus:outline-none focus:ring-2 focus:ring-[#3692f6]/30 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {loading ? t("register.buttonLoading") : t("register.button")}
           </button>
@@ -536,15 +549,10 @@ export default function RegisterPage() {
         </form>
 
         {isGoogleLoginEnabled && (
-          <>
-            <div className="my-5 flex items-center gap-4">
-              <div className="h-px flex-1 bg-slate-200" />
-              <span className="text-sm text-slate-400">{t("register.orContinueWith")}</span>
-              <div className="h-px flex-1 bg-slate-200" />
-            </div>
-            <div className="flex justify-center">
+          <div className="mt-3">
             <GoogleLoginButton
               variant="signup"
+              width={480}
               onSuccess={(opts) => {
                 if (opts.needsProfileCompletion) {
                   setCompleteProfileUsername(opts.username ?? "");
@@ -559,28 +567,19 @@ export default function RegisterPage() {
               }}
               disabled={loading}
             />
-            </div>
-          </>
+          </div>
         )}
 
-        <div className="mt-6 text-center text-sm text-slate-600">
-          <span>{t("register.hasAccount")} </span>
+        <p className="mt-3 flex items-center justify-center gap-2 text-center text-sm leading-5 text-[#818181]">
+          <span>{t("register.hasAccount")}</span>
           <button
+            type="button"
             onClick={() => router.push("/login")}
-            className="font-semibold text-blue-600 hover:underline"
+            className="text-[#3692f6] transition hover:text-[#106faa] hover:underline"
           >
             {t("register.loginLink")}
           </button>
-        </div>
-
-        <div className="mt-4 text-center">
-          <button
-            onClick={() => router.push("/")}
-            className="text-sm text-slate-500 hover:text-slate-700 hover:underline"
-          >
-            {t("common.back")}
-          </button>
-        </div>
+        </p>
 
         <CompleteProfileDialog
           open={showCompleteProfile}
@@ -591,7 +590,7 @@ export default function RegisterPage() {
             router.push("/dashboard");
           }}
         />
-      </main>
-    </div>
+      </div>
+    </AuthPageShell>
   );
 }

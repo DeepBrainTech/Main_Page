@@ -1,0 +1,44 @@
+<svg width="403" height="403" viewBox="0 0 403 403" fill="none" xmlns="http://www.w3.org/2000/svg">
+<rect width="403" height="403" fill="#F5F5F5"/>
+<g id="Sign up">
+<rect width="1920" height="1200" transform="translate(-1102.7 -566.754)" fill="white"/>
+<g id="Frame 58">
+<g id="Frame 59">
+<g clip-path="url(#clip0_1215_4837)">
+<rect x="-132.697" y="-542.754" width="926" height="1152" rx="20" fill="#FFFBED"/>
+<g id="Group 1703">
+<g id="&#231;&#178;&#137;2">
+<path id="Subtract" d="M169.326 0C204.395 0.000175238 232.823 28.4287 232.823 63.4971H338.651V169.325C373.72 169.325 402.148 197.755 402.148 232.823C402.148 267.892 373.72 296.32 338.651 296.32V402.148H0V296.319C35.0685 296.319 63.4971 267.891 63.4971 232.822C63.4968 197.754 35.0683 169.325 0 169.325V63.4971H105.829C105.829 28.4286 134.258 0 169.326 0Z" fill="#FFDD65"/>
+<mask id="mask0_1215_4837" style="mask-type:alpha" maskUnits="userSpaceOnUse" x="0" y="0" width="403" height="403">
+<path id="Subtract_2" d="M169.326 0C204.395 0.000175238 232.823 28.4287 232.823 63.4971H338.651V169.325C373.72 169.325 402.148 197.755 402.148 232.823C402.148 267.892 373.72 296.32 338.651 296.32V402.148H0V296.319C35.0685 296.319 63.4971 267.891 63.4971 232.822C63.4968 197.754 35.0683 169.325 0 169.325V63.4971H105.829C105.829 28.4286 134.258 0 169.326 0Z" fill="#FFAEFF"/>
+</mask>
+<g mask="url(#mask0_1215_4837)">
+<g id="Group 1670">
+<rect id="Rectangle 30" x="42.3315" y="63.4971" width="84.6629" height="84.6629" fill="white" fill-opacity="0.6"/>
+<rect id="Rectangle 31" x="126.994" y="148.16" width="84.6629" height="84.6629" fill="white" fill-opacity="0.6"/>
+<rect id="Rectangle 32" x="211.657" y="63.4971" width="84.6629" height="84.6629" fill="white" fill-opacity="0.6"/>
+<rect id="Rectangle 33" x="211.657" y="232.823" width="84.6629" height="84.6629" fill="white" fill-opacity="0.6"/>
+<rect id="Rectangle 34" x="42.3315" y="232.823" width="84.6629" height="84.6629" fill="white" fill-opacity="0.6"/>
+<rect id="Rectangle 35" x="-42.3315" y="148.16" width="84.6629" height="84.6629" fill="white" fill-opacity="0.6"/>
+<rect id="Rectangle 36" x="296.32" y="148.16" width="84.6629" height="84.6629" fill="white" fill-opacity="0.6"/>
+<rect id="Rectangle 45" x="380.983" y="232.823" width="84.6629" height="84.6629" fill="white" fill-opacity="0.6"/>
+<rect id="Rectangle 39" x="296.32" y="317.486" width="84.6629" height="84.6629" fill="white" fill-opacity="0.6"/>
+<rect id="Rectangle 40" x="126.994" y="317.486" width="84.6629" height="84.6629" fill="white" fill-opacity="0.6"/>
+<rect id="Rectangle 41" x="-42.3315" y="317.486" width="84.6629" height="84.6629" fill="white" fill-opacity="0.6"/>
+<rect id="Rectangle 42" x="-42.3315" y="-21.1658" width="84.6629" height="84.6629" fill="white" fill-opacity="0.6"/>
+<rect id="Rectangle 43" x="126.994" y="-21.1658" width="84.6629" height="84.6629" fill="white" fill-opacity="0.6"/>
+<rect id="Rectangle 44" x="296.32" y="-21.1658" width="84.6629" height="84.6629" fill="white" fill-opacity="0.6"/>
+</g>
+</g>
+</g>
+</g>
+</g>
+</g>
+</g>
+</g>
+<defs>
+<clipPath id="clip0_1215_4837">
+<rect x="-132.697" y="-542.754" width="926" height="1152" rx="20" fill="white"/>
+</clipPath>
+</defs>
+</svg>

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useTranslations } from "next-intl";
 import Image from "next/image";
 import CheckerBackground from "../shared/CheckerBackground";
@@ -26,6 +27,7 @@ function splitLeadSentence(description: string) {
 /** Science-backed principles displayed below the social-proof marquee. */
 export default function BrainTrainingPrinciples() {
   const t = useTranslations("figmaHome");
+  const [hoveredCardIndex, setHoveredCardIndex] = useState<number | null>(null);
   const cards = [
     { title: t("principleClassicTitle"), description: t("principleClassicDescription") },
     { title: t("principleWhyTitle"), description: t("principleWhyDescription") },
@@ -54,9 +56,18 @@ export default function BrainTrainingPrinciples() {
           </p>
         </div>
 
-        <div className="principles-cards flex flex-col gap-5 sm:gap-6">
+        <div
+          className="principles-cards flex flex-col gap-5 sm:gap-6"
+          data-card-hovered={hoveredCardIndex !== null ? "true" : undefined}
+          onMouseLeave={() => setHoveredCardIndex(null)}
+        >
           {cards.map((card, index) => (
-            <article key={card.title} className={`principles-card rounded-[40px] px-6 py-6 text-black transition-transform sm:px-10 sm:py-8 ${CARD_STYLES[index]}`}>
+            <article
+              key={card.title}
+              className={`principles-card relative rounded-[40px] px-6 py-6 text-black transition-transform sm:px-10 sm:py-8 ${hoveredCardIndex === index ? "principles-card--active" : ""} ${CARD_STYLES[index]}`}
+              onMouseEnter={() => setHoveredCardIndex(index)}
+              style={{ zIndex: hoveredCardIndex === index ? cards.length + 1 : index + 1 }}
+            >
               <h3 className="font-figma-heading text-xl font-bold leading-snug sm:text-2xl">{card.title}</h3>
               <p className="font-app-body mt-3 text-lg font-normal leading-normal sm:text-2xl lg:max-w-[52rem]">
                 <strong className="font-semibold">{splitLeadSentence(card.description).lead}</strong>
