@@ -58,7 +58,7 @@ export default function AIPoweredTools() {
             <Image src="/landing/AI-Powered/lightbulb.svg" alt="" width={40} height={40} className="size-10 shrink-0" aria-hidden="true" />
             <span className="font-app-body text-lg leading-9 sm:text-2xl">{t("aiPoweredEyebrow")}</span>
           </div>
-          <h2 className="font-figma-heading mt-8 text-balance text-4xl font-bold leading-tight text-black sm:text-5xl 2xl:mt-10 2xl:text-[3rem] 2xl:leading-[3.75rem]">
+          <h2 className="font-figma-heading mt-8 whitespace-pre-line text-balance text-4xl font-bold leading-tight text-black sm:text-5xl 2xl:mt-10 2xl:text-[3rem] 2xl:leading-[3.75rem]">
             {t("aiPoweredTitle")}
           </h2>
           <p className="font-app-body mt-7 max-w-[36.25rem] text-pretty text-lg leading-relaxed text-black sm:text-2xl 2xl:mt-10 2xl:leading-[2.25rem]">

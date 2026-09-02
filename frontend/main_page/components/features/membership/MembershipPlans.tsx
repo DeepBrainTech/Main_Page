@@ -82,6 +82,12 @@ const planDisplayPrices: Record<MembershipPlan, { monthly: string; annual: strin
   premium: { monthly: "$6.99", annual: "$69.99" },
 };
 
+const annualRegularPrices: Record<MembershipPlan, string | null> = {
+  free: null,
+  plus: "$59.88",
+  premium: "$83.88",
+};
+
 const planRanks: Record<MembershipPlan, number> = {
   free: 0,
   plus: 1,
@@ -331,6 +337,8 @@ export default function MembershipPlans({
             (plan.key === "free" || currentBillingInterval === billingInterval);
           const isFreePreview = plan.key === "free" && currentPlan !== "free";
           const price = planDisplayPrices[plan.key][billingInterval === "annual" ? "annual" : "monthly"];
+          const regularAnnualPrice = annualRegularPrices[plan.key];
+          const showAnnualPriceComparison = billingInterval === "annual" && regularAnnualPrice !== null;
           const periodDateLabel = membershipPeriodEndIso ? formatMembershipPeriodDate(membershipPeriodEndIso, locale) : "";
           let buttonLabel: string | null;
           let buttonDisabled = redirecting;
@@ -413,13 +421,27 @@ export default function MembershipPlans({
                 <h2 className={`${isLanding ? "text-[1.8rem] leading-[2.4rem]" : "text-2xl leading-8"} font-semibold ${styles.title}`}>
                   {t(`plans.${plan.key}`)}
                 </h2>
-                <div className="mt-3 flex items-end gap-2">
-                  <span className={`${isLanding ? "text-[2.7rem] leading-[3rem]" : "text-4xl leading-10"} font-app-body font-bold ${styles.price}`}>
-                    {price}
-                  </span>
-                  <span className={`${isLanding ? "pb-0.5 text-[1.35rem] leading-[2.1rem]" : "pb-1 text-sm leading-6 sm:text-base"} font-app-body font-normal ${styles.subtext}`}>
-                    {t(periodKey)}
-                  </span>
+                <div className="mt-3 flex flex-col items-start">
+                  <div className="flex items-end gap-2">
+                    {showAnnualPriceComparison ? (
+                      <span
+                        className={`${isLanding ? "h-[2.125rem] text-[1.35rem] leading-[2.1rem]" : "h-7 text-lg leading-7"} shrink-0 font-app-body font-semibold ${styles.subtext} line-through decoration-2`}
+                      >
+                        {regularAnnualPrice}
+                      </span>
+                    ) : null}
+                    <span className={`${isLanding ? "text-[2.7rem] leading-[3rem]" : "text-4xl leading-10"} font-app-body font-bold ${styles.price}`}>
+                      {price}
+                    </span>
+                    <span className={`${isLanding ? "pb-0.5 text-[1.35rem] leading-[2.1rem]" : "pb-1 text-sm leading-6 sm:text-base"} font-app-body font-normal ${styles.subtext}`}>
+                      {t(periodKey)}
+                    </span>
+                  </div>
+                  {showAnnualPriceComparison ? (
+                    <span className={`${isLanding ? "text-base leading-[2.1rem]" : "text-sm leading-6"} mt-1 font-app-body font-normal ${styles.subtext}`}>
+                      {t("annualDiscount")}
+                    </span>
+                  ) : null}
                 </div>
               </div>
 
