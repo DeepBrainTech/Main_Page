@@ -36,7 +36,7 @@ export default function FigmaHero({ onStart }: FigmaHeroProps) {
             />
           ))}
         </div>
-        <h1 className="font-figma-heading max-w-4xl text-balance text-4xl font-bold leading-[1.09] tracking-[-0.045em] text-[#1a1a1a] sm:text-6xl lg:text-[5.5rem]">
+        <h1 className="w-full max-w-4xl text-center font-figma-heading text-balance whitespace-pre-line text-4xl font-bold leading-[1.09] tracking-[-0.045em] text-[#1a1a1a] sm:text-6xl lg:text-[5.5rem]">
           {t("heroTitle")}
         </h1>
         <p className="font-app-body mt-8 w-full max-w-[773px] text-center text-[clamp(1rem,1.25vw,1.5rem)] leading-normal text-[#1a1a1a]">

@@ -14,6 +14,7 @@ interface LandingHeaderProps {
  */
 export default function LandingHeader({
   onLogin,
+  onRegister,
 }: LandingHeaderProps) {
   const tCommon = useTranslations("common");
   const t = useTranslations("figmaHome");
@@ -37,7 +38,13 @@ export default function LandingHeader({
         </a>
         <div className="flex min-w-0 flex-wrap items-center justify-end gap-2 sm:gap-4">
           <LanguageSwitcher />
-          <a href="#contact" className={`${landingNavBtn} hidden bg-[#eef2ff] text-[#045e96] hover:bg-[#e0e7ff] sm:inline-flex`}>{t("contact")}</a>
+          <button
+            type="button"
+            onClick={onRegister}
+            className={`${landingNavBtn} hidden bg-[#eef2ff] text-[#045e96] hover:bg-[#e0e7ff] sm:inline-flex`}
+          >
+            {t("navSignUp")}
+          </button>
           <button
             type="button"
             onClick={onLogin}
