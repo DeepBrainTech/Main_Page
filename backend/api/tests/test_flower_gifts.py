@@ -34,9 +34,8 @@ class FlowerGiftFixture(unittest.TestCase):
         self.db.commit()
         self.notifications = patch("services.assets.schedule_notification_event")
         self.notifications.start()
-        self.claims = {"purpose": "flower-intent", "game_key": "quantumgo", "user_id": 1,
-                       "recipient_id": 2, "sender_game_id": str(uuid4()),
-                       "recipient_game_id": str(uuid4()), "room_id": str(uuid4()),
+        self.claims = {"protocol_version": 2, "purpose": "flower-intent", "game_key": "quantumgo",
+                       "portal_user_id": 1, "recipient_portal_user_id": 2, "room_id": str(uuid4()),
                        "request_id": str(uuid4()), "amount": 5, "heat_eligible": True}
 
     def tearDown(self):
@@ -67,9 +66,7 @@ class FlowerGiftTests(FlowerGiftFixture):
         for _ in range(3):
             self.claims["request_id"] = str(uuid4())
             transfer_flowers(self.db, 1, self.token())
-            transfer_flowers(self.db, 2, self.token(user_id=2, recipient_id=1,
-                                                  sender_game_id=self.claims["recipient_game_id"],
-                                                  recipient_game_id=self.claims["sender_game_id"],
+            transfer_flowers(self.db, 2, self.token(portal_user_id=2, recipient_portal_user_id=1,
                                                   request_id=str(uuid4()), heat_eligible=False))
         self.assertEqual(get_asset_balances(self.db, 1)["flowers"], 10)
         self.assertEqual(get_asset_balances(self.db, 2)["flowers"], 0)
@@ -106,13 +103,13 @@ class FlowerGiftTests(FlowerGiftFixture):
         secret, algorithm, audience, issuer, _ = _jwt_settings(get_game_auth_entry_by_game_key("quantumgo"))
         claims = jwt.decode(result["receipt_token"], secret, algorithms=[algorithm], audience=audience, issuer=issuer)
         self.assertEqual(claims["purpose"], "flower-receipt")
-        self.assertEqual(claims["recipient_id"], 2)
+        self.assertEqual(claims["recipient_portal_user_id"], 2)
         with self.assertRaises(HTTPException) as error:
             transfer_status(self.db, 2, self.claims["request_id"])
         self.assertEqual(error.exception.status_code, 404)
 
     def test_bad_intents_do_not_mutate_assets(self):
-        for changes in ({"user_id": 2}, {"recipient_id": 1}, {"amount": 0}, {"amount": True},
+        for changes in ({"portal_user_id": 2}, {"recipient_portal_user_id": 1}, {"amount": 0}, {"amount": True},
                         {"purpose": "flower-receipt"}, {"exp": 1}, {"iss": "main-portal"},
                         {"heat_eligible": 1}, {"request_id": "bad-id"}):
             with self.subTest(changes=changes), self.assertRaises(HTTPException):
@@ -121,29 +118,27 @@ class FlowerGiftTests(FlowerGiftFixture):
         self.assertEqual(self.db.query(CommerceOperation).count(), 0)
 
     def test_scoped_player_balances_only_return_flowers(self):
-        players = [{"user_id": self.claims["sender_game_id"], "portal_user_id": 1},
-                   {"user_id": self.claims["recipient_game_id"], "portal_user_id": 2}]
+        players = [{"portal_user_id": "1"}, {"portal_user_id": "2"}]
         token = self.token(purpose="flower-balances", iss="main-portal:flower-balances", players=players)
         result = player_balances(self.db, 1, token)
-        self.assertEqual(result["players"], [{"user_id": players[0]["user_id"], "flowers": 10},
-                                             {"user_id": players[1]["user_id"], "flowers": 0}])
+        self.assertEqual(result["players"], [{"portal_user_id": "1", "flowers": 10},
+                                             {"portal_user_id": "2", "flowers": 0}])
         self.assertEqual(self.db.query(AssetTransaction).count(), 0)
 
     def test_player_balances_reject_other_accounts_and_gift_tokens(self):
-        players = [{"user_id": self.claims["sender_game_id"], "portal_user_id": 1}]
+        players = [{"portal_user_id": "1"}]
         good = self.token(purpose="flower-balances", iss="main-portal:flower-balances", players=players)
         with self.assertRaises(HTTPException):
             player_balances(self.db, 2, good)
         with self.assertRaises(HTTPException):
             player_balances(self.db, 1, self.token())
-        for invalid in ([], players * 3, [{"user_id": "bad", "portal_user_id": 1}],
-                        [{"user_id": self.claims["sender_game_id"], "portal_user_id": True}]):
+        for invalid in ([], players * 3, [{"portal_user_id": "bad"}], [{"portal_user_id": True}]):
             with self.subTest(players=invalid), self.assertRaises(HTTPException):
                 player_balances(self.db, 1, self.token(purpose="flower-balances",
                     iss="main-portal:flower-balances", players=invalid))
 
     def test_unlinked_player_balance_is_unknown_not_zero(self):
-        player = {"user_id": self.claims["recipient_game_id"], "portal_user_id": None}
+        player = {"portal_user_id": "999"}
         result = player_balances(self.db, 1, self.token(purpose="flower-balances",
             iss="main-portal:flower-balances", players=[player]))
         self.assertIsNone(result["players"][0]["flowers"])
@@ -151,12 +146,6 @@ class FlowerGiftTests(FlowerGiftFixture):
 
 
 class PortalIdFlowerGiftTests(FlowerGiftFixture):
-    def setUp(self):
-        super().setUp()
-        self.claims = {key: value for key, value in self.claims.items()
-                       if key not in ("user_id", "recipient_id", "sender_game_id", "recipient_game_id")}
-        self.claims.update(protocol_version=2, portal_user_id=1, recipient_portal_user_id=2)
-
     def test_v2_transfer_replay_and_receipt_use_only_portal_ids(self):
         first = transfer_flowers(self.db, 1, self.token())
         again = transfer_flowers(self.db, 1, self.token(heat_eligible=False))
@@ -170,6 +159,33 @@ class PortalIdFlowerGiftTests(FlowerGiftFixture):
         self.assertEqual(self.db.query(AssetTransaction).count(), 2)
         for key in ("user_id", "recipient_id", "sender_game_id", "recipient_game_id"):
             self.assertNotIn(key, recovered)
+
+    def test_legacy_requests_are_rejected_without_asset_mutation(self):
+        for version in (None, 1):
+            with self.subTest(version=version), self.assertRaises(HTTPException):
+                transfer_flowers(self.db, 1, self.token(protocol_version=version))
+            with self.subTest(balance_version=version), self.assertRaises(HTTPException):
+                player_balances(self.db, 1, self.token(protocol_version=version,
+                    purpose="flower-balances", iss="main-portal:flower-balances",
+                    players=[{"portal_user_id": "1"}]))
+        self.assertEqual(self.db.query(AssetTransaction).count(), 0)
+
+    def test_historical_paid_operation_recovers_as_v2_without_recharging(self):
+        transfer_flowers(self.db, 1, self.token())
+        operation = self.db.query(CommerceOperation).one()
+        operation.result = {"user_id": 1, "recipient_id": 2,
+            "sender_game_id": str(uuid4()), "recipient_game_id": str(uuid4()),
+            **{key: self.claims[key] for key in ("room_id", "request_id", "amount", "game_key", "heat_eligible")}}
+        self.db.commit()
+        recovered = transfer_status(self.db, 1, self.claims["request_id"])
+        self.assertEqual(recovered["protocol_version"], 2)
+        self.assertEqual(recovered["portal_user_id"], 1)
+        self.assertEqual(recovered["recipient_portal_user_id"], 2)
+        self.assertNotIn("sender_game_id", recovered)
+        self.assertNotIn("user_id", recovered)
+        self.assertEqual(get_asset_balances(self.db, 1)["flowers"], 5)
+        self.assertEqual(get_asset_balances(self.db, 2)["flowers"], 5)
+        self.assertEqual(self.db.query(AssetTransaction).count(), 2)
 
     def test_v2_invalid_ids_do_not_mutate_assets(self):
         for changes in ({"portal_user_id": True}, {"portal_user_id": 2},

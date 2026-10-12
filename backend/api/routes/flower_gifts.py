@@ -37,7 +37,7 @@ async def balance(response: Response, current_user: User = Depends(get_current_a
                   db: Session = Depends(get_db)):
     response.headers["Cache-Control"] = "no-store"
     return APIResponse(success=True, message="ok",
-                       data={"user_id": current_user.id, "assets": get_asset_balances(db, current_user.id)})
+                       data={"portal_user_id": current_user.id, "assets": get_asset_balances(db, current_user.id)})
 
 
 @router.post("/transfers", response_model=APIResponse)
