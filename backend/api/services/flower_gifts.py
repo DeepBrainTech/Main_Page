@@ -14,6 +14,27 @@ from services.idempotency import replay_operation, save_operation
 OPERATION = "quantumgo:flower-gift"
 
 
+def _protocol(claims: dict) -> int:
+    version = claims.get("protocol_version", 1)
+    if type(version) is not int or version not in (1, 2):
+        raise ValueError("invalid_protocol")
+    return version
+
+
+def _portal_id(value) -> int:
+    if type(value) is int:
+        result = value
+    elif isinstance(value, str) and value.isascii() and value.isdecimal():
+        result = int(value)
+        if str(result) != value:
+            raise ValueError("invalid_account")
+    else:
+        raise ValueError("invalid_account")
+    if not 0 < result <= 9223372036854775807:
+        raise ValueError("invalid_account")
+    return result
+
+
 def player_balances(db: Session, user_id: int, token: str) -> dict:
     entry = get_game_auth_entry_by_game_key("quantumgo")
     try:
@@ -24,25 +45,32 @@ def player_balances(db: Session, user_id: int, token: str) -> dict:
         claims = jwt.decode(token, secret, algorithms=[algorithm], audience=audience,
                             issuer=issuer + ":flower-balances",
                             options={"require_exp": True, "require_aud": True, "require_iss": True})
+        version = _protocol(claims)
+        actor_key = "portal_user_id" if version == 2 else "user_id"
         if (claims.get("purpose") != "flower-balances" or claims.get("game_key") != "quantumgo"
-                or type(claims.get("user_id")) is not int or claims["user_id"] != user_id):
+                or type(claims.get(actor_key)) is not int or claims[actor_key] != user_id):
             raise ValueError("invalid_scope")
         players = claims["players"]
         if not isinstance(players, list) or not 1 <= len(players) <= 2:
             raise ValueError("invalid_players")
         result = []
         for player in players:
-            game_id = player["user_id"]
-            if str(UUID(game_id)) != game_id or UUID(game_id).int == 0:
-                raise ValueError("invalid_game_id")
-            portal_id = player.get("portal_user_id")
-            if portal_id is not None and (type(portal_id) is not int or portal_id <= 0):
-                raise ValueError("invalid_account")
+            if version == 2:
+                portal_id = _portal_id(player["portal_user_id"])
+                identity = {"portal_user_id": str(portal_id)}
+            else:
+                game_id = player["user_id"]
+                if str(UUID(game_id)) != game_id or UUID(game_id).int == 0:
+                    raise ValueError("invalid_game_id")
+                portal_id = player.get("portal_user_id")
+                if portal_id is not None and (type(portal_id) is not int or portal_id <= 0):
+                    raise ValueError("invalid_account")
+                identity = {"user_id": game_id}
             active = portal_id is not None and db.query(User.id).filter(
                 User.id == portal_id, User.is_active.is_(True)).first() is not None
-            result.append({"user_id": game_id,
+            result.append({**identity,
                            "flowers": get_asset_balances(db, portal_id)["flowers"] if active else None})
-        return {"user_id": user_id, "players": result}
+        return {actor_key: user_id, "players": result}
     except (JWTError, ValueError, KeyError, TypeError, AttributeError) as exc:
         raise HTTPException(422, "invalid_flower_balance_scope") from exc
 
@@ -59,16 +87,23 @@ def verify_intent(token: str, user_id: int) -> dict:
                             options={"require_exp": True, "require_aud": True, "require_iss": True})
         if claims.get("purpose") != "flower-intent" or claims.get("game_key") != "quantumgo":
             raise ValueError("invalid_scope")
-        if type(claims.get("user_id")) is not int or claims["user_id"] != user_id:
+        version = _protocol(claims)
+        actor_key = "portal_user_id" if version == 2 else "user_id"
+        recipient_key = "recipient_portal_user_id" if version == 2 else "recipient_id"
+        if type(claims.get(actor_key)) is not int or claims[actor_key] != user_id:
             raise ValueError("invalid_user")
-        recipient = claims["recipient_id"]
+        _portal_id(claims[actor_key])
+        recipient = claims[recipient_key]
+        _portal_id(recipient)
         if type(recipient) is not int or recipient <= 0 or recipient == user_id:
             raise ValueError("invalid_recipient")
         if type(claims["amount"]) is not int or claims["amount"] not in (1, 5, 10):
             raise ValueError("invalid_amount")
         if type(claims["heat_eligible"]) is not bool:
             raise ValueError("invalid_heat")
-        for key in ("request_id", "room_id", "sender_game_id", "recipient_game_id"):
+        keys = ("request_id", "room_id") if version == 2 else (
+            "request_id", "room_id", "sender_game_id", "recipient_game_id")
+        for key in keys:
             if str(UUID(claims[key])) != claims[key] or UUID(claims[key]).int == 0:
                 raise ValueError("invalid_id")
         return claims
@@ -84,9 +119,13 @@ def _response(db: Session, user_id: int, result: dict) -> dict:
 
 def transfer_flowers(db: Session, user_id: int, token: str) -> dict:
     claims = verify_intent(token, user_id)
-    recipient = claims["recipient_id"]
-    payload = {key: claims[key] for key in
-               ("room_id", "recipient_id", "amount", "sender_game_id", "recipient_game_id")}
+    version = _protocol(claims)
+    actor_key = "portal_user_id" if version == 2 else "user_id"
+    recipient_key = "recipient_portal_user_id" if version == 2 else "recipient_id"
+    recipient = claims[recipient_key]
+    keys = ("protocol_version", "room_id", recipient_key, "amount") if version == 2 else (
+        "room_id", "recipient_id", "amount", "sender_game_id", "recipient_game_id")
+    payload = {key: claims[key] for key in keys}
     try:
         if db.query(User.id).filter(User.id == recipient, User.is_active.is_(True)).first() is None:
             raise HTTPException(404, "flower_recipient_unavailable")
@@ -103,7 +142,7 @@ def transfer_flowers(db: Session, user_id: int, token: str) -> dict:
                      request_id=claims["request_id"])
         credit_assets(db, recipient, {"flowers": claims["amount"]}, source=source,
                       request_id=claims["request_id"])
-        result = {**payload, "user_id": user_id, "request_id": claims["request_id"],
+        result = {**payload, actor_key: user_id, "request_id": claims["request_id"],
                   "game_key": "quantumgo", "heat_eligible": claims["heat_eligible"]}
         save_operation(db, user_id, claims["request_id"], OPERATION, payload, result)
         response = _response(db, user_id, result)
