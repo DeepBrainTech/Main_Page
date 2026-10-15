@@ -67,7 +67,7 @@
     "events": {
       "purchase": {
         "title": "Purchase Successful",
-        "message": "{diamonds} Diamonds have been added to your bag."
+        "message": "{diamonds} {diamondIcon} have been added to your bag."
       },
       "assetSpent": {
         "title": "Assets Spent",
@@ -75,7 +75,11 @@
         "separator": ", ",
         "coins": "{count} coins",
         "diamonds": "{count} diamonds",
-        "flowers": "{count} flowers"
+        "flowers": "{count, plural, one {# Flower} other {# Flowers}}"
+      },
+      "flowerGiftSent": {
+        "title": "Gift sent",
+        "message": "You sent {count} {flowers} on QuantumGo."
       },
       "subscriptionActivated": {
         "title": "Subscription Activated",

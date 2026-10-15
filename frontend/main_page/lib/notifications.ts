@@ -111,11 +111,22 @@ function localizeNotificationContent(
       for (const asset of ["coins", "diamonds", "flowers"] as const) {
         const amount = Math.abs(Number(amounts[asset] ?? 0));
         if (Number.isFinite(amount) && amount > 0) {
-          parts.push(t(`events.assetSpent.${asset}`, { count: amount }));
+          parts.push(`${amount} [[asset:${asset}]]`);
         }
       }
     }
     const rawSource = typeof metadata.source === "string" ? metadata.source : "";
+    if (rawSource.startsWith("quantumgo:flower-gift:")) {
+      const flowers = Math.abs(Number((changes as Record<string, unknown> | undefined)?.flowers ?? 0));
+      return {
+        title: t("events.flowerGiftSent.title"),
+        message: t("events.flowerGiftSent.message", {
+          count: flowers,
+          flowers: `[[asset:flowers]]`,
+        }),
+        messageParts: null,
+      };
+    }
     const source = rawSource
       .replace(/:/g, " · ")
       .replace(/[-_]/g, " ");
@@ -142,6 +153,7 @@ function localizeNotificationContent(
         title: t("events.purchase.title"),
         message: t("events.purchase.message", {
           diamonds: Number.isFinite(diamonds) ? diamonds! : 0,
+          diamondIcon: "[[asset:diamonds]]",
         }),
         messageParts: null,
       };
@@ -176,7 +188,10 @@ function localizeNotificationContent(
   if (notification.type === "purchase" && Number.isFinite(diamonds)) {
     return {
       title: t("events.purchase.title"),
-      message: t("events.purchase.message", { diamonds: diamonds! }),
+      message: t("events.purchase.message", {
+        diamonds: diamonds!,
+        diamondIcon: "[[asset:diamonds]]",
+      }),
       messageParts: null,
     };
   }

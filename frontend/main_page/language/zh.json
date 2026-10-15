@@ -67,7 +67,7 @@
     "events": {
       "purchase": {
         "title": "购买成功",
-        "message": "{diamonds} 颗钻石已添加到您的账户。"
+        "message": "您的账户已收到 {diamonds} {diamondIcon}。"
       },
       "assetSpent": {
         "title": "资产消耗",
@@ -76,6 +76,10 @@
         "coins": "{count} 金币",
         "diamonds": "{count} 钻石",
         "flowers": "{count} 鲜花"
+      },
+      "flowerGiftSent": {
+        "title": "礼物已送出",
+        "message": "你在 QuantumGo 送出了 {count} {flowers}。"
       },
       "subscriptionActivated": {
         "title": "订阅已开通",
