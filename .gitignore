@@ -17,6 +17,9 @@ AGENTS.md
 # next.js
 /.next/
 /out/
+/.ruff_cache/
+/frontend/main_page/.open-next/
+/frontend/main_page/.dev.vars
 
 # production
 /build

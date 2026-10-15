@@ -5,8 +5,6 @@ import { locales, type Locale } from '../../i18n-config';
 import GoogleAuthProvider from '@/components/providers/GoogleOAuthProvider';
 import type { Metadata } from "next";
 
-// Cloudflare Pages 需要 Edge Runtime
-export const runtime = 'edge';
 
 const localeMetadata: Record<Locale, { title: string; description: string; ogLocale: string }> = {
   en: {
