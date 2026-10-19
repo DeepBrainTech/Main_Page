@@ -9,7 +9,6 @@ export type TokenLaunchKey =
   | "quantumGo"
   | "fogChess"
   | "onlineChess"
-  | "sudokuBattle"
   | "numberBlast";
 
 export type AnalyticsLaunchKey = "sudoku";
@@ -46,12 +45,6 @@ export const GAME_LAUNCH_ENTRIES: GameLaunchEntry[] = [
   },
   {
     kind: "token",
-    launchKey: "sudokuBattle",
-    apiSlug: "sudoku",
-    gameUrl: "https://sudoku-battle.deepbraintechnology.com/",
-  },
-  {
-    kind: "token",
     launchKey: "quantumGo",
     apiSlug: "quantumgo",
     gameUrl:
@@ -62,8 +55,10 @@ export const GAME_LAUNCH_ENTRIES: GameLaunchEntry[] = [
     kind: "token",
     launchKey: "chessMater",
     apiSlug: "chessmater",
-    gameUrl: "https://chessmater.deepbraintechnology.com/",
-  },
+    gameUrl:
+      process.env.NEXT_PUBLIC_CHESSMATER_URL ||
+      "https://chessmater.deepbraintechnology.com/",
+    },
   {
     kind: "token",
     launchKey: "chessTourmaster",

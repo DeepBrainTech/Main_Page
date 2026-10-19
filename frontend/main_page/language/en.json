@@ -399,7 +399,6 @@
     "sudoku": "Sudoku",
     "nokingchess": "No King Chess",
     "soccerChess": "Soccer Chess",
-    "sudokuBattle": "Sudoku Battle",
     "numberBlast": "Number Blast",
     "startFogChess": "FogChess",
     "quantumGo": "Quantum Go",
@@ -1475,11 +1474,6 @@
         "tagline": "Strengthen logic, focus, and memory through themed Sudoku challenges.",
         "description": "Experience new ways to play as each theme brings a unique twist to the classic puzzle."
       },
-      "sudokuBattle": {
-        "name": "SudokuBattle",
-        "tagline": "Solve Smarter. Compete Harder.",
-        "description": "Strike SudokuBattle puzzles with real-time multiplayer battles that test your logic and speed."
-      },
       "chessMater": {
         "name": "ChessMater",
         "tagline": "Pattern recognition, memory, and analysis.",
@@ -1513,7 +1507,7 @@
       },
       "memory": {
         "title": "Memory",
-        "game": "SudokuBattle"
+        "game": "ChessMater"
       },
       "patternRecognition": {
         "title": "Pattern Recognition",

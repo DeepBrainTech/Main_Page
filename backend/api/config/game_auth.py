@@ -25,7 +25,6 @@ class GameAuthEntry:
 GAME_AUTH_ENTRIES: tuple[GameAuthEntry, ...] = (
     GameAuthEntry("fogchess", "fogchess", "FOG_CHESS", "fogchess"),
     GameAuthEntry("online-chess", "online-chess", "ONLINE_CHESS", "online-chess"),
-    GameAuthEntry("sudoku", "sudoku", "SUDOKU", "sudoku-battle"),
     GameAuthEntry(
         "quantumgo",
         "quantumgo",
