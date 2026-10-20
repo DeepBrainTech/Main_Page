@@ -128,8 +128,10 @@ function localizeNotificationContent(
         messageParts: null,
       };
     }
-    const sourceId = rawSource.replace(/^(shop|course):/, "").split(":")[0]
-      .toLowerCase().replace(/[-_]/g, "");
+    const sourceId = rawSource.trim().toLowerCase()
+      .replace(/^(shop|course)\s*[:·]\s*/, "")
+      .split(/[:·]/)[0]
+      .replace(/[\s_-]/g, "");
     const sourceKey = Object.keys(NOTIFICATION_SOURCE_LABELS).find(
       (key) => sourceId === key || sourceId.startsWith(key),
     );

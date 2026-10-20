@@ -81,8 +81,8 @@
       },
       "assetSpent": {
         "title": "Assets Spent",
-        "message": "Spent {assets} on {source}.",
-        "messageWithoutSource": "Spent {assets}.",
+        "message": "Spent {assets} on {source}",
+        "messageWithoutSource": "Spent {assets}",
         "separator": ", ",
         "coins": "{count} coins",
         "diamonds": "{count} diamonds",
