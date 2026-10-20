@@ -33,9 +33,20 @@ def _owned_item(db: Session, user_id: int, product: GameProduct):
     )
 
 
-def quote_purchase(db: Session, user_id: int, product: GameProduct) -> dict:
+def quote_purchase(db: Session, user_id: int, product: GameProduct, target: str | None = None) -> dict:
     inventory = _owned_item(db, user_id, product)
     cost = {} if inventory is not None and inventory.quantity > 0 else product.cost
+    entitlement_owned = False
+    if target is not None:
+        try:
+            target = product.validate_target(target)
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+        if product.permanent_target:
+            entitlement_owned = db.query(GamePurchase).filter_by(
+                user_id=user_id, game_key=product.game_key,
+                product_id=product.product_id, target=target,
+            ).first() is not None
     return {
         "game_key": product.game_key,
         "product_id": product.product_id,
@@ -43,6 +54,10 @@ def quote_purchase(db: Session, user_id: int, product: GameProduct) -> dict:
         "duration_seconds": product.duration_seconds,
         "user_id": user_id,
         "assets": get_asset_balances(db, user_id),
+        "inventory_item_id": product.inventory_item_id,
+        "inventory_quantity": inventory.quantity if inventory is not None else 0,
+        "requires_inventory": product.inventory_only,
+        "entitlement_owned": entitlement_owned,
     }
 
 
@@ -74,6 +89,16 @@ def redeem_purchase(
         .first()
     )
     now = datetime.utcnow()
+    if purchase is None and product.permanent_target:
+        # The account lock serializes concurrent requests across tabs/devices.
+        # Reuse the original entitlement even when a retry has a new UUID.
+        purchase = (
+            db.query(GamePurchase)
+            .filter_by(user_id=user_id, game_key=product.game_key,
+                       product_id=product.product_id, target=target)
+            .order_by(GamePurchase.id.asc())
+            .first()
+        )
     if purchase is not None:
         if (
             purchase.target != target
@@ -82,7 +107,10 @@ def redeem_purchase(
         ):
             raise conflict("request_mismatch")
         if purchase.expires_at <= now:
-            raise conflict("session_expired")
+            if not product.permanent_target:
+                raise conflict("session_expired")
+            # Renew delivery authorization, not the permanent entitlement.
+            purchase.expires_at = now + timedelta(seconds=product.duration_seconds)
     else:
         inventory = _owned_item(db, user_id, product)
         if inventory is not None and inventory.quantity > 0:
@@ -91,6 +119,8 @@ def redeem_purchase(
                 db.delete(inventory)
             cost = {}
         else:
+            if product.inventory_only:
+                raise HTTPException(status_code=400, detail="insufficient_inventory")
             debit_assets(
                 db,
                 user_id,

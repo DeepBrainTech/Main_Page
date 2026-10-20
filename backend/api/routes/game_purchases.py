@@ -17,6 +17,7 @@ async def quote_game_purchase(
     api_slug: str,
     product_id: str,
     response: Response,
+    target: str | None = None,
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db),
 ):
@@ -24,7 +25,7 @@ async def quote_game_purchase(
     return APIResponse(
         success=True,
         message="ok",
-        data=quote_purchase(db, current_user.id, resolve_product(api_slug, product_id)),
+        data=quote_purchase(db, current_user.id, resolve_product(api_slug, product_id), target),
     )
 
 

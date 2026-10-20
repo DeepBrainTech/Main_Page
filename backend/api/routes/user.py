@@ -19,6 +19,7 @@ from schemas import (
     LearningTopicProgressReset,
     MentalMathUnlockDiamondsBody,
 )
+from services import chessmater_inventory, tourmaster_inventory
 from services import (
     assessments,
     assets,
@@ -404,6 +405,52 @@ async def redeem_item(
         db=db,
         request_id=request_id,
     )
+
+
+@router.post("/shop/chessmater/migrate", response_model=APIResponse)
+async def migrate_chessmater_inventory(
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+):
+    return APIResponse(success=True, message="ok", data=chessmater_inventory.migrate_inventory(db, current_user.id))
+
+
+@router.get("/shop/chessmater/deliveries", response_model=APIResponse)
+async def pending_chessmater_deliveries(
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+):
+    return APIResponse(success=True, message="ok", data=chessmater_inventory.pending_deliveries(db, current_user.id))
+
+
+@router.post("/shop/chessmater/deliveries/{purchase_id}/ack", response_model=APIResponse)
+async def acknowledge_chessmater_delivery(
+    purchase_id: UUID,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+):
+    return APIResponse(success=True, message="ok", data=chessmater_inventory.acknowledge_delivery(db, current_user.id, purchase_id))
+
+
+@router.post("/shop/chess-tourmaster/migrate", response_model=APIResponse)
+async def migrate_tourmaster_inventory(
+    current_user: User = Depends(get_current_active_user), db: Session = Depends(get_db),
+):
+    return APIResponse(success=True, message="ok", data=tourmaster_inventory.migrate_inventory(db, current_user.id))
+
+
+@router.get("/shop/chess-tourmaster/deliveries", response_model=APIResponse)
+async def pending_tourmaster_deliveries(
+    current_user: User = Depends(get_current_active_user), db: Session = Depends(get_db),
+):
+    return APIResponse(success=True, message="ok", data=tourmaster_inventory.pending_deliveries(db, current_user.id))
+
+
+@router.post("/shop/chess-tourmaster/deliveries/{purchase_id}/ack", response_model=APIResponse)
+async def acknowledge_tourmaster_delivery(
+    purchase_id: UUID, current_user: User = Depends(get_current_active_user), db: Session = Depends(get_db),
+):
+    return APIResponse(success=True, message="ok", data=tourmaster_inventory.acknowledge_delivery(db, current_user.id, purchase_id))
 
 
 @router.post("/shop/consume", response_model=APIResponse)

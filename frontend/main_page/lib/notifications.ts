@@ -1,4 +1,5 @@
 import type { UserNotificationData } from "@/services/notificationsApi";
+import { NOTIFICATION_SOURCE_LABELS } from "@/config/notification-sources";
 
 export type NotificationMessageParts = {
   before: string;
@@ -127,12 +128,15 @@ function localizeNotificationContent(
         messageParts: null,
       };
     }
-    const source = rawSource
-      .replace(/:/g, " · ")
-      .replace(/[-_]/g, " ");
+    const sourceId = rawSource.replace(/^(shop|course):/, "").split(":")[0]
+      .toLowerCase().replace(/[-_]/g, "");
+    const sourceKey = Object.keys(NOTIFICATION_SOURCE_LABELS).find(
+      (key) => sourceId === key || sourceId.startsWith(key),
+    );
+    const source = sourceKey ? t(`sources.${NOTIFICATION_SOURCE_LABELS[sourceKey]}`) : "";
     return {
       title: t("events.assetSpent.title"),
-      message: t("events.assetSpent.message", {
+      message: t(source ? "events.assetSpent.message" : "events.assetSpent.messageWithoutSource", {
         assets: parts.join(t("events.assetSpent.separator")),
         source,
       }),

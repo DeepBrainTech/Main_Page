@@ -246,3 +246,12 @@ python -m unittest discover -s tests -v
 ```
 
 测试使用隔离 SQLite，覆盖扣费和发货回滚、重放、授权边界、历史价格、QuantumGo 通用购买、充值去重和全部现有 API 契约。SQLite 不验证 PostgreSQL 行锁并发；生产使用统一 users 行锁及 SQL 条件更新。
+
+
+### ChessMater inventory ownership
+
+ChessMater is an exception to the shared portal inventory API. Its Hint, Undo and AntiGravity balances live in the ChessMater database. The existing `/api/user/shop/redeem` endpoint charges portal assets and returns a signed `chessmater-inventory` delivery for ChessMater SKUs; it never creates portal inventory. Other games retain the shared inventory behavior.
+
+ChessMater validates the receipt at its authenticated `/inventory/claim` endpoint and commits each purchase UUID only once. `/api/user/shop/chessmater/deliveries` returns unacknowledged deliveries with fresh signatures; the game acknowledges each delivery using `POST /api/user/shop/chessmater/deliveries/{purchase_id}/ack` only after its own database commits. This recovers purchases after closing the browser without charging again.
+
+`POST /api/user/shop/chessmater/migrate` replaces only the three legacy ChessMater stock rows with a durable delivery record in the same portal transaction. The shared `user_item_inventories` table and every other game's records stay intact. Deploy the portal and ChessMater changes together. For bulk migration, use ChessMater's `backend/scripts/migrate-portal-inventory.cjs` with explicit source and destination database URLs; preview first, then run with `--apply`.

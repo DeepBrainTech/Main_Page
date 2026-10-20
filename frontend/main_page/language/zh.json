@@ -64,6 +64,16 @@
       "premium": "高级会员",
       "membership": "会员"
     },
+    "sources": {
+      "chessMater": "棋艺大师",
+      "chessTourmaster": "棋境之旅",
+      "quantumGo": "量子围棋",
+      "fogChess": "迷雾象棋",
+      "onlineChess": "在线国际象棋",
+      "numberBlast": "数字消除",
+      "sudoku": "数独",
+      "mentalMath": "心算"
+    },
     "events": {
       "purchase": {
         "title": "购买成功",
@@ -72,6 +82,7 @@
       "assetSpent": {
         "title": "资产消耗",
         "message": "在 {source} 中消耗了 {assets}。",
+        "messageWithoutSource": "消耗了 {assets}。",
         "separator": "、",
         "coins": "{count} 金币",
         "diamonds": "{count} 钻石",

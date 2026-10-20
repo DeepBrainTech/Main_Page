@@ -86,12 +86,25 @@ async def redeem_item(
     request_id: UUID | None = None,
 ):
     """Spend portal assets and add inventory once when a request UUID is supplied."""
+    if item_id.startswith("chess_tourmaster_"):
+        from services.tourmaster_inventory import purchase_item
+        result = purchase_item(db, current_user.id, item_id, game_mode, request_id)
+        return APIResponse(success=True, message="ok", data=result)
+    if item_id.startswith("chess_mater_"):
+        from services.chessmater_inventory import purchase_item
+        result = purchase_item(db, current_user.id, item_id, game_mode, request_id)
+        return APIResponse(success=True, message="ok", data=result)
     lock_account(db, current_user.id)
     payload = {"item_id": item_id, "game_mode": game_mode}
     replay = replay_operation(db, current_user.id, request_id, "shop.redeem", payload)
     if replay is not None:
         return APIResponse(success=True, message="ok", data=replay)
     item = _require_item(item_id, game_mode)
+    grants = item.get("grants", {item_id: 1})
+    for granted_id, quantity in grants.items():
+        _require_item(granted_id, game_mode)
+        if not isinstance(quantity, int) or isinstance(quantity, bool) or quantity <= 0:
+            raise HTTPException(status_code=500, detail="invalid_shop_grant")
     rewards = debit_assets(
         db,
         current_user.id,
@@ -99,25 +112,32 @@ async def redeem_item(
         source="shop:" + item_id,
         request_id=str(request_id) if request_id else None,
     )
-    inventory = (
-        db.query(UserItemInventory)
-        .filter_by(user_id=current_user.id, item_id=item_id)
-        .first()
-    )
-    if inventory is None:
-        inventory = UserItemInventory(
-            user_id=current_user.id, item_id=item_id, quantity=1
+    granted_items = []
+    for granted_id, quantity in grants.items():
+        inventory = (
+            db.query(UserItemInventory)
+            .filter_by(user_id=current_user.id, item_id=granted_id)
+            .first()
         )
-        db.add(inventory)
-    else:
-        inventory.quantity += 1
+        if inventory is None:
+            inventory = UserItemInventory(
+                user_id=current_user.id, item_id=granted_id, quantity=quantity
+            )
+            db.add(inventory)
+        else:
+            inventory.quantity += quantity
+        granted_items.append({
+            "item_id": granted_id, "granted_quantity": quantity,
+            "inventory_quantity": inventory.quantity,
+        })
     data = {
         "item_id": item_id,
         "item_name": item["name"],
         "games": item.get("games", []),
         "game_mode": game_mode,
         "cost": item["cost"],
-        "inventory_quantity": inventory.quantity,
+        "inventory_quantity": inventory.quantity if "grants" not in item else None,
+        "granted_items": granted_items,
         "assets": balances(rewards),
     }
     save_operation(db, current_user.id, request_id, "shop.redeem", payload, data)
@@ -143,6 +163,10 @@ async def consume_item(
     request_id: UUID | None = None,
 ):
     """Consume inventory once when a request UUID is supplied."""
+    if item_id.startswith("chess_tourmaster_"):
+        raise HTTPException(status_code=410, detail="tourmaster_inventory_is_game_owned")
+    if item_id.startswith("chess_mater_"):
+        raise HTTPException(status_code=410, detail="chessmater_inventory_is_game_owned")
     lock_account(db, current_user.id)
     payload = {"item_id": item_id, "game_mode": game_mode, "count": count}
     replay = replay_operation(db, current_user.id, request_id, "shop.consume", payload)

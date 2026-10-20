@@ -64,6 +64,16 @@
       "premium": "Premium",
       "membership": "Membership"
     },
+    "sources": {
+      "chessMater": "ChessMater",
+      "chessTourmaster": "Chess Tourmaster",
+      "quantumGo": "Quantum Go",
+      "fogChess": "FogChess",
+      "onlineChess": "Online Chess",
+      "numberBlast": "Number Blast",
+      "sudoku": "Sudoku",
+      "mentalMath": "Mental Math"
+    },
     "events": {
       "purchase": {
         "title": "Purchase Successful",
@@ -72,6 +82,7 @@
       "assetSpent": {
         "title": "Assets Spent",
         "message": "Spent {assets} on {source}.",
+        "messageWithoutSource": "Spent {assets}.",
         "separator": ", ",
         "coins": "{count} coins",
         "diamonds": "{count} diamonds",

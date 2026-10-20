@@ -26,15 +26,44 @@ SHOP_ITEMS: dict[str, dict[str, Any]] = {
         "cost": {"coins": 5, "diamonds": 0, "flowers": 0},
     },
 
+    "chess_mater_reply": {
+        "name": "Chess Mater Hint Unlock Ticket",
+        "games": ["chessmater"],
+        "cost": {"coins": 300, "diamonds": 0, "flowers": 0},
+    },
     "chess_mater_undo": {
         "name": "Chess Mater Undo",
         "games": ["chessmater"],
-        "cost": {"coins": 5, "diamonds": 0, "flowers": 0},
+        "cost": {"coins": 400, "diamonds": 0, "flowers": 0},
     },
     "chess_mater_antigravity": {
         "name": "Chess Mater Antigravity",
         "games": ["chessmater"],
-        "cost": {"coins": 5, "diamonds": 0, "flowers": 0},
+        "cost": {"coins": 600, "diamonds": 0, "flowers": 0},
+    },
+    "chess_mater_reply_pack5": {
+        "name": "Chess Mater Hint Pack of 5",
+        "games": ["chessmater"],
+        "cost": {"coins": 1300, "diamonds": 0, "flowers": 0},
+        "grants": {"chess_mater_reply": 5},
+    },
+    "chess_mater_undo_pack5": {
+        "name": "Chess Mater Undo Pack of 5",
+        "games": ["chessmater"],
+        "cost": {"coins": 1700, "diamonds": 0, "flowers": 0},
+        "grants": {"chess_mater_undo": 5},
+    },
+    "chess_mater_antigravity_pack5": {
+        "name": "Chess Mater AntiGravity Pack of 5",
+        "games": ["chessmater"],
+        "cost": {"coins": 2500, "diamonds": 0, "flowers": 0},
+        "grants": {"chess_mater_antigravity": 5},
+    },
+    "chess_mater_utility_pack": {
+        "name": "ChessMater Utility Pack",
+        "games": ["chessmater"],
+        "cost": {"coins": 1900, "diamonds": 0, "flowers": 0},
+        "grants": {"chess_mater_reply": 3, "chess_mater_undo": 2, "chess_mater_antigravity": 1},
     },
     "learning_mental_math_making_whole": {
         "name": "learning_mental_math_making_whole",
