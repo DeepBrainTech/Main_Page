@@ -64,6 +64,71 @@ const refreshed = await portal.refreshSession();
 
 启动 URL 中的 coins/diamonds/flowers 只用于初始展示。余额和扣费始终以服务端为准。
 
+### 多游戏共用排行榜头像
+
+游戏后端使用 `POST /api/games/{api_slug}/leaderboard/avatars`，请求头为 `Authorization: Bearer <token>`，无需请求体。已登记游戏自动复用同一接口。ChessMater 使用 `api_slug=chessmater`，直接调用公共路由和服务，不保留游戏专用头像模块。
+
+凭证必须由游戏后端签发，使用该游戏的 `{env_prefix}_JWT_SECRET` 和 `{env_prefix}_JWT_ALG`，不能使用主站签发的游戏登录 Token。以 `mygame` 为例：
+
+```python
+from datetime import datetime, timedelta, timezone
+import os
+from jose import jwt
+
+token = jwt.encode(
+    {
+        "user_ids": ["1", "2", "3"],
+        "purpose": "leaderboard-avatars",
+        "aud": "mygame-leaderboard-avatars",
+        "iss": "mygame-game",
+        "exp": datetime.now(timezone.utc) + timedelta(seconds=60),
+    },
+    os.environ["MYGAME_JWT_SECRET"],
+    algorithm=os.getenv("MYGAME_JWT_ALG", "HS256"),
+)
+```
+
+`aud` 固定为 `{game_key}-leaderboard-avatars`，`iss` 固定为 `{game_key}-game`，与登录凭证的 AUD/ISS 配置独立。`user_ids` 为 1–3 个主站用户 ID 字符串，游戏后端应从排行榜结果确定用户范围。
+
+成功响应的 `data.avatars` 每项仅包含 `user_id`、`avatar_url`、`avatar_fallback_url`，仅返回存在且启用的账号。头像优先使用上传头像，其次 Google 头像，最后使用主站默认头像。响应禁止缓存；401 表示凭证缺失或无效，404 表示游戏未登记，503 表示游戏签名密钥未配置。
+
+底层头像解析和查询统一在 `services/avatars.py`，游戏凭证校验在 `services/game_avatars.py`。资产继续共用 `GET /api/user/assets` 和 `services/assets.py`；游戏专属奖励、道具交付仍由各游戏服务负责。
+
+### 多游戏共用首次通关奖励
+
+在 `config/game_rewards.py` 的 `GAME_LEVEL_REWARDS` 中，使用已登记的 `game_key` 配置关卡范围和奖励。例如：
+
+```python
+"mygame": LevelRewardRule(
+    first_level=1,
+    last_level=50,
+    rewards={"coins": 50, "diamonds": 2},
+),
+```
+
+游戏后端确认首次通关后，调用 `POST /api/games/{api_slug}/level-rewards/claim`。请求头为 `Authorization: Bearer <token>`，无需请求体。Token 使用该游戏的 `{env_prefix}_REWARD_SECRET`（未设置时使用 `{env_prefix}_JWT_SECRET`）签名，算法使用 `{env_prefix}_JWT_ALG`，默认 HS256。密钥仅保存在双方后端。
+
+```python
+token = jwt.encode(
+    {
+        "user_id": "1",
+        "level": 3,
+        "purpose": "first-clear-reward",
+        "aud": "mygame-level-reward",
+        "iss": "mygame-game",
+        "exp": datetime.now(timezone.utc) + timedelta(seconds=60),
+    },
+    os.environ.get("MYGAME_REWARD_SECRET") or os.environ["MYGAME_JWT_SECRET"],
+    algorithm=os.getenv("MYGAME_JWT_ALG", "HS256"),
+)
+```
+
+金额完全由主站配置决定，Token 只证明哪个用户通过哪个关卡。主站按游戏、账号和关卡去重，在同一事务中入账并保存领取记录。新游戏无需新增路由或服务。未登记游戏返回 404 `unknown_game`，未配置奖励返回 404 `level_rewards_not_configured`；签名配置不可用返回 503，凭证无效返回 401。
+
+成功响应的 `data` 包含 `game_key`、`level`、`rewards`（如 `{"coins": 200}`）、`already_claimed` 和最新 `assets`。重试返回首次领取时的奖励金额，不会重新入账。游戏后端应保存待发记录，超时后重试，确认游戏、关卡和奖励后才标记已到账。
+
+ChessMater 配置为 1–105 关、每关首次奖励 200 金币；`ledger_operation="first-clear-coins"` 保留已保存的去重标识，禁止随意修改，否则会破坏历史记录校验。所有游戏的去重标识和已奖励关卡范围应保持稳定。主站已删除 ChessMater 专属奖励路由和服务；需同步部署 ChessMater 后端，旧 Token 用途 `first-clear-coins` 和顶层奖励字段 `data.coins` 不再接受。
+
 ## 3. 道具兑换和消耗
 
 在 config/shop_items.py 的 SHOP_ITEMS 中登记商品：
