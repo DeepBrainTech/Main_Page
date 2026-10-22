@@ -1,5 +1,5 @@
 # 构建阶段
-FROM node:20-alpine AS builder
+FROM node:22.23.4-alpine AS builder
 
 ARG NEXT_PUBLIC_GOOGLE_CLIENT_ID=""
 ENV NEXT_PUBLIC_GOOGLE_CLIENT_ID=$NEXT_PUBLIC_GOOGLE_CLIENT_ID
@@ -13,8 +13,8 @@ WORKDIR /app
 # 复制 package 文件
 COPY package*.json ./
 
-# 安装依赖（使用 legacy-peer-deps 以解决 next-intl 与 Next.js 16 的 peer dependency 冲突）
-RUN npm install --legacy-peer-deps
+# Install locked dependencies with the existing peer dependency compatibility flag.
+RUN npm ci --legacy-peer-deps
 
 # 复制源代码
 COPY . .
@@ -23,7 +23,7 @@ COPY . .
 RUN npm run build
 
 # 生产运行阶段
-FROM node:20-alpine AS runner
+FROM node:22.23.4-alpine AS runner
 
 WORKDIR /app
 
