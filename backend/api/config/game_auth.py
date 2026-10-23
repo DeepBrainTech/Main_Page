@@ -32,6 +32,7 @@ GAME_AUTH_ENTRIES: tuple[GameAuthEntry, ...] = (
         "quantum-go",
         has_session=True,
     ),
+    # Freefall Chess keeps its legacy game/API keys, env prefix and JWT audience for existing clients.
     GameAuthEntry(
         "chessmater",
         "chessmater",

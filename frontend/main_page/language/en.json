@@ -65,7 +65,7 @@
       "membership": "Membership"
     },
     "sources": {
-      "chessMater": "ChessMater",
+      "chessMater": "Freefall Chess",
       "chessTourmaster": "Chess Tourmaster",
       "quantumGo": "Quantum Go",
       "fogChess": "FogChess",
@@ -413,7 +413,7 @@
     "numberBlast": "Number Blast",
     "startFogChess": "FogChess",
     "quantumGo": "Quantum Go",
-    "chessMater": "ChessMater",
+    "chessMater": "Freefall Chess",
     "chessTourmaster": "Chess Tourmaster",
     "onlineChess": "Online Chess",
     "intercontinentalChess": "Intercontinental Chess",
@@ -514,7 +514,7 @@
     "completionProgress": "{completed}/{total} Completed",
     "dailyGoals": "Daily Goals",
     "monthlyGoals": "Monthly Goals",
-    "dailyPlayChessMater": "Complete 1 game of ChessMater",
+    "dailyPlayChessMater": "Complete 1 game of Freefall Chess",
     "dailyPlayChessTourmaster": "Complete 1 game of Chess Tourmaster",
     "monthlyChessTourmaster20": "Complete first 20 games of Chess Tourmaster",
     "rewardCoins": "+{count} coins",
@@ -1486,7 +1486,7 @@
         "description": "Experience new ways to play as each theme brings a unique twist to the classic puzzle."
       },
       "chessMater": {
-        "name": "ChessMater",
+        "name": "Freefall Chess",
         "tagline": "Pattern recognition, memory, and analysis.",
         "description": "Enhances working memory and logical reasoning through dynamic chess-based puzzles, thereby building individualized cognitive patterns."
       },
@@ -1518,11 +1518,11 @@
       },
       "memory": {
         "title": "Memory",
-        "game": "ChessMater"
+        "game": "Freefall Chess"
       },
       "patternRecognition": {
         "title": "Pattern Recognition",
-        "game": "ChessMater"
+        "game": "Freefall Chess"
       }
     },
     "testimonials": {

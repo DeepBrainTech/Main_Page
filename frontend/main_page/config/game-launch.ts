@@ -53,6 +53,7 @@ export const GAME_LAUNCH_ENTRIES: GameLaunchEntry[] = [
   },
   {
     kind: "token",
+    // Freefall Chess is the public name; keep legacy launch/API/env keys and the URL for compatibility.
     launchKey: "chessMater",
     apiSlug: "chessmater",
     gameUrl:

@@ -25,6 +25,7 @@ export const DAILY_TASKS: TaskConfig[] = [
   {
     id: "daily-1",
     type: "daily",
+    // Display Freefall Chess via i18n; keep these keys aligned with existing daily progress records.
     labelKey: "dailyPlayChessMater",
     gameMode: "chessmater",
     targetCount: 1,

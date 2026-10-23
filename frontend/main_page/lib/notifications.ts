@@ -279,12 +279,20 @@ export function mapNotification(
 ): NotificationItem {
   const icon = notificationIcon(notification.icon, t);
   const { title, message, messageParts } = localizeNotificationContent(notification, t);
+  // Localize Freefall Chess and its legacy ChessMater name only when rendering;
+  // preserve the original notification, ledger and source IDs for compatibility.
+  const displayText = (value: string) =>
+    value.replace(/\b(?:Chess[ _-]?Mater|Freefall\s+Chess)\b|棋艺大师|自由落体国际象棋/gi, () => t("sources.chessMater"));
   return {
     id: notification.id,
     type: notification.type,
-    title,
-    message,
-    messageParts,
+    title: displayText(title),
+    message: displayText(message),
+    messageParts: messageParts ? {
+      before: displayText(messageParts.before),
+      highlight: displayText(messageParts.highlight),
+      after: displayText(messageParts.after),
+    } : null,
     icon: notification.icon,
     iconSrc: icon.src,
     iconAlt: icon.alt,
