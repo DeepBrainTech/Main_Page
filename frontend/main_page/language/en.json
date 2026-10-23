@@ -66,7 +66,7 @@
     },
     "sources": {
       "chessMater": "Freefall Chess",
-      "chessTourmaster": "Chess Tourmaster",
+      "chessTourmaster": "Knightours Chess",
       "quantumGo": "Quantum Go",
       "fogChess": "FogChess",
       "onlineChess": "Online Chess",
@@ -414,7 +414,7 @@
     "startFogChess": "FogChess",
     "quantumGo": "Quantum Go",
     "chessMater": "Freefall Chess",
-    "chessTourmaster": "Chess Tourmaster",
+    "chessTourmaster": "Knightours Chess",
     "onlineChess": "Online Chess",
     "intercontinentalChess": "Intercontinental Chess",
     "mathChess": "Math Chess",
@@ -515,8 +515,8 @@
     "dailyGoals": "Daily Goals",
     "monthlyGoals": "Monthly Goals",
     "dailyPlayChessMater": "Complete 1 game of Freefall Chess",
-    "dailyPlayChessTourmaster": "Complete 1 game of Chess Tourmaster",
-    "monthlyChessTourmaster20": "Complete first 20 games of Chess Tourmaster",
+    "dailyPlayChessTourmaster": "Complete 1 game of Knightours Chess",
+    "monthlyChessTourmaster20": "Complete first 20 games of Knightours Chess",
     "rewardCoins": "+{count} coins",
     "rewardDiamonds": "+{count} diamonds",
     "rewardFlowers": "+{count} flowers",
@@ -1491,7 +1491,7 @@
         "description": "Enhances working memory and logical reasoning through dynamic chess-based puzzles, thereby building individualized cognitive patterns."
       },
       "chessTourmaster": {
-        "name": "Chess Tourmaster",
+        "name": "Knightours Chess",
         "tagline": "Strategic Chess Adventures Across Dynamic Boards.",
         "description": "Challenge your tactical planning and adaptability with innovative chess-based puzzles set across evolving board designs."
       },

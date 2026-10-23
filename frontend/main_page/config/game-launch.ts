@@ -58,13 +58,15 @@ export const GAME_LAUNCH_ENTRIES: GameLaunchEntry[] = [
     apiSlug: "chessmater",
     gameUrl:
       process.env.NEXT_PUBLIC_CHESSMATER_URL ||
-      "https://chessmater.deepbraintechnology.com/",
+      "https://freefall-chess.deepbraintechnology.com/",
     },
   {
     kind: "token",
     launchKey: "chessTourmaster",
     apiSlug: "chess-tourmaster",
-    gameUrl: "https://chess-tourmaster.deepbraintechnology.com",
+    gameUrl:
+      process.env.NEXT_PUBLIC_TOURMASTER_URL ||
+      "https://knightours-chess.deepbraintechnology.com",
   },
   {
     kind: "token",

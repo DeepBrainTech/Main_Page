@@ -16,12 +16,12 @@ from typing import Any
 
 SHOP_ITEMS: dict[str, dict[str, Any]] = {
     "chess_tourmaster_hint": {
-        "name": "Chess Tourmaster_hint",
+        "name": "Knightours Chess Hint",
         "games": ["chess-tourmaster"],
         "cost": {"coins": 5, "diamonds": 0, "flowers": 0},
     },
         "chess_tourmaster_undo": {
-        "name": "Chess Tourmaster_undo",
+        "name": "Knightours Chess Undo",
         "games": ["chess-tourmaster"],
         "cost": {"coins": 5, "diamonds": 0, "flowers": 0},
     },

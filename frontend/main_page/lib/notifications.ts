@@ -279,10 +279,12 @@ export function mapNotification(
 ): NotificationItem {
   const icon = notificationIcon(notification.icon, t);
   const { title, message, messageParts } = localizeNotificationContent(notification, t);
-  // Localize Freefall Chess and its legacy ChessMater name only when rendering;
+  // Localize current and legacy game names only when rendering;
   // preserve the original notification, ledger and source IDs for compatibility.
   const displayText = (value: string) =>
-    value.replace(/\b(?:Chess[ _-]?Mater|Freefall\s+Chess)\b|棋艺大师|自由落体国际象棋/gi, () => t("sources.chessMater"));
+    value
+      .replace(/\b(?:Chess[ _-]?Mater|Freefall\s+Chess)\b|棋艺大师|自由落体国际象棋/gi, () => t("sources.chessMater"))
+      .replace(/\b(?:Chess[ _-]?Tourmaster|Tourmaster|Knightours\s+Chess)\b|棋境之旅|棋旅大师/gi, () => t("sources.chessTourmaster"));
   return {
     id: notification.id,
     type: notification.type,
