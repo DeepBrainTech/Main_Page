@@ -4,7 +4,7 @@ import BrainGamesTab from "@/components/features/brain-games/BrainGamesTab";
 import { useGameLauncher } from "@/hooks/useGameLauncher";
 
 export default function BrainGamesPage() {
-  const { launchByKey } = useGameLauncher();
+  const { launchEntry } = useGameLauncher();
 
-  return <BrainGamesTab launchByKey={launchByKey} />;
+  return <BrainGamesTab onLaunchGame={launchEntry} />;
 }

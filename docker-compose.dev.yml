@@ -43,6 +43,10 @@ services:
     container_name: main-page-api-dev
     ports:
       - "8000:8000"
+    # Load backend credentials without replacing them with empty root .env defaults.
+    env_file:
+      - path: ./backend/api/.env
+        required: false
     environment:
       - HOST=0.0.0.0
       - PORT=8000
@@ -51,6 +55,9 @@ services:
       - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:3000,http://frontend:3000,http://localhost:5173}
       - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/main_page_db
       - REDIS_URL=redis://redis:6379/0
+      - R2_BUCKET_NAME=${R2_BUCKET_NAME:-dbt-learning}
+      # The game backend runs on the host; localhost here would refer to this container.
+      - CHESSMATER_API_URL=${CHESSMATER_API_URL:-http://host.docker.internal:3001}
       - SECRET_KEY=dev-secret-key-change-in-production-please
       # ===== Cross-subdomain auth cookie =====
       # Local dev: host-only cookie on localhost, no HTTPS requirement.

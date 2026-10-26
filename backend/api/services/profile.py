@@ -11,7 +11,7 @@ from models import User
 from schemas import CompleteProfileBody, UserResponse, compute_age
 from services.avatars import avatar_url
 from services.portal_sessions import issue_portal_session
-from utils.r2_storage import upload_object_bytes
+from utils.avatar_storage import upload_avatar_bytes
 
 
 def _build_avatar_url(user: User) -> Optional[str]:
@@ -110,9 +110,9 @@ async def upload_avatar(file: UploadFile, current_user: User, db: Session):
             detail="AUTH_AVATAR_TOO_LARGE",
         )
 
-    object_key = f"Avatar/{current_user.id}/{uuid4().hex}.{ext}"
+    object_key = f"{current_user.id}/{uuid4().hex}.{ext}"
     try:
-        upload_object_bytes(
+        upload_avatar_bytes(
             object_key=object_key,
             content=content,
             content_type=mime_type,

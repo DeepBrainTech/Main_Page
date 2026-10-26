@@ -5,12 +5,16 @@ import os
 from sqlalchemy.orm import Session
 
 from models import User
+from utils.avatar_storage import generate_avatar_read_url
 from utils.r2_storage import generate_object_read_url
 
 
 def avatar_url(object_key: str | None, google_url: str | None) -> str | None:
     if object_key:
         try:
+            # New keys start with the user ID; historical keys retain their old bucket.
+            if object_key.split("/", 1)[0].isdigit() and "/" in object_key:
+                return generate_avatar_read_url(object_key=object_key, expires_seconds=86400)
             return generate_object_read_url(
                 object_key=object_key, expires_seconds=86400
             )

@@ -10,6 +10,8 @@ from routes.game_purchases import router as game_purchase_router
 from routes.flower_gifts import router as flower_gift_router
 from routes.game_reward_routes import router as game_reward_router
 from routes.game_avatar_routes import router as game_avatar_router
+from routes.game_media_routes import router as game_media_router
+from routes.game_leaderboard_routes import router as game_leaderboard_router
 from schemas import APIResponse, GamePlayRecordIn
 from services import game_activity, game_likes, game_sessions, inventory
 
@@ -17,6 +19,8 @@ router = APIRouter(prefix="/api/games", tags=["Games"])
 router.include_router(flower_gift_router)
 router.include_router(game_reward_router)
 router.include_router(game_avatar_router)
+router.include_router(game_media_router)
+router.include_router(game_leaderboard_router)
 
 
 @router.get("/shop/catalog", response_model=APIResponse)

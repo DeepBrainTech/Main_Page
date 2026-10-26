@@ -3,6 +3,7 @@
 import { useParams } from "next/navigation";
 import { useRouter } from "@/lib/i18n-navigation";
 import { useTranslations } from "next-intl";
+import type { GameEntry } from "@/config/brain-games";
 import { apiFetch } from "@/lib/api-config";
 import { getUserTimezone, postGamePlayedRecord } from "@/services/userApi";
 import {
@@ -99,5 +100,13 @@ export function useGameLauncher() {
 
   return {
     launchByKey,
+    launchEntry: (entry: GameEntry) => {
+      if (entry.launchKey !== "external") {
+        launchByKey(entry.launchKey);
+      } else if (entry.externalUrl) {
+        void postGamePlayedRecord(entry.key).catch(() => {});
+        window.location.href = entry.externalUrl;
+      }
+    },
   };
 }

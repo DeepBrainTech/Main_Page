@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 import time
 
-from utils.r2_storage import get_r2_client
+from utils.r2_storage import get_r2_read_only_client
 
 
 DEFAULT_KNOWLEDGE_BUCKET = "dbt-chat"
@@ -19,7 +19,7 @@ _cached_at = 0.0
 def _read_r2_knowledge() -> str:
     bucket = os.getenv("WUKOO_KNOWLEDGE_BUCKET", DEFAULT_KNOWLEDGE_BUCKET).strip() or DEFAULT_KNOWLEDGE_BUCKET
     key = os.getenv("WUKOO_KNOWLEDGE_KEY", DEFAULT_KNOWLEDGE_KEY).strip() or DEFAULT_KNOWLEDGE_KEY
-    client = get_r2_client()
+    client = get_r2_read_only_client()
     response = client.get_object(Bucket=bucket, Key=key)
     body = response["Body"].read()
     return body.decode("utf-8").strip()

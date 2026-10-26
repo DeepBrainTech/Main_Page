@@ -3,12 +3,12 @@
 import Image, { type StaticImageData } from "next/image";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
+import { Link } from "@/lib/i18n-navigation";
+import { getGameDetailHref } from "@/lib/game-details";
 import { GAMES_BY_DIMENSION } from "@/config/brain-games";
-import type { PortalLaunchKey } from "@/config/game-launch";
 import { COGNITIVE_DIMENSION_KEYS } from "@/types/cognitive";
 import type { GameEntry } from "@/config/brain-games";
 import { useGameLikes } from "@/hooks/useGameLikes";
-import { postGamePlayedRecord } from "@/services/userApi";
 import chessmaterGif from "../../../public/brain-games/chessmater.gif";
 import sudokuGif from "../../../public/brain-games/sudoku.gif";
 import chessTourmasterGif from "../../../public/brain-games/chessTourmaster.gif";
@@ -28,7 +28,7 @@ const GAME_COVER_MAP: Record<string, string | StaticImageData> = {
 };
 
 interface BrainGamesTabProps {
-  launchByKey: (key: PortalLaunchKey) => void;
+  onLaunchGame: (entry: GameEntry) => void;
 }
 
 type FeaturedKey = "fogchess" | "quantumgo";
@@ -190,28 +190,10 @@ const CATEGORY_META: Record<
   },
 };
 
-function launchForKey(
-  entry: GameEntry,
-  launchByKey: BrainGamesTabProps["launchByKey"]
-): () => void {
-  const launchKey = entry.launchKey;
-  if (launchKey === "external") {
-    const externalUrl = entry.externalUrl;
-    if (!externalUrl) return () => {};
-    return () => {
-      void postGamePlayedRecord(entry.key).catch(() => {
-        /* open game even if record fails */
-      });
-      window.location.href = externalUrl;
-    };
-  }
-  return () => launchByKey(launchKey);
-}
-
 /**
  * Brain games tab with featured carousel and category explorer.
  */
-export default function BrainGamesTab({ launchByKey }: BrainGamesTabProps) {
+export default function BrainGamesTab({ onLaunchGame }: BrainGamesTabProps) {
   const tHome = useTranslations("dashboard");
   const tBrain = useTranslations("brainGames");
   const [activeCategory, setActiveCategory] = useState<GameCategoryFilter>(null);
@@ -295,18 +277,18 @@ export default function BrainGamesTab({ launchByKey }: BrainGamesTabProps) {
                       {launchEntry ? (
                         <button
                           type="button"
-                          onClick={launchForKey(launchEntry, launchByKey)}
+                          onClick={() => onLaunchGame(launchEntry)}
                           className="h-[45px] min-w-[125px] rounded-full bg-[#045E96] px-6 text-[16px] font-semibold text-white shadow-[0px_3.2px_4.8px_rgba(4,94,150,0.3)]"
                         >
                           {tBrain("ribbon.playNow")}
                         </button>
                       ) : null}
-                      <button
-                        type="button"
-                        className="h-[45px] min-w-[129px] rounded-full bg-[#DDEDFF] px-6 text-[16px] font-semibold text-[#045E96]"
+                      <Link
+                        href={getGameDetailHref(feature.key)}
+                        className="inline-flex h-[45px] min-w-[129px] items-center justify-center rounded-full bg-[#DDEDFF] px-6 text-[16px] font-semibold text-[#045E96]"
                       >
                         {tBrain("ribbon.learnMore")}
-                      </button>
+                      </Link>
                     </div>
                   </div>
                   <div className="relative min-h-[220px] w-full flex-1 overflow-hidden bg-slate-100 sm:min-h-0 sm:min-w-0 sm:flex-[0.95]">
@@ -339,10 +321,9 @@ export default function BrainGamesTab({ launchByKey }: BrainGamesTabProps) {
               if (!rankingEntry) return null;
 
               return (
-                <button
+                <Link
                   key={gameKey}
-                  type="button"
-                  onClick={launchForKey(rankingEntry, launchByKey)}
+                  href={getGameDetailHref(rankingEntry.key)}
                   className="flex w-full shrink-0 items-center gap-3 rounded-[16px] border border-white/80 bg-white p-3 text-left shadow-[0px_10px_15px_0px_rgba(0,0,0,0.10)] transition hover:translate-y-[-1px]"
                 >
                   <div className="relative h-8 w-8 shrink-0">
@@ -370,7 +351,7 @@ export default function BrainGamesTab({ launchByKey }: BrainGamesTabProps) {
                     </p>
                   </div>
                   <span className="shrink-0 text-xl text-[#0B6FB4]">›</span>
-                </button>
+                </Link>
               );
             })}
           </div>
@@ -480,14 +461,15 @@ export default function BrainGamesTab({ launchByKey }: BrainGamesTabProps) {
                 : (GAME_COVER_MAP[entry.key] ?? `/brain-games/${entry.key}.gif`); 
               const playerText =
                 entry.key === "quantumgo" || entry.key === "no-king-chess" || entry.key === "soccer_chess" || entry.key === "fogchess" || entry.key === "online-chess" ? tBrain("playersOneTwo") : tBrain("playersOne");
-              const launch = launchForKey(entry, launchByKey);
+              const launch = () => onLaunchGame(entry);
 
               return (
                 <div
                   key={entry.key}
-                  className="@container/card rounded-[22px] border border-white/60 bg-white/90 p-3 text-left shadow-[0px_10px_15px_0px_rgba(0,0,0,0.1),0px_4px_6px_0px_rgba(0,0,0,0.1)] transition hover:translate-y-[-2px] sm:rounded-[26px] sm:p-3.5 md:rounded-[30px] md:p-4 lg:rounded-[32px] lg:p-[15px]"
+                  className="@container/card relative rounded-[22px] border border-white/60 bg-white/90 p-3 text-left shadow-[0px_10px_15px_0px_rgba(0,0,0,0.1),0px_4px_6px_0px_rgba(0,0,0,0.1)] transition hover:translate-y-[-2px] sm:rounded-[26px] sm:p-3.5 md:rounded-[30px] md:p-4 lg:rounded-[32px] lg:p-[15px]"
                 >
-                  <button type="button" onClick={launch} className="block w-full text-left">
+                  <Link href={getGameDetailHref(entry.key)} aria-label={tHome(entry.nameKey)} className="absolute inset-0 z-10 rounded-[inherit] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#0075FF]" />
+                  <div className="block w-full text-left">
                     <div className="relative aspect-[344/217] w-full overflow-hidden rounded-[18px] bg-slate-200 sm:rounded-[20px] md:rounded-[22px] lg:rounded-[24px]">
                       {imageSrc ? (
                         <Image
@@ -499,19 +481,17 @@ export default function BrainGamesTab({ launchByKey }: BrainGamesTabProps) {
                         />
                       ) : null}
                     </div>
-                  </button>
+                  </div>
                   {/* Figma: left column = title + players (tight gap); Play vertically centered to that block */}
                   <div className="mt-3 px-0 @min-[22rem]/card:mt-4 sm:px-0.5">
                     <div className="flex min-w-0 items-center justify-between gap-2">
                       <div className="flex min-w-0 flex-1 flex-col gap-px">
-                        <button type="button" onClick={launch} className="min-w-0 text-left">
+                        <div className="min-w-0 text-left">
                           <p className="m-0 break-words font-['Titan_One'] text-[15px] font-normal leading-tight text-[#045E96] @min-[18rem]/card:text-[17px] @min-[22rem]/card:text-[19px] @min-[26rem]/card:text-xl @min-[22rem]/card:leading-snug">
                             {tHome(entry.nameKey)}
                           </p>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={launch}
+                        </div>
+                        <div
                           className="font-app-body flex min-w-0 items-center gap-2 py-0 text-left text-[12px] font-normal leading-snug text-[#106FAA] @min-[20rem]/card:text-sm @min-[20rem]/card:leading-5"
                         >
                           <span className="inline-flex h-4 w-4 shrink-0 text-[#106FAA]" aria-hidden>
@@ -523,7 +503,7 @@ export default function BrainGamesTab({ launchByKey }: BrainGamesTabProps) {
                             </svg>
                           </span>
                           <span>{playerText}</span>
-                        </button>
+                        </div>
                       </div>
                       <button
                         type="button"
@@ -531,7 +511,7 @@ export default function BrainGamesTab({ launchByKey }: BrainGamesTabProps) {
                           e.stopPropagation();
                           launch();
                         }}
-                        className="font-app-body inline-flex h-8 min-w-[7rem] shrink-0 items-center justify-center rounded-full bg-[#DDEDFF] px-4 text-[13px] font-medium leading-5 text-[#045E96] @min-[22rem]/card:min-w-[7.25rem] @min-[22rem]/card:px-5 @min-[22rem]/card:text-sm"
+                        className="font-app-body relative z-20 inline-flex h-8 min-w-[7rem] shrink-0 items-center justify-center rounded-full bg-[#DDEDFF] px-4 text-[13px] font-medium leading-5 text-[#045E96] @min-[22rem]/card:min-w-[7.25rem] @min-[22rem]/card:px-5 @min-[22rem]/card:text-sm"
                       >
                         {tBrain("ribbon.playNow")}
                       </button>
