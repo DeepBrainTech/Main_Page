@@ -24,8 +24,8 @@ export const GAME_ACHIEVEMENT_GROUPS = [
 export const GAME_ACHIEVEMENT_RULES: Readonly<Partial<Record<string, GameAchievementRules>>> = {
   chessmater: {
     levels: { descriptionKey: "levels", targets: [10, 20, 30, 40, 50] },
-    records: { descriptionKey: "records", targets: [1, 3, 5, 10, 20] },
-    noHints: { descriptionKey: "noHints", targets: [1, 5, 10, 20, 30] },
+    records: { descriptionKey: "records", targets: [10, 20, 30, 40, 50] },
+    noHints: { descriptionKey: "noHints", targets: [10, 20, 30, 40, 50] },
     moves: { descriptionKey: "moves", targets: [50, 150, 500, 1500, 3000] },
   },
 };

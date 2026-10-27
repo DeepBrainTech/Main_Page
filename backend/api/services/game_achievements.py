@@ -16,10 +16,11 @@ from utils.notification_events import schedule_notification_event
 
 TARGETS = {
     "levels": (10, 20, 30, 40, 50),
-    "records": (1, 3, 5, 10, 20),
-    "noHints": (1, 5, 10, 20, 30),
+    "records": (10, 20, 30, 40, 50),
+    "noHints": (10, 20, 30, 40, 50),
     "moves": (50, 150, 500, 1500, 3000),
 }
+RULE_VERSIONS = {"levels": 1, "records": 2, "noHints": 2, "moves": 1}
 
 
 def require_game(api_slug: str):
@@ -75,6 +76,8 @@ def receive_achievement_events(db: Session, token: str, api_slug: str) -> dict:
             if (not isinstance(event, dict) or event.get("group") not in TARGETS
                     or type(event.get("tier")) is not int or not 0 <= event["tier"] < 5
                     or type(event.get("target")) is not int
+                    or type(event.get("rule_version", 1)) is not int
+                    or event.get("rule_version", 1) != RULE_VERSIONS[event["group"]]
                     or event["target"] != TARGETS[event["group"]][event["tier"]]):
                 raise ValueError("invalid_achievement_event")
         user_id = int(raw_user_id)
@@ -87,7 +90,7 @@ def receive_achievement_events(db: Session, token: str, api_slug: str) -> dict:
     created = False
     for event in events:
         group, tier = event["group"], event["tier"]
-        source_id = f"chessmater:achievement:v1:{user_id}:{group}:{tier}"
+        source_id = f"chessmater:achievement:v{RULE_VERSIONS[group]}:{user_id}:{group}:{tier}"
         if db.query(UserNotification).filter_by(source_event_id=source_id).first() is None:
             db.add(UserNotification(
                 user_id=user_id, type="game_achievement", title="Achievement Unlocked",

@@ -56,7 +56,9 @@ for (const locale of ['zh', 'en']) {
   assert.ok(html.includes('aria-valuemax="20"'));
   assert.ok(html.includes('width:100%'));
   for (const [progressValues, expected] of [
-    [{ levels: 10, records: 1, noHints: 1, moves: 50 }, 4],
+    [{ levels: 10, records: 10, noHints: 10, moves: 50 }, 4],
+    [{ levels: 0, records: 9, noHints: 9, moves: 0 }, 0],
+    [{ levels: 0, records: 20, noHints: 30, moves: 0 }, 5],
     [{ levels: 0, records: 0, noHints: 0, moves: 0 }, 0],
     [{ levels: 105, records: 105, noHints: 105, moves: 10000 }, 20],
   ]) {

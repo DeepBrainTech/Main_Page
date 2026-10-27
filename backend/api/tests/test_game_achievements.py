@@ -23,7 +23,7 @@ class GameAchievementTests(CommerceFixture):
 
     def token(self, **overrides):
         claims = {"user_id": "1", "purpose": "achievement-unlocks",
-                  "achievements": [{"group": "records", "tier": 0, "target": 1}],
+                  "achievements": [{"group": "records", "tier": 0, "target": 10, "rule_version": 2}],
                   "exp": datetime.now(timezone.utc) + timedelta(minutes=1),
                   "aud": "chessmater-achievements", "iss": "chessmater-game", **overrides}
         return jwt.encode(claims, "isolated-inventory-test-secret", algorithm="HS256")
@@ -39,13 +39,13 @@ class GameAchievementTests(CommerceFixture):
         self.assertEqual(rows[0].user_id, 1)
         self.assertEqual(rows[0].type, 'game_achievement')
         self.assertEqual(rows[0].notification_metadata,
-                         {"game_key": "chessmater", "group": "records", "tier": 0, "target": 1})
+                         {"game_key": "chessmater", "group": "records", "tier": 0, "target": 10})
 
     def test_new_tiers_and_accounts_are_independent(self):
         with patch('services.game_achievements.schedule_notification_event'):
             receive_achievement_events(self.db, self.token(), 'chessmater')
             receive_achievement_events(self.db, self.token(user_id='2'), 'chessmater')
-            receive_achievement_events(self.db, self.token(achievements=[{"group": "records", "tier": 1, "target": 3}]), 'chessmater')
+            receive_achievement_events(self.db, self.token(achievements=[{"group": "records", "tier": 1, "target": 20, "rule_version": 2}]), 'chessmater')
         self.assertEqual(self.db.query(UserNotification).count(), 3)
 
     def test_wrong_audience_expired_and_malformed_events_are_rejected(self):
@@ -58,6 +58,22 @@ class GameAchievementTests(CommerceFixture):
                 receive_achievement_events(self.db, self.token(**overrides), 'chessmater')
             self.assertEqual(error.exception.status_code, 401)
         self.assertEqual(self.db.query(UserNotification).count(), 0)
+
+    def test_old_notifications_do_not_block_new_thresholds_and_legacy_events_are_rejected(self):
+        self.db.add(UserNotification(user_id=1, type='game_achievement', title='Historical achievement',
+                                    message='Historical message', icon='achievement',
+                                    source_event_id='chessmater:achievement:v1:1:records:0'))
+        self.db.commit()
+        with patch('services.game_achievements.schedule_notification_event'):
+            receive_achievement_events(self.db, self.token(), 'chessmater')
+        self.assertEqual(self.db.query(UserNotification).count(), 2)
+        self.assertEqual(self.db.query(UserNotification).filter_by(source_event_id='chessmater:achievement:v1:1:records:0').one().title,
+                         'Historical achievement')
+        with self.assertRaises(HTTPException):
+            receive_achievement_events(self.db, self.token(achievements=[{'group': 'records', 'tier': 0, 'target': 1}]), 'chessmater')
+        with patch('services.game_achievements.schedule_notification_event'):
+            receive_achievement_events(self.db, self.token(achievements=[{'group': 'moves', 'tier': 0, 'target': 50}]), 'chessmater')
+        self.assertEqual(self.db.query(UserNotification).filter_by(source_event_id='chessmater:achievement:v1:1:moves:0').count(), 1)
 
     @patch('services.game_achievements.requests.get')
     def test_proxy_validates_values_and_uses_current_identity(self, send):
