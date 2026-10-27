@@ -49,8 +49,8 @@ export default function GameLeaderboard({ gameKey }: { gameKey: string }) {
   useContainedWheelScroll(scrollRef, Boolean(data?.entries.length));
   const { isScrolling, handleScroll } = useScrollActivity(Boolean(data?.entries.length));
   return (
-    <aside className={`${dashboardCardClass} min-w-0 rounded-[2rem] p-6 font-app-body sm:p-8`} aria-labelledby="game-leaderboard-title" aria-busy={loading}>
-      <h2 id="game-leaderboard-title" className="flex items-center gap-2.5 font-['Titan_One'] text-2xl leading-8 tracking-wide">
+    <aside className={`${dashboardCardClass} flex min-h-0 min-w-0 flex-col overflow-hidden rounded-[2rem] p-6 font-app-body sm:p-8 xl:absolute xl:inset-x-0 xl:top-0 xl:max-h-full`} aria-labelledby="game-leaderboard-title" aria-busy={loading}>
+      <h2 id="game-leaderboard-title" className="flex shrink-0 items-center gap-2.5 font-['Titan_One'] text-2xl leading-8 tracking-wide">
         <span className="relative block h-8 w-[2.0625rem] shrink-0 overflow-hidden">
           <Image src="/game-details/LeaderboardTrophy.png" alt="" width={67} height={66} className="absolute max-w-none"
             style={{ width: "201.97%", height: "206.04%", left: "-50.69%", top: "-50.3%" }} />
@@ -67,7 +67,7 @@ export default function GameLeaderboard({ gameKey }: { gameKey: string }) {
       ) : data?.entries.length ? (
         <div ref={scrollRef} role="region" tabIndex={0} aria-label={t("leaderboardCompleted")}
           data-scrolling={isScrolling} onScroll={handleScroll}
-          className={`${styles.scrollArea} mt-5 max-h-[39.5rem] touch-pan-y overflow-y-auto overscroll-contain rounded-xl focus-visible:outline-2 focus-visible:outline-offset-2`}>
+          className={`${styles.scrollArea} mt-5 min-h-0 max-h-[39.5rem] touch-pan-y overflow-y-auto overscroll-contain rounded-xl focus-visible:outline-2 focus-visible:outline-offset-2`}>
           <ol className="space-y-2">
             {data.entries.map((entry) => <LeaderboardRow key={entry.user_id} entry={entry} />)}
           </ol>

@@ -61,7 +61,10 @@ export default function GameDetail({ slug }: { slug: string }) {
           </article>
           <GameAchievements gameKey={entry.key} />
         </div>
-        <GameLeaderboard gameKey={entry.key} />
+        {/* Keep the desktop sidebar from increasing the content row height. */}
+        <div className="min-w-0 xl:relative xl:self-stretch">
+          <GameLeaderboard gameKey={entry.key} />
+        </div>
       </div>
     </div>
   );
