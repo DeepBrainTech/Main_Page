@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-/** Size a single row to reveal 20% of the next card when more items are available. */
+/** Observe navigation only; CSS determines card sizes before the first paint. */
 export function usePreviewCarousel(itemCount: number) {
   const trackRef = useRef<HTMLDivElement>(null);
   const [scrollbar, setScrollbar] = useState({ value: 0, max: 0, thumbWidth: 32 });
@@ -33,20 +33,8 @@ export function usePreviewCarousel(itemCount: number) {
       setScrollbar((current) => current.value === value && current.max === max && current.thumbWidth === thumbWidth
         ? current : { value, max, thumbWidth });
     };
-    const measure = () => {
-      const styles = getComputedStyle(track);
-      const width = track.clientWidth - parseFloat(styles.paddingLeft) - parseFloat(styles.paddingRight);
-      const gap = parseFloat(styles.columnGap) || 0;
-      const rem = parseFloat(getComputedStyle(document.documentElement).fontSize);
-      const columns = width >= 48 * rem ? 3 : width >= 32 * rem ? 2 : 1;
-      const hasMore = itemCount > columns;
-      const cardWidth = (width - gap * (hasMore ? columns : columns - 1)) / (columns + (hasMore ? 0.2 : 0));
-      track.style.setProperty("--preview-card-width", `${Math.max(1, cardWidth)}px`);
-      updateNavigation();
-    };
-
-    measure();
-    const observer = new ResizeObserver(measure);
+    updateNavigation();
+    const observer = new ResizeObserver(updateNavigation);
     observer.observe(track);
     const handleScroll = () => {
       updateNavigation();

@@ -55,11 +55,8 @@ export default function GameDetail({ slug }: { slug: string }) {
               <p className="font-semibold">{entry.key === "chessmater" ? t("freefallIntro") : t("intro", { game: name, category: tBrain(`categoryChip.${dimension}`) })}</p>
               <p className="mt-2">{t(`descriptions.${entry.key}`)}</p>
             </div>
-            {loading ? <p role="status" className="mt-8 animate-pulse rounded-2xl bg-[#EDF4FC] p-6">{t("loadingMedia")}</p> : error ? (
-              <div role="status" className="mt-8 rounded-2xl bg-[#EDF4FC] p-6">
-                <p>{t("mediaError")}</p><button type="button" onClick={retry} className="mt-3 rounded-full bg-white px-5 py-2 font-medium">{t("retry")}</button>
-              </div>
-            ) : <GameMediaGallery key={slug} previews={media.previews} tutorials={media.tutorials} gameName={name} />}
+            <GameMediaGallery key={slug} previews={media.previews} tutorials={media.tutorials} gameName={name}
+              loading={loading} error={error} onRetry={retry} />
           </article>
           <GameAchievements gameKey={entry.key} progress={achievementProgress} />
         </div>

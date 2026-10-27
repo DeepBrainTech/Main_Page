@@ -12,10 +12,10 @@ export function useGameMedia(slug: string) {
 
   useEffect(() => {
     const controller = new AbortController();
-    setState({ slug, media: { previews: [], tutorials: [] }, loading: true, error: false });
+    setState((previous) => ({ slug, media: previous.slug === slug ? previous.media : { previews: [], tutorials: [] }, loading: true, error: false }));
     void fetchGameMedia(slug, controller.signal).then(
       (media) => { if (!controller.signal.aborted) setState({ slug, media, loading: false, error: false }); },
-      () => { if (!controller.signal.aborted) setState({ slug, media: { previews: [], tutorials: [] }, loading: false, error: true }); },
+      () => { if (!controller.signal.aborted) setState((previous) => ({ ...previous, loading: false, error: true })); },
     );
     return () => controller.abort();
   }, [slug, attempt]);
