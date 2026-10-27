@@ -8,6 +8,7 @@
     "pages:build": "next-on-pages",
     "start": "next start",
     "lint": "eslint",
+    "test:achievements": "node scripts/test-game-achievements.mjs",
     "assets:backgrounds": "node scripts/optimize-home-system-backgrounds.mjs"
   },
   "overrides": {

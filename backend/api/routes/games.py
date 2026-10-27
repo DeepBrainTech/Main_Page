@@ -12,6 +12,7 @@ from routes.game_reward_routes import router as game_reward_router
 from routes.game_avatar_routes import router as game_avatar_router
 from routes.game_media_routes import router as game_media_router
 from routes.game_leaderboard_routes import router as game_leaderboard_router
+from routes.game_achievement_routes import router as game_achievement_router
 from schemas import APIResponse, GamePlayRecordIn
 from services import game_activity, game_likes, game_sessions, inventory
 
@@ -21,6 +22,7 @@ router.include_router(game_reward_router)
 router.include_router(game_avatar_router)
 router.include_router(game_media_router)
 router.include_router(game_leaderboard_router)
+router.include_router(game_achievement_router)
 
 
 @router.get("/shop/catalog", response_model=APIResponse)

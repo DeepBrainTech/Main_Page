@@ -22,6 +22,7 @@ import {
 
 export function useNotifications(activeTab: string | null) {
   const tNotifications = useTranslations("notifications");
+  const tAchievements = useTranslations("gameDetails");
   const [open, setOpen] = useState(false);
   const { toasts, observeNotifications, dismissToast } = useNotificationToasts(open);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
@@ -47,8 +48,8 @@ export function useNotifications(activeTab: string | null) {
     arrowRight: number;
   } | null>(null);
   const mapRow = useCallback(
-    (row: Parameters<typeof mapNotification>[0]) => mapNotification(row, tNotifications),
-    [tNotifications],
+    (row: Parameters<typeof mapNotification>[0]) => mapNotification(row, tNotifications, tAchievements),
+    [tNotifications, tAchievements],
   );
 
   const refreshNotifications = useCallback(async function refresh(showLoading = false) {

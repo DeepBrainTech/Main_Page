@@ -1,4 +1,5 @@
-export type AchievementGroupKey = "levels" | "topThree" | "topTen" | "noHints";
+/** Levels, records, and noHints count distinct levels; moves counts cumulative legal moves. */
+export type AchievementGroupKey = "levels" | "records" | "noHints" | "moves";
 
 export interface AchievementRule {
   descriptionKey: AchievementGroupKey;

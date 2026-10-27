@@ -129,7 +129,7 @@ export default function NotificationPanel({
                     } ${notification.unread ? "cursor-pointer" : ""}`}
                   >
                     <div
-                      className={`flex size-10 shrink-0 items-center justify-center rounded-full px-2.5 ${notification.iconBgClass}`}
+                      className={`flex size-10 shrink-0 items-center justify-center rounded-full ${notification.type === "game_achievement" ? "p-1" : "px-2.5"} ${notification.iconBgClass}`}
                     >
                       <img
                         src={notification.iconSrc}

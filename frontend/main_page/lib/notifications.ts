@@ -1,5 +1,6 @@
 import type { UserNotificationData } from "@/services/notificationsApi";
 import { NOTIFICATION_SOURCE_LABELS } from "@/config/notification-sources";
+import { GAME_ACHIEVEMENT_GROUPS } from "@/config/game-achievements";
 
 export type NotificationMessageParts = {
   before: string;
@@ -102,8 +103,20 @@ function planLabelFromMetadata(
 function localizeNotificationContent(
   notification: UserNotificationData,
   t: NotificationTranslateFn,
+  tAchievements?: NotificationTranslateFn,
 ): { title: string; message: string; messageParts: NotificationMessageParts | null } {
   const metadata = notification.metadata ?? {};
+  const achievement = getAchievement(notification);
+  if (achievement && tAchievements) {
+    return {
+      title: t("events.gameAchievement.title"),
+      message: t("events.gameAchievement.message", {
+        game: t("sources.chessMater"),
+        achievement: tAchievements(`achievementNames.${achievement.group.key}.${achievement.tier}`),
+      }),
+      messageParts: null,
+    };
+  }
   if (notification.type === "asset_spent") {
     const changes = metadata.changes;
     const parts: string[] = [];
@@ -273,12 +286,28 @@ export function formatNotificationTime(value: string | null, t: NotificationTran
   return t("timeDaysAgo", { count: days });
 }
 
+function getAchievement(notification: UserNotificationData) {
+  const metadata = notification.metadata ?? {};
+  if (notification.type !== "game_achievement" || metadata.game_key !== "chessmater") return null;
+  const group = GAME_ACHIEVEMENT_GROUPS.find((item) => item.key === metadata.group);
+  const tier = metadata.tier;
+  return group && typeof tier === "number" && Number.isInteger(tier) && tier >= 0 && tier < group.icons.length
+    ? { group, tier } : null;
+}
+
 export function mapNotification(
   notification: UserNotificationData,
   t: NotificationTranslateFn,
+  tAchievements?: NotificationTranslateFn,
 ): NotificationItem {
   const icon = notificationIcon(notification.icon, t);
-  const { title, message, messageParts } = localizeNotificationContent(notification, t);
+  const achievement = getAchievement(notification);
+  if (achievement) {
+    icon.src = `/game-details/${achievement.group.icons[achievement.tier]}.png`;
+    icon.imgClass = "h-8 w-8 shrink-0 object-contain";
+    icon.alt = t("iconAchievement");
+  }
+  const { title, message, messageParts } = localizeNotificationContent(notification, t, tAchievements);
   // Localize current and legacy game names only when rendering;
   // preserve the original notification, ledger and source IDs for compatibility.
   const displayText = (value: string) =>

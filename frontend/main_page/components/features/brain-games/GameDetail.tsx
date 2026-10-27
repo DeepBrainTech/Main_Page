@@ -7,6 +7,7 @@ import { findGameDetail } from "@/lib/game-details";
 import { useGameLauncher } from "@/hooks/useGameLauncher";
 import { useGameLikes } from "@/hooks/useGameLikes";
 import { useGameMedia } from "@/hooks/useGameMedia";
+import { useGameAchievements } from "@/hooks/useGameAchievements";
 import { dashboardCardClass } from "@/components/features/dashboard/dashboardCardStyles";
 import GameAchievements from "./GameAchievements";
 import GameMediaGallery from "./GameMediaGallery";
@@ -21,6 +22,7 @@ export default function GameDetail({ slug }: { slug: string }) {
   const { media, loading, error, retry } = useGameMedia(slug);
   const game = findGameDetail(slug)!;
   const { entry, dimension } = game;
+  const achievementProgress = useGameAchievements(entry.key);
   const name = tHome(entry.nameKey);
   const likes = likeStates.get(entry.key);
 
@@ -59,7 +61,7 @@ export default function GameDetail({ slug }: { slug: string }) {
               </div>
             ) : <GameMediaGallery key={slug} previews={media.previews} tutorials={media.tutorials} gameName={name} />}
           </article>
-          <GameAchievements gameKey={entry.key} />
+          <GameAchievements gameKey={entry.key} progress={achievementProgress} />
         </div>
         {/* Keep the desktop sidebar from increasing the content row height. */}
         <div className="min-w-0 xl:relative xl:self-stretch">

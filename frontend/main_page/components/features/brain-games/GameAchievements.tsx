@@ -9,16 +9,43 @@ interface GameAchievementsProps {
   progress?: GameAchievementProgress;
 }
 
+function isAchievementUnlocked(value: number | undefined, target: number | undefined) {
+  return target !== undefined && value !== undefined && Number.isFinite(value) && value >= target;
+}
+
 export default function GameAchievements({ gameKey, progress }: GameAchievementsProps) {
   const t = useTranslations("gameDetails");
   const rules = GAME_ACHIEVEMENT_RULES[gameKey];
   const values = progress?.gameKey === gameKey ? progress.values : undefined;
   const hasProgress = values !== undefined;
+  const totalAchievements = GAME_ACHIEVEMENT_GROUPS.reduce(
+    (total, group) => total + (rules?.[group.key]?.targets.length ?? 0), 0,
+  );
+  const unlockedAchievements = GAME_ACHIEVEMENT_GROUPS.reduce(
+    (total, group) => total + (rules?.[group.key]?.targets.filter(
+      (target) => isAchievementUnlocked(values?.[group.key], target),
+    ).length ?? 0), 0,
+  );
   return (
     <section className={`${dashboardCardClass} font-app-body p-6 sm:p-8 xl:p-12`} aria-labelledby="achievements-title">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <h2 id="achievements-title" className="font-['Titan_One'] text-xl leading-8">{t("achievements")}</h2>
-        {rules && !hasProgress && <span className="rounded-full bg-[#EDF4FC] px-3 py-1 text-xs">{t("progressPending")}</span>}
+        {rules && totalAchievements > 0 && (
+          <div className="flex w-full min-w-0 items-center gap-3 sm:ml-auto sm:max-w-[25.9375rem]"
+            title={hasProgress ? undefined : t("progressPending")}>
+            <div role="progressbar" aria-label={t("achievementProgress")}
+              aria-valuemin={0} aria-valuemax={totalAchievements}
+              aria-valuenow={hasProgress ? unlockedAchievements : undefined}
+              aria-valuetext={hasProgress ? t("achievementProgressCount", { count: unlockedAchievements, total: totalAchievements }) : t("progressPending")}
+              className="h-4 min-w-0 flex-1 overflow-hidden rounded-full bg-[#E3EDF7]">
+              <div className="h-full rounded-full bg-[#1BD056] transition-[width] duration-300 motion-reduce:transition-none"
+                style={{ width: `${hasProgress ? unlockedAchievements / totalAchievements * 100 : 0}%` }} />
+            </div>
+            <span aria-hidden="true" className="shrink-0 whitespace-nowrap text-sm tabular-nums text-[#045E96]">
+              {hasProgress ? unlockedAchievements : "—"}/{totalAchievements}
+            </span>
+          </div>
+        )}
       </div>
       {rules ? (
         <div className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-2 min-[100rem]:grid-cols-4">
@@ -29,7 +56,7 @@ export default function GameAchievements({ gameKey, progress }: GameAchievements
               <ul key={group.key} className="space-y-6">
                 {group.icons.map((icon, index) => {
                   const target = rule?.targets[index];
-                  const unlocked = target !== undefined && value !== undefined && Number.isFinite(value) && value >= target;
+                  const unlocked = isAchievementUnlocked(value, target);
                   return (
                     <li key={icon} data-achievement={`${group.key}-${index}`} data-unlocked={unlocked} className="flex min-h-12 items-center gap-3">
                       <div className="flex h-10 w-10 shrink-0 items-center justify-center">

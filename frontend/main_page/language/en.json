@@ -26,6 +26,8 @@
     "nextPreviews": "More screenshots",
     "scrollPreviews": "Scroll screenshots",
     "achievements": "Game Achievements",
+    "achievementProgress": "Achievement progress",
+    "achievementProgressCount": "{count} of {total} achievements unlocked",
     "progressPending": "Progress not yet available",
     "achievementRulePending": "Unlock condition to be configured",
     "achievementUnlocked": "Unlocked",
@@ -59,15 +61,15 @@
     },
     "achievementNames": {
       "levels": { "0": "Novice", "1": "Apprentice", "2": "Rising Strategist", "3": "Board Expert", "4": "Master of the Board" },
-      "topThree": { "0": "Rising Star I", "1": "Rising Star II", "2": "Rising Star III", "3": "Rising Star IV", "4": "Rising Star V" },
-      "topTen": { "0": "Getting There I", "1": "Getting There II", "2": "Getting There III", "3": "Getting There IV", "4": "Getting There V" },
-      "noHints": { "0": "Self-Reliant", "1": "Puzzle Solver", "2": "The Intellectual", "3": "The Strategist", "4": "The Mastermind" }
+      "records": { "0": "First Breakthrough", "1": "Precision Player", "2": "Route Expert", "3": "Move Master", "4": "Puzzle Virtuoso" },
+      "noHints": { "0": "Independent Thinker", "1": "Self-Guided Explorer", "2": "Puzzle Solver", "3": "Deep Thinker", "4": "The Mastermind" },
+      "moves": { "0": "First Steps", "1": "Board Wanderer", "2": "Persistent Explorer", "3": "Thousand-Step Journey", "4": "Footprints Everywhere" }
     },
     "achievementRules": {
       "levels": "Complete {count} levels",
-      "topThree": "Achieve top 3 in {count} levels",
-      "topTen": "Achieve top 10 in {count} levels",
-      "noHints": "Beat {count} levels without using hints"
+      "records": "Tie or beat records in {count, plural, one {# level} other {# levels}}",
+      "noHints": "Clear {count, plural, one {# level} other {# levels}} without hints",
+      "moves": "Make {count} valid moves in total"
     }
   },
   "common": {
@@ -146,6 +148,10 @@
       "mentalMath": "Mental Math"
     },
     "events": {
+      "gameAchievement": {
+        "title": "Achievement Unlocked",
+        "message": "You unlocked {achievement} in {game}!"
+      },
       "purchase": {
         "title": "Purchase Successful",
         "message": "{diamonds} {diamondIcon} have been added to your bag."

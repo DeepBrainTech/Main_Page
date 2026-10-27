@@ -26,6 +26,8 @@
     "nextPreviews": "查看更多截图",
     "scrollPreviews": "左右滑动截图",
     "achievements": "游戏成就",
+    "achievementProgress": "成就解锁进度",
+    "achievementProgressCount": "已解锁 {count} 枚徽章，共 {total} 枚",
     "progressPending": "暂无成就进度",
     "achievementRulePending": "达成条件待配置",
     "achievementUnlocked": "已达成",
@@ -59,15 +61,15 @@
     },
     "achievementNames": {
       "levels": { "0": "初学者", "1": "学徒", "2": "新锐策略家", "3": "棋盘专家", "4": "棋盘大师" },
-      "topThree": { "0": "明日之星 I", "1": "明日之星 II", "2": "明日之星 III", "3": "明日之星 IV", "4": "明日之星 V" },
-      "topTen": { "0": "渐入佳境 I", "1": "渐入佳境 II", "2": "渐入佳境 III", "3": "渐入佳境 IV", "4": "渐入佳境 V" },
-      "noHints": { "0": "独立思考", "1": "解谜高手", "2": "智者", "3": "策略家", "4": "思维大师" }
+      "records": { "0": "崭露头角", "1": "精准落子", "2": "路线高手", "3": "步数大师", "4": "极限解谜" },
+      "noHints": { "0": "独立思考", "1": "自主探索", "2": "解谜能手", "3": "深思熟虑", "4": "思维大师" },
+      "moves": { "0": "迈出脚步", "1": "棋盘漫步", "2": "探索不止", "3": "千步之旅", "4": "足迹遍布" }
     },
     "achievementRules": {
       "levels": "完成 {count} 个关卡",
-      "topThree": "在 {count} 个关卡中进入前 3 名",
-      "topTen": "在 {count} 个关卡中进入前 10 名",
-      "noHints": "不使用提示通过 {count} 个关卡"
+      "records": "刷新或追平 {count} 关步数纪录",
+      "noHints": "无提示通关 {count} 关",
+      "moves": "累计完成 {count} 步有效移动"
     }
   },
   "common": {
@@ -146,6 +148,10 @@
       "mentalMath": "心算"
     },
     "events": {
+      "gameAchievement": {
+        "title": "成就已解锁",
+        "message": "你在{game}中获得了「{achievement}」成就！"
+      },
       "purchase": {
         "title": "购买成功",
         "message": "您的账户已收到 {diamonds} {diamondIcon}。"
