@@ -292,10 +292,10 @@
       "title": "确定取消订阅？",
       "description": "确定要取消你的 {plan} 订阅吗？",
       "loseHeading": "你将失去：",
-      "losePremium1": "每日 5 钻石",
+      "losePremium1": "每日额外 20 钻石",
       "losePremium2": "所有课程的无限访问权限",
       "losePremium3": "补签功能",
-      "losePlus1": "每日 5 钻石",
+      "losePlus1": "每日额外 10 钻石",
       "losePlus2": "补签功能",
       "keepPlan": "保留 {plan}",
       "confirmCancel": "仍要取消",
@@ -410,12 +410,17 @@
         "description": "每门课程 100"
       },
       "dailyDiamonds": {
-        "title": "每日 5 钻石",
+        "title": "每日 10 钻石",
         "description": "登录即可领取奖励"
       },
+      "paymentCoins": {
+        "plus": "赠送 5,000 金币",
+        "premium": "赠送 10,000 金币",
+        "description": "首次付款及每次续费成功后立即到账"
+      },
       "premiumRewards": {
-        "title": "10 钻石 +",
-        "coins": "50 金币"
+        "title": "20 钻石 +",
+        "coins": "200 金币"
       },
       "catchUp": {
         "title": "补签功能",
@@ -441,6 +446,7 @@
     "welcomeBack": "欢迎回来，{username}！👋",
     "dashboardTab": "主页",
     "todaysReward": "今日奖励",
+    "streakBonus": "连续签到 {count} 天奖励",
     "friends": "好友",
     "friendStatus": "正在玩 迷雾象棋",
     "weekdaySun": "日",
@@ -458,6 +464,8 @@
     "claimReward": "领取奖励",
     "rewardCoins": "+{count} 金币",
     "rewardCoinsWeeklyBonus": "+{count} 金币（周连签奖励）",
+    "rewardAmount": "+{count} <asset></asset>",
+    "rewardAmountWeeklyBonus": "+{count} <asset></asset>（周连签奖励）",
     "rewardDiamonds": "+{count} 钻石",
     "rewardFlowers": "+{count} 鲜花",
     "premiumBonusAlt": "高级会员奖励",
@@ -479,9 +487,8 @@
     "homesteadCharacterName": "Wukoo",
     "homesteadHead": "头部",
     "homesteadBody": "身体",
-    "homesteadHand": "手部",
+    "homesteadHand": "配饰",
     "homesteadBackground": "背景",
-    "homesteadLimited": "限定",
     "welcomeUser@": {
       "username": "用户名"
     },
@@ -509,8 +516,8 @@
     "flowers": "鲜花",
     "checkIn": "签到",
     "checkInTitle": "每日签到",
-    "checkInReward": "每日签到 +50 金币",
-    "checkInStreak": "连续签到 7 天 +200 金币 +1 钻石",
+    "checkInReward": "每日签到 +200 金币",
+    "checkInStreak": "每连续签到满 7 天，当天共获 1,000 金币 +30 钻石",
     "signed": "已签",
     "signToday": "今日签到",
     "dailyTasks": "每日任务",
@@ -549,9 +556,8 @@
     "homesteadSlots": {
       "head": "头部",
       "body": "身体",
-      "hand": "手部",
-      "background": "背景",
-      "limited": "限定"
+      "hand": "配饰",
+      "background": "背景"
     },
     "homesteadErrors": {
       "insufficientAssets": "金币或钻石不足。",
@@ -560,6 +566,10 @@
       "generic": "无法更新家园物品，请稍后重试。"
     },
     "homesteadItems": {
+      "head-tech-goggles": "科技护目镜",
+      "head-wukoo-circlet": "悟空金箍",
+      "body-wukoo-cloud": "筋斗云",
+      "hand-wukoo-staff": "金箍棒",
       "head-glasses": "眼镜",
       "body-blue-tshirt": "蓝色 T 恤",
       "body-sweater": "毛衣",
@@ -584,8 +594,7 @@
       "background-cloudy": "云朵背景",
       "background-green-free": "绿色背景",
       "background-red-free": "红色背景",
-      "background-blue-free": "蓝色背景",
-      "limited-jindouyun-monkey": "筋斗云猴子"
+      "background-blue-free": "蓝色背景"
     }
   },
   "tasks": {

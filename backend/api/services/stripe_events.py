@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from config.stripe_billing import get_stripe_webhook_secret
 from models import User
 from schemas import APIResponse
+from services.membership_rewards import grant_membership_payment_coins
 from services.stripe_checkout import fulfill_asset_checkout
 from services.stripe_common import (
     _plan_label,
@@ -191,8 +192,16 @@ async def stripe_webhook(request: Request, db: Session):
         elif etype == "invoice.paid":
             user = _resolve_user_for_invoice(db, obj)
             if not user:
+                if (
+                    _stripe_obj_get(obj, "billing_reason")
+                    in {"subscription_create", "subscription_cycle"}
+                    and (_stripe_obj_get(obj, "amount_paid", 0) or 0) > 0
+                ):
+                    raise ValueError("paid_membership_invoice_user_not_resolved")
                 logger.warning("invoice.paid: user not resolved")
                 return APIResponse(success=True, message="ok", data={"received": True})
+            grant_membership_payment_coins(db, user, obj)
+            db.commit()
             billing_reason = _stripe_obj_get(obj, "billing_reason")
             if billing_reason == "subscription_create":
                 return APIResponse(success=True, message="ok", data={"received": True})
@@ -241,6 +250,7 @@ async def stripe_webhook(request: Request, db: Session):
                 _sync_pending_from_subscription_schedule(db, user, full_sub)
 
     except Exception as e:
+        db.rollback()
         logger.exception("stripe webhook error: %s", e)
         raise HTTPException(status_code=500, detail="webhook_handler_failed")
 

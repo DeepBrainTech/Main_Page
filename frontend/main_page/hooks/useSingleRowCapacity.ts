@@ -1,13 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useLayoutEffect, useState } from "react";
 
 export function useSingleRowCapacity(itemCount: number) {
   const [element, setElement] = useState<HTMLDivElement | null>(null);
   const [layout, setLayout] = useState({ capacity: 1, cardWidth: 144 });
   const rowRef = useCallback((node: HTMLDivElement | null) => setElement(node), []);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!element) return;
 
     const updateCapacity = () => {

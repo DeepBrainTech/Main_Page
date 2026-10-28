@@ -23,6 +23,27 @@ interface StreakRewardDialogProps {
   onClose: () => void;
 }
 
+function RewardAmount({ count, asset }: {
+  count: number;
+  asset: "coins" | "diamonds" | "flowers";
+}) {
+  const tHome = useTranslations("dashboard");
+  const labelKey = asset === "coins" ? "rewardCoins" : asset === "diamonds" ? "rewardDiamonds" : "rewardFlowers";
+  const icon = asset === "coins" ? "/checkin/coin.svg"
+    : asset === "diamonds" ? "/checkin/diamond.svg" : "/dashboard/flower.svg";
+
+  return (
+    <div aria-label={tHome(labelKey, { count })}>
+      <span aria-hidden="true" className="inline-flex flex-wrap items-center gap-x-1.5">
+        {tHome.rich("rewardAmount", {
+          count,
+          asset: () => <Image src={icon} alt="" width={24} height={24} className="inline-block h-6 w-6 shrink-0 object-contain" />,
+        })}
+      </span>
+    </div>
+  );
+}
+
 export default function StreakRewardDialog({
   open,
   reward,
@@ -79,23 +100,20 @@ export default function StreakRewardDialog({
     return null;
   }
 
-  const baseCoinReward = Math.min(reward.coins, 50);
-  const weeklyBonusCoins =
-    reward.streak > 0 && reward.streak % 7 === 0 ? Math.max(0, reward.coins - baseCoinReward) : 0;
+  const isStreakMilestone = reward.streak > 0 && reward.streak % 7 === 0;
   const coinRewardParts = [
-    baseCoinReward > 0 ? tHome("rewardCoins", { count: baseCoinReward }) : null,
-    weeklyBonusCoins > 0 ? tHome("rewardCoinsWeeklyBonus", { count: weeklyBonusCoins }) : null,
+    reward.coins > 0 ? <RewardAmount key="coins" count={reward.coins} asset="coins" /> : null,
   ].filter(Boolean);
   const extraRewardParts = [
-    reward.diamonds > 0 ? tHome("rewardDiamonds", { count: reward.diamonds }) : null,
-    reward.flowers > 0 ? tHome("rewardFlowers", { count: reward.flowers }) : null,
+    reward.diamonds > 0 ? <RewardAmount key="diamonds" count={reward.diamonds} asset="diamonds" /> : null,
+    reward.flowers > 0 ? <RewardAmount key="flowers" count={reward.flowers} asset="flowers" /> : null,
   ].filter(Boolean);
 
   const membershipBonusParts = [
     reward.membershipBonusDiamonds > 0
-      ? tHome("rewardDiamonds", { count: reward.membershipBonusDiamonds })
+      ? <RewardAmount key="membership-diamonds" count={reward.membershipBonusDiamonds} asset="diamonds" />
       : null,
-    reward.membershipBonusCoins > 0 ? tHome("rewardCoins", { count: reward.membershipBonusCoins }) : null,
+    reward.membershipBonusCoins > 0 ? <RewardAmount key="membership-coins" count={reward.membershipBonusCoins} asset="coins" /> : null,
   ].filter(Boolean);
 
   return (
@@ -174,7 +192,9 @@ export default function StreakRewardDialog({
           </div>
           <div className="inline-flex min-w-0 flex-1 flex-col items-start justify-start gap-1">
             <div className="self-stretch font-app-body text-sm font-medium leading-5 text-sky-700">
-              {tHome("todaysReward")}
+              {isStreakMilestone
+                ? tHome("streakBonus", { count: reward.streak })
+                : tHome("todaysReward")}
             </div>
             <div className="self-stretch break-words font-app-body text-xl font-semibold leading-8 text-amber-400">
               {coinRewardParts.map((part, index) => (

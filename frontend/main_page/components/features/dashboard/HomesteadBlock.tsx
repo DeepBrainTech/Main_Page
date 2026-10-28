@@ -316,11 +316,6 @@ export default function HomesteadBlock({
                 iconSrc: "/home-system/background/background.svg",
                 label: tHome("homesteadBackground"),
               },
-              {
-                key: "limited" as const,
-                iconSrc: "/dashboard/Star.svg",
-                label: tHome("homesteadLimited"),
-              },
             ] as const
           ).map((tab) => {
             const isActive = menuOpen && activeCustomizeTab === tab.key;

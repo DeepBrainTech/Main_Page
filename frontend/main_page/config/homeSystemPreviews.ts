@@ -6,6 +6,10 @@ export const HOME_SYSTEM_BASE_ARTWORK_BOUNDS = [881, 200, 1173, 1316] as const;
 
 const artworkBounds: Record<string, readonly [number, number, number, number]> = {
   "head-glasses": [1112, 518, 674, 215],
+  "head-tech-goggles": [1097, 477, 694, 284],
+  "head-wukoo-circlet": [1112, 302, 665, 276],
+  "body-wukoo-cloud": [747, 1278, 1585, 656],
+  "hand-wukoo-staff": [493, 199, 1851, 1225],
   "body-blue-tshirt": [1221, 864, 478, 305],
   "head-paper-hat": [1146, 72, 586, 379],
   "body-sweater": [1045, 864, 828, 344],
@@ -24,7 +28,6 @@ const artworkBounds: Record<string, readonly [number, number, number, number]> =
   "body-fireworks-outfit": [1081, 858, 665, 688],
   "head-fireworks-headpiece": [1098, 190, 1103, 1037],
   "body-fireworks-handpiece": [855, 838, 352, 308],
-  "limited-jindouyun-monkey": [171, 69, 625, 600],
 };
 
 // Ignore isolated export artifacts when centering the accessory thumbnails.
@@ -42,8 +45,5 @@ export function getHomeSystemThumbnailFrame(itemId: string) {
 export function getHomeSystemPreviewFrame(itemId: string) {
   const bounds = artworkBounds[itemId];
   if (!bounds) return null;
-  const canvas = itemId === "limited-jindouyun-monkey"
-    ? { width: 946, height: 709 }
-    : HOME_SYSTEM_ARTBOARD;
-  return { bounds, canvas };
+  return { bounds, canvas: HOME_SYSTEM_ARTBOARD };
 }

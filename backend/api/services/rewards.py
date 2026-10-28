@@ -183,7 +183,7 @@ async def get_rewards(current_user: User, db: Session, x_user_timezone: str | No
 
 
 async def do_check_in(current_user: User, db: Session, x_user_timezone: str | None):
-    """Daily check-in (user timezone). Base CHECK_IN_COINS; each 7-day streak milestone adds streak coins to STREAK_TOTAL_COINS that day and STREAK_DIAMONDS once per 7-day window."""
+    """Grant daily or milestone check-in rewards plus any active membership bonus."""
     lock_account(db, current_user.id)
     tz = (x_user_timezone or "").strip() or DEFAULT_TZ
     today = _today_in_tz(tz)
@@ -237,9 +237,8 @@ async def do_check_in(current_user: User, db: Session, x_user_timezone: str | No
         streak_start = date.fromisoformat(today) - timedelta(days=STREAK_DAYS - 1)
         streak_start_str = streak_start.isoformat()
         if rewards.last_streak_award_start != streak_start_str:
-            # Milestone day total should be 200 coins, not 200 + daily base.
-            milestone_extra_coins = max(0, STREAK_TOTAL_COINS - CHECK_IN_COINS)
-            coins_awarded += milestone_extra_coins
+            # Membership bonuses remain separate from the milestone reward.
+            coins_awarded = STREAK_TOTAL_COINS
             rewards.last_streak_award_start = streak_start_str
             diamonds_awarded = STREAK_DIAMONDS
     rewards = credit_assets(

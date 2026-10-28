@@ -42,6 +42,10 @@ function backgroundVisual(name: string): HomeSystemItemVisual {
 const itemVisuals: Record<string, HomeSystemItemVisual> = {
   // Overlay the supplied exports without per-item offsets or scale corrections.
   "head-glasses": { primary: asset("accessories/head/glasses_head.png") },
+  "head-tech-goggles": { primary: asset("accessories/head/tech_head.png") },
+  "head-wukoo-circlet": { primary: asset("accessories/head/Wukoo_head.png") },
+  "body-wukoo-cloud": { primary: asset("accessories/body/Wukoo_body.png") },
+  "hand-wukoo-staff": { primary: asset("accessories/hand/Wukoo_accessory.png") },
   "body-blue-tshirt": {
     primary: asset("accessories/body/blueshirt_body.png"),
   },
@@ -98,7 +102,6 @@ const itemVisuals: Record<string, HomeSystemItemVisual> = {
   "background-green-free": backgroundVisual("green_background"),
   "background-red-free": backgroundVisual("red_background"),
   "background-blue-free": backgroundVisual("blue_background"),
-  "limited-jindouyun-monkey": { primary: asset("limited-1.svg") },
 };
 
 export function getHomeSystemVisual(itemId: string | null | undefined) {

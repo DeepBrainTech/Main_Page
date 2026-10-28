@@ -105,6 +105,7 @@ export default function HomeSystemPurchaseModal({ item, loadout, coins, diamonds
             {t(busy ? "homesteadSaving" : equipped ? "homesteadUnequip" : "homesteadPurchase.equipForFree")}
           </button>
         ) : null}
+        {!membershipAccess ? (
         <button
           type="button"
           onClick={onConfirm}
@@ -113,6 +114,7 @@ export default function HomeSystemPurchaseModal({ item, loadout, coins, diamonds
         >
           {label}
         </button>
+        ) : null}
         {exclusive && !membershipAccess ? (
           <button
             type="button"
@@ -126,7 +128,7 @@ export default function HomeSystemPurchaseModal({ item, loadout, coins, diamonds
             {t.rich("homesteadPurchase.upgrade", membershipText)}
           </button>
         ) : null}
-        {insufficient ? (
+        {!membershipAccess && insufficient ? (
           <button
             type="button"
             disabled={busy}

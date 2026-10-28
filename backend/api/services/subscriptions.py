@@ -485,7 +485,12 @@ def _resolve_user_for_subscription(
 
 
 def _resolve_user_for_invoice(db: Session, invoice) -> User | None:
-    sub_id = _stripe_obj_get(invoice, "subscription")
+    parent = _stripe_obj_get(invoice, "parent")
+    details = _stripe_obj_get(parent, "subscription_details")
+    subscription = _stripe_obj_get(invoice, "subscription") or _stripe_obj_get(
+        details, "subscription"
+    )
+    sub_id = subscription if isinstance(subscription, str) else _stripe_obj_get(subscription, "id")
     if sub_id:
         user = _user_by_subscription_id(db, str(sub_id))
         if user:
@@ -514,6 +519,23 @@ async def billing_status(current_user: User, db: Session):
     trial_eligible = False
     if checkout:
         _stripe_configure()
+        # Recover Checkout activation when its webhook has not arrived yet.
+        customer_id = getattr(current_user, "stripe_customer_id", None)
+        if not has_sub and customer_id:
+            try:
+                subscriptions = stripe.Subscription.list(customer=customer_id, status="all", limit=100)
+                candidates = [
+                    sub for sub in subscriptions.auto_paging_iter()
+                    if sub.status in ("active", "trialing", "past_due")
+                    and str((_stripe_obj_get(sub, "metadata") or {}).get("user_id", "")) == str(current_user.id)
+                ]
+                # Multiple subscriptions require reconciliation, not an arbitrary choice.
+                if len(candidates) == 1:
+                    sync_user_from_stripe_subscription(db, current_user, candidates[0])
+                    has_sub = bool(current_user.stripe_subscription_id)
+                    portal = bool(current_user.stripe_customer_id)
+            except stripe.error.StripeError as e:
+                logger.warning("billing status subscription recovery failed: %s", e)
         if not getattr(current_user, "membership_trial_used", False) and getattr(
             current_user, "stripe_customer_id", None
         ):

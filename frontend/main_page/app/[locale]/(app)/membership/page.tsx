@@ -170,7 +170,9 @@ export default function MembershipPage() {
 
   const loadAll = useCallback(async (): Promise<"trialing" | "active" | "past_due" | null> => {
     try {
-      const [m, st] = await Promise.all([fetchAuthMeMembership(), fetchBillingStatus()]);
+      // Billing status may synchronize membership from Stripe before reading the profile.
+      const st = await fetchBillingStatus();
+      const m = await fetchAuthMeMembership();
       const p = m.membership_plan;
       if (p === "free" || p === "plus" || p === "premium") {
         setCurrentPlan(p);
@@ -198,6 +200,7 @@ export default function MembershipPage() {
       // Keep toggle aligned with the *active* subscription so the current plan card matches (pending interval alone is a future state).
       setBillingInterval(activeInterval);
       setLoadError(null);
+      window.dispatchEvent(new Event("membership-plan-change"));
       return st.subscription_status;
     } catch {
       setLoadError("loadFailed");
@@ -216,7 +219,6 @@ export default function MembershipPage() {
       void loadAll().then((status) => {
         setSuccessMessage(status === "trialing" ? "checkoutTrialSuccess" : "checkoutSuccess");
       });
-      window.dispatchEvent(new Event("membership-plan-change"));
       router.replace(pathname);
     } else if (checkout === "canceled") {
       void loadAll();
@@ -224,7 +226,6 @@ export default function MembershipPage() {
     } else if (portal === "return") {
       setSuccessMessage("portalReturn");
       void loadAll();
-      window.dispatchEvent(new Event("membership-plan-change"));
       router.replace(pathname);
     }
   }, [searchParams, loadAll, router, pathname]);

@@ -61,6 +61,7 @@ const planConfigs: PlanConfig[] = [
     key: "plus",
     features: [
       { titleKey: "features.dailyDiamonds.title", descriptionKey: "features.dailyDiamonds.description", enabled: true, icon: "diamond" },
+      { titleKey: "features.paymentCoins.plus", descriptionKey: "features.paymentCoins.description", enabled: true, icon: "coin" },
       { titleKey: "features.payPerCourse.title", descriptionKey: "features.payPerCourse.description", enabled: true, marker: "lock" },
       { titleKey: "features.catchUp.title", descriptionKey: "features.catchUp.description", enabled: true },
     ],
@@ -70,6 +71,7 @@ const planConfigs: PlanConfig[] = [
     bestValue: true,
     features: [
       { titleKey: "features.premiumRewards.title", descriptionKey: "features.dailyDiamonds.description", enabled: true, icon: "diamond" },
+      { titleKey: "features.paymentCoins.premium", descriptionKey: "features.paymentCoins.description", enabled: true, icon: "coin" },
       { titleKey: "features.allContent.title", descriptionKey: "features.allContent.description", enabled: true },
       { titleKey: "features.catchUp.title", descriptionKey: "features.catchUp.description", enabled: true },
     ],
@@ -483,9 +485,11 @@ export default function MembershipPlans({
                           isLanding ? "text-[1.2rem] leading-[1.8rem]" : "text-base leading-6"
                         } font-semibold ${styles.featureTitle}`}
                       >
-                        {feature.icon === "diamond" ? (
+                        {feature.icon ? (
                           <Image
-                            src={isLanding ? "/landing/pricing/diamond.svg" : "/dashboard/dimond.svg"}
+                            src={feature.icon === "coin"
+                              ? isLanding ? "/landing/pricing/coin.svg" : "/dashboard/coin.svg"
+                              : isLanding ? "/landing/pricing/diamond.svg" : "/dashboard/dimond.svg"}
                             alt=""
                             width={16}
                             height={16}

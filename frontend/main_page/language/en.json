@@ -410,12 +410,17 @@
         "description": "100 per course"
       },
       "dailyDiamonds": {
-        "title": "5 Daily Diamonds",
+        "title": "10 Daily Diamonds",
         "description": "Login to claim rewards"
       },
+      "paymentCoins": {
+        "plus": "5,000 Bonus Coins",
+        "premium": "10,000 Bonus Coins",
+        "description": "With your first payment and every successful renewal"
+      },
       "premiumRewards": {
-        "title": "10 Diamonds +",
-        "coins": "50 Coins"
+        "title": "20 Diamonds +",
+        "coins": "200 Coins"
       },
 
       "catchUp": {
@@ -442,6 +447,7 @@
     "welcomeBack": "Welcome back, {username}! 👋",
     "dashboardTab": "Dashboard",
     "todaysReward": "Today's Reward",
+    "streakBonus": "{count}-Day Streak Bonus",
     "friends": "Friends",
     "friendStatus": "Playing Fog of War",
     "weekdaySun": "Sun",
@@ -459,6 +465,8 @@
     "claimReward": "Claim Reward",
     "rewardCoins": "+{count} Coins",
     "rewardCoinsWeeklyBonus": "+{count} Coins (Weekly Reward)",
+    "rewardAmount": "+{count} <asset></asset>",
+    "rewardAmountWeeklyBonus": "+{count} <asset></asset> (Weekly Reward)",
     "rewardDiamonds": "+{count} Diamonds",
     "rewardFlowers": "+{count} Flowers",
     "premiumBonusAlt": "Premium Bonus",
@@ -480,9 +488,8 @@
     "homesteadCharacterName": "Wukoo",
     "homesteadHead": "Head",
     "homesteadBody": "Body",
-    "homesteadHand": "Hand",
+    "homesteadHand": "Accessories",
     "homesteadBackground": "Background",
-    "homesteadLimited": "Limited",
     "welcomeUser@": {
       "username": "Username"
     },
@@ -510,8 +517,8 @@
     "flowers": "Flowers",
     "checkIn": "Check-in",
     "checkInTitle": "Daily Check-in",
-    "checkInReward": "Daily +50 coins",
-    "checkInStreak": "7-day streak +200 coins +1 diamond",
+    "checkInReward": "Daily +200 coins",
+    "checkInStreak": "Every 7-day streak: 1,000 coins +30 diamonds that day",
     "signed": "Signed",
     "signToday": "Sign today",
     "dailyTasks": "Daily Tasks",
@@ -550,9 +557,8 @@
     "homesteadSlots": {
       "head": "Head",
       "body": "Body",
-      "hand": "Hand",
-      "background": "Background",
-      "limited": "Limited"
+      "hand": "Accessories",
+      "background": "Background"
     },
     "homesteadErrors": {
       "insufficientAssets": "You do not have enough coins or diamonds.",
@@ -561,6 +567,10 @@
       "generic": "Could not update your home-system items. Please try again."
     },
     "homesteadItems": {
+      "head-tech-goggles": "Tech Goggles",
+      "head-wukoo-circlet": "Wukoo Golden Circlet",
+      "body-wukoo-cloud": "Wukoo Somersault Cloud",
+      "hand-wukoo-staff": "Wukoo Golden Staff",
       "head-glasses": "Glasses",
       "body-blue-tshirt": "Blue T-Shirt",
       "body-sweater": "Sweater",
@@ -585,8 +595,7 @@
       "background-cloudy": "Cloudy Background",
       "background-green-free": "Green Background",
       "background-red-free": "Red Background",
-      "background-blue-free": "Blue Background",
-      "limited-jindouyun-monkey": "Jindouyun Monkey"
+      "background-blue-free": "Blue Background"
     }
   },
   "tasks": {

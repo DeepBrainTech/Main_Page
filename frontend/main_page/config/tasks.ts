@@ -29,7 +29,7 @@ export const DAILY_TASKS: TaskConfig[] = [
     labelKey: "dailyPlayChessMater",
     gameMode: "chessmater",
     targetCount: 1,
-    rewardCoins: 10,
+    rewardCoins: 200,
   },
   {
     id: "daily-2",
@@ -37,7 +37,7 @@ export const DAILY_TASKS: TaskConfig[] = [
     labelKey: "dailyPlayChessTourmaster",
     gameMode: "chess-tourmaster",
     targetCount: 1,
-    rewardCoins: 10,
+    rewardCoins: 200,
   },
 ];
 
