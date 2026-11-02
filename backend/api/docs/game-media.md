@@ -58,7 +58,7 @@ remain private. Signed URLs use the S3 endpoint, not the custom domain.
 An optional shared `R2_ENDPOINT_URL` overrides the standard account endpoint,
 for example when using a jurisdiction-specific R2 endpoint.
 
-The game bucket never falls back to `R2_BUCKET_NAME`: its default is always
+The game bucket is configured independently: its default is always
 `dbt-game`. Credentials are configured by access level, not by feature. The old
 `GAME_MEDIA_R2_*` credential variables are no longer read. Bucket and public URL
 settings remain feature-specific. See [R2 storage configuration](r2-storage.md).

@@ -22,7 +22,7 @@ from schemas import (
     LearningStudyTimeCreate,
     LearningTopicProgressReset,
 )
-from utils.r2_storage import generate_object_read_url
+from utils.r2_storage import generate_object_read_url, get_ai_learning_video_bucket_name
 
 
 def _to_progress_percent(numerator: int, denominator: int) -> int:
@@ -699,7 +699,11 @@ async def get_making_whole_question_video(
         )
 
     try:
-        url = generate_object_read_url(object_key=object_key, expires_seconds=600)
+        url = generate_object_read_url(
+            object_key=object_key,
+            bucket_name=get_ai_learning_video_bucket_name(),
+            expires_seconds=600,
+        )
     except RuntimeError as exc:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)

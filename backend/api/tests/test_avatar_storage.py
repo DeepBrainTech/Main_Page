@@ -1,4 +1,4 @@
-"""Avatar uploads and reads use the dedicated bucket without migrating old keys."""
+"""Avatar uploads and reads use the dedicated bucket."""
 
 import asyncio
 from io import BytesIO
@@ -24,7 +24,6 @@ class AvatarStorageTests(unittest.TestCase):
     def setUp(self):
         env = patch.dict(os.environ, {
             "R2_ACCOUNT_ID": "same-account",
-            "R2_BUCKET_NAME": "dbt-learning",
             "AVATAR_R2_BUCKET_NAME": "",
             "R2_ENDPOINT_URL": "",
         })
@@ -45,16 +44,11 @@ class AvatarStorageTests(unittest.TestCase):
         client.generate_presigned_url.assert_called_once_with(
             ClientMethod="get_object", Params={"Bucket": "avatar", "Key": "42/new.png"}, ExpiresIn=86400,
         )
-        self.assertEqual(os.environ["R2_BUCKET_NAME"], "dbt-learning")
 
-    def test_new_keys_use_avatar_resolver_and_legacy_keys_keep_old_resolver(self):
-        with patch("services.avatars.generate_avatar_read_url", return_value="new-url") as new, patch("services.avatars.generate_object_read_url", return_value="legacy-url") as old:
-            self.assertEqual(avatar_url("42/new.png", None), "new-url")
-            new.assert_called_once_with(object_key="42/new.png", expires_seconds=86400)
-            old.assert_not_called()
-            for key in ["Avatar/42/old.png", "avatars/42.png"]:
-                self.assertEqual(avatar_url(key, None), "legacy-url")
-                old.assert_called_with(object_key=key, expires_seconds=86400)
+    def test_avatar_keys_use_dedicated_bucket_resolver(self):
+        with patch("services.avatars.generate_avatar_read_url", return_value="avatar-url") as resolve:
+            self.assertEqual(avatar_url("42/new.png", None), "avatar-url")
+            resolve.assert_called_once_with(object_key="42/new.png", expires_seconds=86400)
 
     def test_storage_error_keeps_google_avatar_fallback(self):
         with patch("services.avatars.generate_avatar_read_url", side_effect=RuntimeError("unavailable")):

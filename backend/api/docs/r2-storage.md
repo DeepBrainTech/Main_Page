@@ -12,22 +12,24 @@ R2_READ_ONLY_SECRET_ACCESS_KEY=your-read-only-secret-key
 R2_READ_WRITE_ACCESS_KEY_ID=your-read-write-access-key
 R2_READ_WRITE_SECRET_ACCESS_KEY=your-read-write-secret-key
 
-R2_BUCKET_NAME=dbt-learning
+AI_LEARNING_VIDEO_BUCKET_NAME=dbt-learning
 GAME_MEDIA_R2_BUCKET_NAME=dbt-game
 AVATAR_R2_BUCKET_NAME=avatar
 ```
 
-The **read-only** token is authorized for `dbt-chat`, `dbt-game` and `dbt-learning`.
-It handles knowledge reads, game media listing/reads, course video signed URLs
-and historical avatars still stored in a content bucket.
+The **read-only** token is authorized for `dbt-chat`, `dbt-game` and the configured
+AI learning video bucket. It handles knowledge reads, game media listing/reads,
+and AI learning video signed URLs.
 
 The **read/write** token is authorized only for `avatar`. It handles new avatar
 uploads and signed avatar reads. Reading an avatar must use this token too,
 because the read-only token has no access to the avatar bucket. New object keys
 remain `<user_id>/<random_uuid>.<extension>`.
 
-`R2_BUCKET_NAME` selects the course video and historical avatar bucket. The other
-two bucket variables are optional and default to `dbt-game` and `avatar`.
+`AI_LEARNING_VIDEO_BUCKET_NAME` selects the bucket used by the Making Whole AI
+video endpoint. It defaults to `dbt-learning` in both Compose files; set it
+explicitly in non-Compose deployments. The game and avatar bucket variables
+default to `dbt-game` and `avatar`.
 Knowledge defaults to `dbt-chat` and still supports `WUKOO_KNOWLEDGE_BUCKET`.
 Bucket variables select storage locations, not credentials.
 

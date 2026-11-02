@@ -16,8 +16,8 @@ def _require_env(name: str) -> str:
     return value
 
 
-def get_r2_bucket_name() -> str:
-    return _require_env("R2_BUCKET_NAME")
+def get_ai_learning_video_bucket_name() -> str:
+    return _require_env("AI_LEARNING_VIDEO_BUCKET_NAME")
 
 
 def get_r2_endpoint_url() -> str:
@@ -50,12 +50,13 @@ def get_r2_read_write_client() -> BaseClient:
     return _get_r2_client("READ_WRITE")
 
 
-def generate_object_read_url(object_key: str, expires_seconds: int = 600) -> str:
+def generate_object_read_url(
+    object_key: str, *, bucket_name: str, expires_seconds: int = 600
+) -> str:
     client = get_r2_read_only_client()
-    bucket = get_r2_bucket_name()
     return client.generate_presigned_url(
         ClientMethod="get_object",
-        Params={"Bucket": bucket, "Key": object_key},
+        Params={"Bucket": bucket_name, "Key": object_key},
         ExpiresIn=expires_seconds,
     )
 

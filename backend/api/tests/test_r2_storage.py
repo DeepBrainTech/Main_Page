@@ -17,7 +17,6 @@ class R2StorageTests(unittest.TestCase):
             "R2_READ_ONLY_SECRET_ACCESS_KEY": "read-secret",
             "R2_READ_WRITE_ACCESS_KEY_ID": "write-key",
             "R2_READ_WRITE_SECRET_ACCESS_KEY": "write-secret",
-            "R2_BUCKET_NAME": "dbt-learning",
         }, clear=True)
         settings.start()
         self.addCleanup(settings.stop)
@@ -60,14 +59,17 @@ class R2StorageTests(unittest.TestCase):
         for call in create.call_args_list:
             self.assertEqual(call.kwargs["endpoint_url"], "https://custom.r2.example.test")
 
-    def test_course_and_legacy_avatar_urls_use_read_only_credentials(self):
+    def test_ai_learning_video_url_uses_the_configured_bucket(self):
         read = MagicMock()
         with patch.object(r2_storage, "get_r2_read_only_client", return_value=read), patch.object(r2_storage, "get_r2_read_write_client") as write:
-            r2_storage.generate_object_read_url("course/tutorial.mp4")
-            r2_storage.generate_object_read_url("Avatar/42/old.png", expires_seconds=86400)
-        self.assertEqual(read.generate_presigned_url.call_count, 2)
-        read.generate_presigned_url.assert_called_with(
-            ClientMethod="get_object", Params={"Bucket": "dbt-learning", "Key": "Avatar/42/old.png"}, ExpiresIn=86400,
+            r2_storage.generate_object_read_url(
+                "mental-math/lesson1/secret1/01.mp4",
+                bucket_name="dbt-learning",
+            )
+        read.generate_presigned_url.assert_called_once_with(
+            ClientMethod="get_object",
+            Params={"Bucket": "dbt-learning", "Key": "mental-math/lesson1/secret1/01.mp4"},
+            ExpiresIn=600,
         )
         write.assert_not_called()
 
