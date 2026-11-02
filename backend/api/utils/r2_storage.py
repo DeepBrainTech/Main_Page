@@ -17,7 +17,7 @@ def _require_env(name: str) -> str:
 
 
 def get_ai_learning_video_bucket_name() -> str:
-    return _require_env("AI_LEARNING_VIDEO_BUCKET_NAME")
+    return os.getenv("AI_LEARNING_VIDEO_BUCKET_NAME", "").strip() or "dbt-learning"
 
 
 def get_r2_endpoint_url() -> str:
