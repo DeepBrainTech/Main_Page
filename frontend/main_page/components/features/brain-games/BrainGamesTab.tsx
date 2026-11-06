@@ -9,6 +9,7 @@ import { GAMES_BY_DIMENSION } from "@/config/brain-games";
 import { COGNITIVE_DIMENSION_KEYS } from "@/types/cognitive";
 import type { GameEntry } from "@/config/brain-games";
 import { useGameLikes } from "@/hooks/useGameLikes";
+import { useUrlFilter } from "@/hooks/useUrlFilter";
 import chessmaterGif from "../../../public/brain-games/chessmater.gif";
 import sudokuGif from "../../../public/brain-games/sudoku.gif";
 import chessTourmasterGif from "../../../public/brain-games/chessTourmaster.gif";
@@ -143,7 +144,7 @@ const CATEGORY_ORDER: (typeof COGNITIVE_DIMENSION_KEYS)[number][] = [
   "reaction",
 ];
 
-type GameCategoryFilter = (typeof COGNITIVE_DIMENSION_KEYS)[number] | null;
+const GAME_CATEGORY_FILTERS = ["all", ...COGNITIVE_DIMENSION_KEYS] as const;
 
 function allPortalGames(): GameEntry[] {
   const seen = new Set<string>();
@@ -196,7 +197,8 @@ const CATEGORY_META: Record<
 export default function BrainGamesTab({ onLaunchGame }: BrainGamesTabProps) {
   const tHome = useTranslations("dashboard");
   const tBrain = useTranslations("brainGames");
-  const [activeCategory, setActiveCategory] = useState<GameCategoryFilter>(null);
+  const [category, setCategory] = useUrlFilter("category", GAME_CATEGORY_FILTERS, "all");
+  const activeCategory = category === "all" ? null : category;
   const [featuredIndex, setFeaturedIndex] = useState(0);
   const { likeStates } = useGameLikes();
   /** New shuffle on browser refresh / remount — zeros slots follow this order among chessmater / quantumgo / fogchess. */
@@ -284,7 +286,7 @@ export default function BrainGamesTab({ onLaunchGame }: BrainGamesTabProps) {
                         </button>
                       ) : null}
                       <Link
-                        href={getGameDetailHref(feature.key)}
+                        href={getGameDetailHref(feature.key, activeCategory)}
                         className="inline-flex h-[45px] min-w-[129px] items-center justify-center rounded-full bg-[#DDEDFF] px-6 text-[16px] font-semibold text-[#045E96]"
                       >
                         {tBrain("ribbon.learnMore")}
@@ -323,7 +325,7 @@ export default function BrainGamesTab({ onLaunchGame }: BrainGamesTabProps) {
               return (
                 <Link
                   key={gameKey}
-                  href={getGameDetailHref(rankingEntry.key)}
+                  href={getGameDetailHref(rankingEntry.key, activeCategory)}
                   className="flex w-full shrink-0 items-center gap-3 rounded-[16px] border border-white/80 bg-white p-3 text-left shadow-[0px_10px_15px_0px_rgba(0,0,0,0.10)] transition hover:translate-y-[-1px]"
                 >
                   <div className="relative h-8 w-8 shrink-0">
@@ -371,7 +373,7 @@ export default function BrainGamesTab({ onLaunchGame }: BrainGamesTabProps) {
               key={dimKey}
               type="button"
               onClick={() =>
-                setActiveCategory((prev) => (prev === dimKey ? null : dimKey))
+                setCategory(category === dimKey ? "all" : dimKey)
               }
               className={`group relative w-full cursor-pointer overflow-visible text-left outline-none transition ${
                 isActive ? "" : "hover:-translate-y-0.5"
@@ -468,7 +470,7 @@ export default function BrainGamesTab({ onLaunchGame }: BrainGamesTabProps) {
                   key={entry.key}
                   className="@container/card relative rounded-[22px] border border-white/60 bg-white/90 p-3 text-left shadow-[0px_10px_15px_0px_rgba(0,0,0,0.1),0px_4px_6px_0px_rgba(0,0,0,0.1)] transition hover:translate-y-[-2px] sm:rounded-[26px] sm:p-3.5 md:rounded-[30px] md:p-4 lg:rounded-[32px] lg:p-[15px]"
                 >
-                  <Link href={getGameDetailHref(entry.key)} aria-label={tHome(entry.nameKey)} className="absolute inset-0 z-10 rounded-[inherit] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#0075FF]" />
+                  <Link href={getGameDetailHref(entry.key, activeCategory)} aria-label={tHome(entry.nameKey)} className="absolute inset-0 z-10 rounded-[inherit] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#0075FF]" />
                   <div className="block w-full text-left">
                     <div className="relative aspect-[344/217] w-full overflow-hidden rounded-[18px] bg-slate-200 sm:rounded-[20px] md:rounded-[22px] lg:rounded-[24px]">
                       {imageSrc ? (

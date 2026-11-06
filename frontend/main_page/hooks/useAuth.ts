@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { apiFetch } from "@/lib/api-config";
 import { defaultLocale, type Locale } from "@/i18n-config";
 import { useRouter } from "@/lib/i18n-navigation";
+import { authHref } from "@/lib/navigation";
 
 /** 当前用户信息（来自 GET /api/auth/me） */
 export interface AuthUserInfo {
@@ -53,7 +54,8 @@ export function useAuth() {
         setLoading(false);
       })
       .catch(() => {
-        router.push("/", { locale });
+        const returnTo = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+        router.replace(authHref("/login", returnTo), { locale });
       });
   };
 

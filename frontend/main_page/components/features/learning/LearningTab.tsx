@@ -15,10 +15,13 @@ import { getMentalMathSecret, MENTAL_MATH_LESSONS } from "@/config/mental-math/c
 import { mentalMathLessonListKey } from "@/lib/mentalMathLabels";
 import {
   getLessonProgressPercentByPractice,
+  getLessonQuestionTotal,
+  getSecretSolvedCount,
   refreshMentalMathLessonProgress,
   subscribePracticeProgress,
 } from "@/lib/mentalMathPracticeProgress";
 import { fetchLearningStudyTime } from "@/services/userApi";
+import LearningCourseHome from "@/components/features/learning/LearningCourseHome";
 
 const MONTH_IDS = ["jan", "feb", "mar", "apr", "may", "jun", "jul"] as const;
 
@@ -161,6 +164,28 @@ export default function LearningTab() {
     ? "xl:col-span-4 xl:row-span-2 xl:row-start-1"
     : "xl:col-span-4 xl:col-start-9 xl:row-start-1";
 
+  if (!showLessonBoard) {
+    const lessonProgress = MENTAL_MATH_LESSONS.map((lesson) => ({
+      total: getLessonQuestionTotal(lesson.key),
+      attempted: lesson.secrets.reduce((sum, secret) => sum + getSecretSolvedCount(lesson.key, secret.key), 0),
+    }));
+    const totalQuestions = lessonProgress.reduce((sum, lesson) => sum + lesson.total, 0);
+    const attemptedQuestions = lessonProgress.reduce((sum, lesson) => sum + lesson.attempted, 0);
+    const progress = totalQuestions
+      ? Math.min(100, Math.round((attemptedQuestions / totalQuestions) * 100))
+      : 0;
+
+    return (
+      <LearningCourseHome
+        progress={progress}
+        completedLessons={lessonProgress.filter((lesson) => lesson.total > 0 && lesson.attempted >= lesson.total).length}
+        totalLessons={MENTAL_MATH_LESSONS.length}
+        hasStarted={attemptedQuestions > 0}
+        onOpenCourse={() => setShowLessonBoard(true)}
+      />
+    );
+  }
+
   return (
     <div
       className={`grid grid-cols-1 items-stretch gap-5 pb-10 font-app-body xl:grid-cols-12 ${
@@ -241,42 +266,6 @@ export default function LearningTab() {
       ) : null}
 
       <section className={`space-y-3 ${contentGridClass}`}>
-        {!showLessonBoard ? (
-          <div className="space-y-3">
-            <h2 className="text-xl font-semibold text-[#106FAA]">{tLearn("lessonsHeading")}</h2>
-            <article className="rounded-[32px] border border-white/70 bg-white/80 p-4 shadow-[0px_10px_15px_0px_rgba(0,0,0,0.1)] backdrop-blur-md">
-              <div className="flex flex-col gap-4 md:flex-row md:items-center">
-                <div className="overflow-hidden rounded-3xl md:w-[36%]">
-                  <Image
-                    src="/learning/mental_math/mental_math.png"
-                    alt={tLearn("mentalMathTitle")}
-                    width={420}
-                    height={240}
-                    className="h-[190px] w-full object-cover"
-                  />
-                </div>
-
-                <div className="flex-1">
-                  <h3 className="font-['Titan_One'] text-2xl text-[#045E96]">{tLearn("mentalMathTitle")}</h3>
-                  <p className="mt-2 text-sm leading-6 text-[#045E96]">{tLearn("mentalMathIntro")}</p>
-                  <p className="mt-2 text-sm font-medium text-[#106FAA]">{tLearn("ageBand")}</p>
-                  <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-                    <span className="rounded-full bg-[#EDF4FC] px-4 py-1.5 text-sm text-[#106FAA]">
-                      {tLearn("lessonMeta", { lessonCount: MENTAL_MATH_LESSONS.length, hours: 24 })}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => setShowLessonBoard(true)}
-                      className="rounded-full bg-[#045E96] px-5 py-2 text-sm font-semibold text-[#EDF4FC] transition hover:opacity-95"
-                    >
-                      {tLearn("startLearning")}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </article>
-          </div>
-        ) : (
           <div className="space-y-5">
             <div className="text-2xl font-semibold text-[#106FAA]">
               <button
@@ -433,7 +422,6 @@ export default function LearningTab() {
               </div>
             )}
           </div>
-        )}
       </section>
 
       <UnlockCourseDialog

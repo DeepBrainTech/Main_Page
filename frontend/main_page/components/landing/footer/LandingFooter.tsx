@@ -1,17 +1,26 @@
 "use client";
 
 import Image from "next/image";
-import { useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { Link } from "@/lib/i18n-navigation";
+import { SUPPORT_CONTACT_EMAIL } from "@/constants/support";
+
+type FooterLink = { label: string; href?: string };
 
 export default function LandingFooter() {
-  const params = useParams();
-  const locale = params.locale as string;
   const t = useTranslations("figmaHome");
-  const groups = [
-    { title: t("districts"), links: [t("districtTechnology"), t("districtAcademy")] },
-    { title: t("browse"), links: [t("games"), t("courses"), t("tests")] },
-    { title: t("about"), links: [t("aboutUs"), t("leadership"), t("careers"), t("blog"), t("contact")] },
+  const tSettings = useTranslations("settings");
+  const groups: { title: string; links: FooterLink[] }[] = [
+    { title: t("districts"), links: [{ label: t("districtTechnology"), href: "/" }, { label: t("districtAcademy") }] },
+    { title: t("browse"), links: [
+      { label: t("games"), href: "/braingames" },
+      { label: t("courses"), href: "/learning" },
+      { label: t("tests"), href: "/test" },
+    ] },
+    { title: t("about"), links: [
+      { label: t("aboutUs") }, { label: t("leadership") }, { label: t("careers") }, { label: t("blog") },
+      { label: t("contact"), href: `mailto:${SUPPORT_CONTACT_EMAIL}` },
+    ] },
   ];
 
   return (
@@ -41,8 +50,12 @@ export default function LandingFooter() {
               <h2 className="text-[clamp(1rem,1.0417vw,1.25rem)] font-semibold leading-[1.4] text-white/70">{group.title}</h2>
               <ul className="mt-5 flex flex-col gap-5 text-[clamp(1rem,1.0417vw,1.25rem)] font-medium leading-[1.4]">
                 {group.links.map((link) => (
-                  <li key={link}>
-                    <a href="#" className="transition-colors hover:text-[#ffdd65]">{link}</a>
+                  <li key={link.label}>
+                    {link.href ? (
+                      <Link href={link.href} className="transition-colors hover:text-[#ffdd65]">{link.label}</Link>
+                    ) : (
+                      <span aria-disabled="true" title={tSettings("legalLinkComingSoon")} className="cursor-default text-white/60">{link.label}</span>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -52,8 +65,8 @@ export default function LandingFooter() {
         <div className="flex flex-wrap items-center justify-between gap-5 text-[clamp(0.875rem,1.0417vw,1.25rem)] font-extralight leading-[1.4] text-white">
           <p>{t("copyright")}</p>
           <div className="flex items-center gap-[clamp(1.5rem,2.0833vw,2.5rem)]">
-            <a href={`/${locale}/privacy-policy`} className="transition-colors hover:text-[#ffdd65]">{t("policy")}</a>
-            <a href="#" className="transition-colors hover:text-[#ffdd65]">{t("terms")}</a>
+            <Link href="/privacy-policy" className="transition-colors hover:text-[#ffdd65]">{t("policy")}</Link>
+            <span aria-disabled="true" title={tSettings("legalLinkComingSoon")} className="cursor-default text-white/60">{t("terms")}</span>
           </div>
         </div>
       </div>

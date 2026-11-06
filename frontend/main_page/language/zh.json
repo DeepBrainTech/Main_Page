@@ -1078,6 +1078,37 @@
       "badgeFocusPilot": "专注领航",
       "badgeLogicExplorer": "逻辑探索者",
       "lessonsHeading": "课程列表",
+      "coursesHeading": "课程",
+      "mentalMathCourseTitle": "心算秘诀",
+      "courseCategoriesLabel": "按学科筛选课程",
+      "courseCategories": {
+        "all": "全部课程",
+        "math": "数学",
+        "language": "语言",
+        "chess": "国际象棋"
+      },
+      "courseProgress": "学习进度",
+      "courseProgressLabel": "{title}的学习进度",
+      "courseLessonCount": "{completed}/{total} 课",
+      "continueLearning": "继续学习",
+      "saveCourse": "收藏{title}",
+      "removeSavedCourse": "取消收藏{title}",
+      "noCourses": "该分类暂无课程，敬请期待。",
+      "booksHeading": "图书",
+      "studyToolsHeading": "学习工具",
+      "studyTools": {
+        "ai": {
+          "category": "专属 AI 导师",
+          "title": "陈博士 AI",
+          "description": "让每一次错误都成为学习的机会。通过清晰讲解和个性化指导，不断提升自己。"
+        },
+        "practice": {
+          "category": "考试练习",
+          "title": "模拟测试",
+          "description": "使用历年真题练习，从容应考，建立信心。"
+        }
+      },
+      "resourcesComingSoon": "即将上线",
       "mentalMathTitle": "心算训练",
       "mentalMathIntro": "通过短课时建立数感——清晰讲解 + 闯关练习，更轻松坚持。",
       "ageBand": "适合 6–12 岁",

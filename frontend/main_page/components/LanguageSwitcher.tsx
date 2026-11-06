@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { usePathname, useRouter } from "@/lib/i18n-navigation";
 import { setNextLocaleCookie } from "@/lib/locale-cookie";
+import { currentHref } from "@/lib/navigation";
 
 export default function LanguageSwitcher() {
   const router = useRouter();
@@ -17,7 +18,7 @@ export default function LanguageSwitcher() {
   const switchLanguage = (newLocale: string) => {
     setNextLocaleCookie(newLocale);
     setIsOpen(false);
-    router.push(pathname || "/", { locale: newLocale });
+    router.replace(currentHref(pathname || "/"), { locale: newLocale, scroll: false });
   };
 
   const nextLocale = currentLocale === "zh" ? "en" : "zh";

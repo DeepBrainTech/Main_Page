@@ -5,6 +5,7 @@ import { useRouter } from "@/lib/i18n-navigation";
 import { useTranslations } from "next-intl";
 import type { GameEntry } from "@/config/brain-games";
 import { apiFetch } from "@/lib/api-config";
+import { authHref } from "@/lib/navigation";
 import { getUserTimezone, postGamePlayedRecord } from "@/services/userApi";
 import {
   GAME_LAUNCH_BY_KEY,
@@ -40,7 +41,8 @@ export function useGameLauncher() {
       });
 
       if (response.status === 401) {
-        router.push("/login");
+        const returnTo = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+        router.replace(authHref("/login", returnTo));
         return;
       }
 

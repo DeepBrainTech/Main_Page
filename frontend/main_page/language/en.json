@@ -702,7 +702,7 @@
       "nBackPracticeTitle": "N-back Practice",
       "nBackPracticeBadge": "Practice",
       "nBackPracticeDesc": "Use the history and current stimulus to judge whether they match under the given N-back level. Once you are familiar, start the formal test.",
-      "nBackFixedLevelHint": "This test uses 2-back for all trials.",
+      "nBackFixedLevelHint": "This test uses {level}-back for all trials.",
       "nBackFormalDesc": "For each trial, follow the shown N-back level and decide whether the current stimulus matches the one N steps earlier. Try to be both fast and accurate.",
       "nBackHintGrid": "Grid mode: numbers in the 3×3 grid represent different positions. Compare the current highlighted cell with the position {level} steps before.",
       "nBackHintLetter": "Letter mode: letters are chosen from A–K. Compare the current letter with the one {level} steps before.",
@@ -1079,6 +1079,37 @@
       "badgeFocusPilot": "Focus Pilot",
       "badgeLogicExplorer": "Logic Explorer",
       "lessonsHeading": "Lessons",
+      "coursesHeading": "Courses",
+      "mentalMathCourseTitle": "Mental Math Secrets",
+      "courseCategoriesLabel": "Filter courses by subject",
+      "courseCategories": {
+        "all": "All Courses",
+        "math": "Math",
+        "language": "Language",
+        "chess": "Chess"
+      },
+      "courseProgress": "Progress",
+      "courseProgressLabel": "{title} progress",
+      "courseLessonCount": "{completed}/{total} Lessons",
+      "continueLearning": "Continue",
+      "saveCourse": "Save {title}",
+      "removeSavedCourse": "Unsave {title}",
+      "noCourses": "No courses available in this category yet.",
+      "booksHeading": "Books",
+      "studyToolsHeading": "Study Tools",
+      "studyTools": {
+        "ai": {
+          "category": "Personal AI Tutor",
+          "title": "Dr. Chen AI",
+          "description": "Turn every mistake into a learning moment. Get a clear explanation and a personal guide to improve."
+        },
+        "practice": {
+          "category": "Exam Practice",
+          "title": "Practice Tests",
+          "description": "Build confidence with real test papers from past years."
+        }
+      },
+      "resourcesComingSoon": "Coming soon",
       "mentalMathTitle": "Mental Math",
       "mentalMathIntro": "Build number sense through short lessons — friendly explanations and practice streaks.",
       "ageBand": "Ages 6-12",

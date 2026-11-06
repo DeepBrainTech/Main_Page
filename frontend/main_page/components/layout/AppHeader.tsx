@@ -61,7 +61,12 @@ export default function AppHeader({
   return (
     <header className="sticky top-0 z-50 border-b border-slate-200 bg-white/95 shadow-sm backdrop-blur">
       <div className="flex min-h-16 items-center justify-between gap-2 px-4 py-3 sm:min-h-[4.75rem] sm:gap-3 sm:px-6 sm:py-3.5 lg:min-h-24 lg:px-8 lg:py-4">
-        <div className="flex min-w-0 items-center">
+        <Link
+          href={tabHrefMap.dashboard}
+          onClick={onCloseOverlays}
+          aria-label={tHome("dashboardTab")}
+          className="flex min-w-0 shrink-0 items-center rounded-lg focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#045E96]"
+        >
           <Image
             src="/dashboard/logo.png"
             alt={tCommon("appName")}
@@ -70,9 +75,9 @@ export default function AppHeader({
             className="h-8 w-auto max-w-full object-contain sm:h-10 lg:h-12"
             priority
           />
-        </div>
+        </Link>
 
-        <div className="flex min-w-0 shrink-0 items-center gap-2 sm:gap-3 xl:max-w-[759px]">
+        <div className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-2 sm:gap-3 md:flex-none md:flex-nowrap xl:max-w-[759px]">
           <div className="flex flex-wrap items-center justify-end gap-2 sm:flex-nowrap sm:gap-2 md:gap-3">
             <div className="group relative">
               <button type="button" className="rounded-full" aria-label={tHome("coins")}>

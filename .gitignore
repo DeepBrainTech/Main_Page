@@ -33,6 +33,7 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!/.agents/skills/dbt-game-integration/assets/examples/.env.example
 
 # vercel
 .vercel

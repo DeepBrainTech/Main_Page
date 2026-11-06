@@ -70,7 +70,7 @@ export default function AuthedAppLayout({ children }: { children: React.ReactNod
         avatarUrl={avatarUrl}
         onLogout={async () => {
           await logout();
-          router.replace("/login");
+          router.replace("/");
         }}
         onProfileUpdate={refetch}
       >

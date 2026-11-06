@@ -45,13 +45,13 @@ class AvatarTests(unittest.TestCase):
         self.user.avatar_object_key = "avatars/1.png"
         self.user.google_avatar_url = "https://google.example.test/avatar.png"
         self.db.commit()
-        with patch("services.avatars.generate_object_read_url", return_value="https://r2.example.test/signed-avatar"):
+        with patch("services.avatars.generate_avatar_read_url", return_value="https://r2.example.test/signed-avatar"):
             result = get_leaderboard_avatars(self.db, self.token(), "chessmater")
         self.assertEqual(result, {"avatars": [
             {"user_id": 1, "avatar_url": "https://r2.example.test/signed-avatar", "avatar_fallback_url": "https://portal.example.test/dashboard/default.png"},
             {"user_id": 2, "avatar_url": "https://portal.example.test/dashboard/default.png", "avatar_fallback_url": "https://portal.example.test/dashboard/default.png"},
         ]})
-        with patch("services.avatars.generate_object_read_url", side_effect=RuntimeError("unavailable")):
+        with patch("services.avatars.generate_avatar_read_url", side_effect=RuntimeError("unavailable")):
             self.assertEqual(get_leaderboard_avatars(self.db, self.token(), "chessmater")["avatars"][0]["avatar_url"], self.user.google_avatar_url)
 
     def test_invalid_login_expired_and_unbounded_tokens_are_rejected(self):

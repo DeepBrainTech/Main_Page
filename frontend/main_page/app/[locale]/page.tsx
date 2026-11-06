@@ -33,7 +33,7 @@ export default function Home() {
     apiFetch("/api/auth/verify")
       .then((res) => {
         if (res.ok) {
-          router.push("/dashboard");
+          router.replace("/dashboard");
         }
       })
       .catch(() => {

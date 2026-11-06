@@ -11,6 +11,7 @@ import GoogleLoginButton from "@/components/auth/GoogleLoginButton";
 import AuthPageShell from "@/components/auth/AuthPageShell";
 import AuthTextField from "@/components/auth/AuthTextField";
 import CompleteProfileDialog from "@/components/features/profile/CompleteProfileDialog";
+import { useAuthNavigation } from "@/hooks/useAuthNavigation";
 
 type FormField =
   | "username"
@@ -24,6 +25,7 @@ type FormField =
 
 export default function RegisterPage() {
   const router = useRouter();
+  const { destination, authHref } = useAuthNavigation();
   const params = useParams();
   const locale = params.locale as string;
   const t = useTranslations();
@@ -393,9 +395,9 @@ export default function RegisterPage() {
       const result = await response.json().catch(() => null);
 
       if (result?.data?.auto_login) {
-        router.push("/dashboard");
+        router.replace(destination);
       } else {
-        router.push("/login?registered=true");
+        router.replace(authHref("/login?registered=true"));
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : t("register.registerFailed");
@@ -630,7 +632,7 @@ export default function RegisterPage() {
                   setCompleteProfileUsername(opts.username ?? "");
                   setShowCompleteProfile(true);
                 } else {
-                  router.push("/dashboard");
+                  router.replace(destination);
                 }
               }}
               onError={(code) => {
@@ -646,7 +648,7 @@ export default function RegisterPage() {
           <span>{t("register.hasAccount")}</span>
           <button
             type="button"
-            onClick={() => router.push("/login")}
+            onClick={() => router.push(authHref("/login"))}
             className="text-[#3692f6] transition hover:text-[#106faa] hover:underline"
           >
             {t("register.loginLink")}
@@ -659,7 +661,7 @@ export default function RegisterPage() {
           onClose={() => setShowCompleteProfile(false)}
           onSuccess={() => {
             setShowCompleteProfile(false);
-            router.push("/dashboard");
+            router.replace(destination);
           }}
         />
       </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { usePathname, useSearchParams } from "next/navigation";
 import { type MembershipPlan } from "@/components/features/membership/MembershipPlans";
 import ProfileDialog from "@/components/features/profile/ProfileDialog";
 import SettingsDialog from "@/components/features/settings/SettingsDialog";
@@ -42,12 +43,21 @@ export default function AppShell({
   onProfileUpdate,
   children,
 }: AppShellProps) {
+  const pathname = usePathname();
+  const search = useSearchParams().toString();
   const [profileOpen, setProfileOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [membershipPlan, setMembershipPlan] = useState<MembershipPlan>("free");
   const [avatarFailed, setAvatarFailed] = useState(false);
   const { loading: rewardsLoading, coins, diamonds, flowers } = useRewards();
   const notifications = useNotifications(activeTab);
+  const setNotificationsOpen = notifications.setOpen;
+
+  useEffect(() => {
+    setProfileOpen(false);
+    setSettingsOpen(false);
+    setNotificationsOpen(false);
+  }, [pathname, search, setNotificationsOpen]);
 
   const resolvedAvatarSrc = !avatarFailed && avatarUrl ? avatarUrl : "/dashboard/default.png";
 

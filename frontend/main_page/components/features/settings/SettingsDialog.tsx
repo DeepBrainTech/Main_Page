@@ -8,6 +8,7 @@ import { SUPPORT_CONTACT_EMAIL } from "@/constants/support";
 import { readAppPreferences, setSoundEffectsEnabled, writeAppPreferences } from "@/lib/app-preferences";
 import { Link, usePathname, useRouter } from "@/lib/i18n-navigation";
 import { setNextLocaleCookie } from "@/lib/locale-cookie";
+import { currentHref } from "@/lib/navigation";
 
 interface SettingsDialogProps {
   open: boolean;
@@ -67,7 +68,7 @@ export default function SettingsDialog({ open, onClose }: SettingsDialogProps) {
     if (locales.includes(next)) {
       setNextLocaleCookie(next);
       if (next !== currentLocale) {
-        router.push(pathname || "/", { locale: next });
+        router.replace(currentHref(pathname || "/"), { locale: next, scroll: false });
       }
     }
     onClose();

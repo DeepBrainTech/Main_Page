@@ -1,0 +1,15 @@
+{
+  "name": "dbt-game-integration",
+  "version": "0.3.0",
+  "private": true,
+  "type": "module",
+  "description": "DBT game integration documentation, examples, and AI skill",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "check": "node scripts/validate.mjs",
+    "test": "node --test tests/install.test.mjs tests/login.test.mjs"
+  },
+  "devDependencies": {
+    "jose": "5.9.6"
+  }
+}

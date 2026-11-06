@@ -32,9 +32,9 @@ Backend	Deployed on Railway
 
 To maintain educational progress, user authentication is required to access the hub.
 
-Every game integrated into this hub must support data persistence. Users first log in the game page, then enter each game with their unique ID and password. Game Developers are responsible to store:
+Every game integrated into this hub must support data persistence. Users authenticate with the portal; games verify portal-issued credentials and associate game data with the verified portal user ID. Games do not require a separate player password. Game Developers are responsible to store:
 
-- User Profiles: Syncing game scores and levels with the game page central user database.
+- User Profiles: Maintaining a unique mapping to the portal user ID, with scores and levels stored in the game's own database.
 
 - Match Data: Storing match history and game states (especially for multiplayer titles like FogChess).
 
@@ -42,6 +42,8 @@ Every game integrated into this hub must support data persistence. Users first l
 
 
 ## Development Guidelines
+
+For new game integration, see the [DBT integration guide](docs/dbt-game-integration.md) and [skill installation guide](docs/dbt-game-integration-install.md). The repository-local integration skill is invoked explicitly as `$dbt-game-integration`; routine development does not require loading it.
 
 We welcome contributions from students across different backgrounds. To keep the integration process seamless:
 

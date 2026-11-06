@@ -8,9 +8,11 @@ import GoogleLoginButton from "@/components/auth/GoogleLoginButton";
 import AuthPageShell from "@/components/auth/AuthPageShell";
 import AuthTextField from "@/components/auth/AuthTextField";
 import CompleteProfileDialog from "@/components/features/profile/CompleteProfileDialog";
+import { useAuthNavigation } from "@/hooks/useAuthNavigation";
 
 export default function LoginPage() {
   const router = useRouter();
+  const { destination, authHref } = useAuthNavigation();
   const t = useTranslations();
 
   const [username, setUsername] = useState("");
@@ -66,7 +68,7 @@ export default function LoginPage() {
       // We still consume the body to keep error handling consistent.
       await response.json().catch(() => null);
 
-      router.push("/dashboard");
+      router.replace(destination);
     } catch (err: any) {
       setError(err.message || t("login.loginFailed"));
     } finally {
@@ -126,7 +128,7 @@ export default function LoginPage() {
             </label>
             <button
               type="button"
-              onClick={() => router.push("/forgot-password")}
+              onClick={() => router.push(authHref("/forgot-password"))}
               className="font-medium text-[#3692f6] transition hover:text-[#106faa] hover:underline"
             >
               {t("login.forgotPassword")}
@@ -153,7 +155,7 @@ export default function LoginPage() {
                   setCompleteProfileUsername(opts.username ?? "");
                   setShowCompleteProfile(true);
                 } else {
-                  router.push("/dashboard");
+                  router.replace(destination);
                 }
               }}
               onError={(code) => setError(t(`auth.${code}`))}
@@ -166,7 +168,7 @@ export default function LoginPage() {
           <span>{t("login.noAccount")}</span>
           <button
             type="button"
-            onClick={() => router.push("/register")}
+            onClick={() => router.push(authHref("/register"))}
             className="text-[#3692f6] transition hover:text-[#106faa] hover:underline"
           >
             {t("login.registerLink")}
@@ -179,7 +181,7 @@ export default function LoginPage() {
           onClose={() => setShowCompleteProfile(false)}
           onSuccess={() => {
             setShowCompleteProfile(false);
-            router.push("/dashboard");
+            router.replace(destination);
           }}
         />
       </div>

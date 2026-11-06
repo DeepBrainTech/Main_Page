@@ -6,8 +6,9 @@ import { useTranslations } from "next-intl";
 import { COGNITIVE_DIMENSION_KEYS } from "@/types/cognitive";
 import { fetchLeaderboard, type LeaderboardEntry } from "@/services/userApi";
 import { getCountryLabel, getFlagImageSrcSet, getFlagImageUrl } from "@/constants/countries";
+import { useUrlFilter } from "@/hooks/useUrlFilter";
 
-type LeaderboardTabType = "global" | "dimension";
+const LEADERBOARD_TABS = ["global", "dimension"] as const;
 
 export default function LeaderboardTab() {
   const renderCountryFlag = (code?: string | null, size: "small" | "large" = "small") => {
@@ -30,7 +31,7 @@ export default function LeaderboardTab() {
   const [totalList, setTotalList] = useState<LeaderboardEntry[]>([]);
   const [byDimension, setByDimension] = useState<Record<string, LeaderboardEntry[]>>({});
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<LeaderboardTabType>("global");
+  const [activeTab, setActiveTab] = useUrlFilter("tab", LEADERBOARD_TABS, "global");
 
   useEffect(() => {
     let cancelled = false;

@@ -5,9 +5,11 @@ import { useParams } from "next/navigation";
 import { useRouter } from "@/lib/i18n-navigation";
 import { useTranslations } from "next-intl";
 import { getApiUrl } from "@/lib/api-config";
+import { useAuthNavigation } from "@/hooks/useAuthNavigation";
 
 export default function ForgotPasswordPage() {
   const router = useRouter();
+  const { authHref } = useAuthNavigation();
   const params = useParams();
   const locale = params.locale as string;
   const t = useTranslations();
@@ -151,7 +153,7 @@ export default function ForgotPasswordPage() {
       
       // 2秒后跳转到登录页
       setTimeout(() => {
-        router.push("/login");
+        router.replace(authHref("/login"));
       }, 2000);
     } catch (err) {
       if (!error) {
@@ -332,7 +334,7 @@ export default function ForgotPasswordPage() {
 
         <div className="mt-6 text-center">
           <button
-            onClick={() => router.push("/login")}
+            onClick={() => router.push(authHref("/login"))}
             className="text-sm text-zinc-600 dark:text-zinc-400 hover:underline"
           >
             {t("forgotPassword.backToLogin")}
