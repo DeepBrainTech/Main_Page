@@ -30,6 +30,11 @@ npm run typecheck
 npm run test:unit
 ```
 
+`npm run typecheck` first runs `next typegen` to generate `next-env.d.ts`
+and route declarations before running TypeScript. These generated files are
+not checked in, so a clean checkout needs this step to resolve static image
+imports without first running a development server or production build.
+
 Browser fixtures intercept API requests, block external browser requests, and fail
 on unexpected API endpoints or uncaught page errors. They verify frontend behavior,
 not the correctness of the mocked backend. Build with local API addresses so no
