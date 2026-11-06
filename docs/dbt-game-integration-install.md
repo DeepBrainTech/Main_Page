@@ -16,7 +16,12 @@ This skill is **explicit-only** in Codex. Invoke it with its `$` name when you n
 Use $dbt-game-integration from Main_Page to complete both portal registration
 and game-side DBT integration in this session.
 
-Game repository: D:\Projects\mygame
+Game repository: GAME_REPOSITORY_ABSOLUTE_PATH
+
+Use the skill's Freefall Chess reference for the existing end-to-end pattern.
+Its reviewed local source path is D:\DeepBrainTech\ChessMater. Treat that as
+a read-only reference unless Freefall Chess itself is the target. Another game
+needs its own keys, secrets, and agreed reward rules.
 
 Read both repositories' instructions and existing code. Implement the localized
 portal launch entry, game token verification, unique portal user ID mapping,
@@ -48,16 +53,16 @@ From the Main_Page root, run:
 Windows PowerShell:
 
 ```powershell
-node .agents/skills/dbt-game-integration/scripts/install.mjs "D:\Projects\mygame"
+node .agents/skills/dbt-game-integration/scripts/install.mjs "GAME_REPOSITORY_ABSOLUTE_PATH"
 ```
 
 macOS/Linux:
 
 ```sh
-node .agents/skills/dbt-game-integration/scripts/install.mjs "$HOME/projects/mygame"
+node .agents/skills/dbt-game-integration/scripts/install.mjs "/absolute/path/to/target-game"
 ```
 
-The installer copies the complete skill into `mygame/.agents/skills/dbt-game-integration/`, including the explicit-only policy, references, examples, and supporting tools. It records the package version and source commit when available in `installation.json`. Treat that commit as provenance, not proof that the source working tree had no local changes; use an approved, clean revision for team distribution.
+Replace the path with the actual target checkout. The installer copies the complete skill into its `.agents/skills/dbt-game-integration/`, including the explicit-only policy, references, examples, and supporting tools. It records the package version and source commit when available in `installation.json`. Treat that commit as provenance, not proof that the source working tree had no local changes; use an approved, clean revision for team distribution.
 
 The installer refuses to overwrite an existing installation. It does not modify game application code, install dependencies, stage files, configure secrets, or deploy services.
 

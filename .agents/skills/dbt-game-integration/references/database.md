@@ -4,9 +4,9 @@
 
 `Main_Page.users.id` is the canonical account identity. Store it as `portal_user_id` on a game-side player/profile record with a non-null unique constraint. Preserve an existing local player UUID if game tables already depend on it.
 
-Use an integer type compatible with the portal ID. Current portal users use a signed integer; verification examples accept positive values through 2147483647. Do not convert an existing game's UUID into a portal ID or assume equal numeric values establish a relationship.
+Use storage compatible with the portal ID. Current portal login IDs are signed integers; verification examples accept positive values through 2147483647. Freefall Chess stores their normalized decimal representation in TEXT `portal_user_id` columns, with a unique mapping separate from local `users.id`. Preserve that existing representation; a new game may use an integer column. Do not convert a game UUID into a portal ID or assume equal numbers establish a relationship.
 
-Illustrative PostgreSQL shape (adapt through the game's migration system):
+Freefall Chess uses `users`, `user_progress`, `user_level_stats`, `user_level_coin_rewards`, and `inventory_deliveries`; see [the reference](freefall-chess.md) for their identities and source locations. The following simplified PostgreSQL schema is an optional new-game design, not a reproduction of its existing tables or a migration to apply to them:
 
 ```sql
 CREATE TABLE game_players (

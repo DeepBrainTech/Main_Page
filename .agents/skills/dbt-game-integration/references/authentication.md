@@ -4,7 +4,7 @@
 
 The portal performs registration, password/social login, and account-status checks. The browser calls protected portal APIs using the portal HttpOnly Cookie with `credentials: 'include'`. Portal resource APIs do not accept a game JWT as a replacement for this Cookie.
 
-The portal issues a separate JWT for each game. Current login claims are:
+The portal issues a separate JWT for each game. Using Freefall Chess as the example, current login claims are:
 
 ```json
 {
@@ -12,7 +12,7 @@ The portal issues a separate JWT for each game. Current login claims are:
   "user_id": 123,
   "username": "display_login_name",
   "iss": "main-portal",
-  "aud": "mygame",
+  "aud": "chessmater",
   "exp": 2000000000
 }
 ```
@@ -21,7 +21,7 @@ This is an illustrative payload, not a usable token. `user_id` is the numeric po
 
 ## Verification
 
-Configure the expected algorithm, issuer, and audience on the backend. Do not choose them from unverified JWT headers/claims. Current defaults are HS256, `main-portal`, and the game's registered audience, with a 300-second lifetime. The configured audience can differ from the API slug: QuantumGo defaults to `quantum-go`.
+Configure the expected algorithm, issuer, and audience on the backend. Do not choose them from unverified JWT headers/claims. Freefall Chess defaults to HS256, issuer `main-portal`, audience `chessmater`, and a 300-second portal login lifetime. Other games may have an audience different from their API slug; inspect the registry instead of deriving it from the display name.
 
 Require a valid signature, `exp`, `iss`, `aud`, a positive integer `user_id` within the current portal integer range, and the expected login identity fields. Login validation must reject paid grants and inventory receipts. The example uses the current login shape (`sub` and `username`, with no `purpose`) to separate those credentials.
 
@@ -38,6 +38,8 @@ Fragments are read by browser JavaScript, not received directly by the game HTTP
 Refresh once shortly before expiration, coalesce concurrent refresh attempts, and retry transient failures with bounded backoff. A game-API 401 may be resolved by one refresh and reauthentication attempt. A portal-API 401 requires returning to portal login; avoid redirect loops. Preserve only a trusted return location.
 
 ## Game-local sessions and account state
+
+Concrete Freefall Chess behavior is documented in [the reference](freefall-chess.md): Bearer exchange at `/api/auth/verify`, a separate `cm_session` Cookie, and `/api/auth/me` restoration. Its backend uses `jsonwebtoken`; the bundled `jose` verifier is a portable alternative, not a copy of its server implementation.
 
 Games may validate the short-lived JWT on every request, or exchange it for a game-local session after verification. That session must bind to `portal_user_id` and have an explicit lifetime/revalidation policy. The example verifier does not implement a session store or a revocation service.
 

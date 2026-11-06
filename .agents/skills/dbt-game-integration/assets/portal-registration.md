@@ -4,6 +4,8 @@ Use this as the per-game integration record when one agent implements both sides
 
 ## Identity and deployment
 
+Reference only: Freefall Chess uses `chessmater` for game key/API slug/audience, `CHESSMATER` for backend prefix, and game-owned inventory. Record the target's actual identifiers below; do not copy these defaults for a different game. See [the worked reference](../references/freefall-chess.md).
+
 - Game display names/locales:
 - Stable `game_key`:
 - API `api_slug`:

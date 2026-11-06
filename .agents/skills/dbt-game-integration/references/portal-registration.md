@@ -1,23 +1,25 @@
 # Portal maintainer workflow
 
-For the standard workflow, the agent starts in Main_Page and implements both repositories using [the combined prompt](../assets/integration-prompt.md). Use [the integration record](../assets/portal-registration.md) to capture requirements and outcomes; a pre-existing handoff is not required. Validate stable IDs and requested features from both repositories before changing Main_Page. Examples below use an unregistered `mygame`.
+For the standard workflow, the agent starts in Main_Page and implements both repositories using [the combined prompt](../assets/integration-prompt.md). Use [the integration record](../assets/portal-registration.md) to capture requirements and outcomes; a pre-existing handoff is not required. Validate stable IDs and requested features from both repositories before changing Main_Page. Examples use the existing [Freefall Chess registration](freefall-chess.md); do not duplicate it or reuse its identity for another game.
 
 ## Authentication registration
 
-Add an entry to `backend/api/config/game_auth.py`:
+Freefall Chess already has this entry in `backend/api/config/game_auth.py`:
 
 ```python
 GameAuthEntry(
-    game_key="mygame",
-    api_slug="mygame",
-    env_prefix="MYGAME",
-    default_aud="mygame",
+    game_key="chessmater",
+    api_slug="chessmater",
+    env_prefix="CHESSMATER",
+    default_aud="chessmater",
     has_session=True,
-    track_daily_play=False,
+    track_daily_play=True,
 ),
 ```
 
 Configure both backends with matching signing parameters using the [environment example](../assets/examples/.env.example). Every game gets a separate secret. An optional reward secret is shared only by the relevant backends. Never distribute the portal account-signing key.
+
+For a new game, add a separate entry with its assigned keys, prefix, audience, and tracking policy. Do not copy the reference's daily-tracking flag without a requirement.
 
 The registered game joins the supported game-key catalog automatically through the registry union. Decide explicitly whether any additional catalog/status lists need adjustment. `track_daily_play` enables daily tracking; it does not define a new reward policy.
 

@@ -8,6 +8,12 @@ the portal-side registration and the game-side DBT integration.
 
 Game repository: GAME_REPOSITORY_ABSOLUTE_PATH
 
+Use the skill's Freefall Chess reference for the complete existing integration
+pattern. If its source checkout is available, inspect relevant files read-only;
+the reviewed Windows path is D:\DeepBrainTech\ChessMater. Keep that path distinct
+from the target above. Preserve existing chessmater identifiers when maintaining
+Freefall Chess; give a different target game its own identifiers and secrets.
+
 Inspect both repositories and their applicable AGENTS.md instructions before
 editing. Infer existing game identifiers, framework, database, and configuration
 from the code. Ask about missing essential decisions rather than inventing
@@ -44,6 +50,6 @@ Do not include secrets in documents, run git add, modify production data,
 create real payments, or deploy services. Remove temporary files you create.
 ```
 
-Windows game-path example: `D:\DeepBrainTech\MyGame`. macOS/Linux example: `/home/developer/projects/mygame`. Replace the optional requirements line with actual agreed features when needed; do not submit illustrative prices as approved business rules.
+Windows reference checkout: `D:\DeepBrainTech\ChessMater` (Freefall Chess). For a different target, replace `GAME_REPOSITORY_ABSOLUTE_PATH` with its own existing directory. The reference path does not authorize edits to it. Replace optional requirements with actual agreed features; do not reuse Freefall Chess prices or rewards as automatically approved new-game rules.
 
 For a later focused change, explicitly request portal-only or game-only scope. The default prompt above intentionally covers both repositories without copying the skill into the game.

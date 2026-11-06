@@ -11,6 +11,8 @@ The standard workflow starts in Main_Page with a user-supplied local game reposi
 
 ## Establish repository scope
 
+Use [Freefall Chess](references/freefall-chess.md) as the primary concrete reference for login, mapping, rewards, and inventory. Its legacy internal key is `chessmater`; allocate independent identifiers for a new game. A reference path is not authorization to modify that repository when another game is the target.
+
 - **Both repositories (default):** locate Main_Page and resolve the supplied game path. Read applicable repository/ancestor instructions for each, inspect each working tree, and preserve unrelated changes. Read [quick start](references/quick-start.md), [authentication](references/authentication.md), [database](references/database.md), [API contracts](references/api.md), and [portal registration](references/portal-registration.md). Implement both portal registration and game integration, rather than stopping after a handoff.
 - **Portal-only or game-only:** use this scope when the user explicitly requests it, or when the other repository is inaccessible. Complete accessible work and identify the exact remaining changes using [the integration record](assets/portal-registration.md). Ask for missing access/path details when necessary; do not claim completion of the other side.
 - **Skill maintenance:** Main_Page's `.agents/skills/dbt-game-integration/` is the authoritative source. Keep it self-contained; game-local installation is an optional alternative, not the team's required workflow.
@@ -30,7 +32,7 @@ Work only in the named repositories and relevant files. A user-supplied game pat
 ## Implementation and verification
 
 1. Confirm the portal and game repository roots. Identify the stable `game_key`, `api_slug`, environment prefix, domains, backend stack, and requested optional features from code and user input. Registration means registering the game with DBT, not adding a second user-registration system.
-2. Implement the requested scope using the references and [example assets](assets/). Adapt examples to the game's architecture; `/auth/portal` in examples is a suggested game-owned route, not a shared DBT endpoint.
+2. Implement the requested scope using the references and [example assets](assets/). Freefall Chess uses game-owned `POST /api/auth/verify` with a Bearer portal token; game and portal response envelopes differ. Adapt that pattern to the target architecture rather than inventing a shared login endpoint or copying legacy code blindly.
 3. Use a verified identity to provision or load the game player atomically. Define expiration, refresh, account-switch, and local-session behavior. Do not claim immediate portal logout/ban propagation from offline JWT validation.
 4. For financial or inventory actions, use stable request IDs and durable game-side deduplication/retry state. Never apply gameplay effects based on a browser-reported balance or successful redirect.
 5. Run applicable checks in both repositories from [acceptance](references/acceptance.md). Verify matching paths, identity types, signing configuration, origins, and requested optional contracts. Distinguish code checks from live integration; report missing secrets/configuration or unavailable services.

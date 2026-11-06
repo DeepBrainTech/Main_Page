@@ -1,6 +1,6 @@
 # Compatibility and source provenance
 
-Package version: 0.3.0. Source review date: 2026-11-06.
+Package version: 0.4.0. Source review date: 2026-11-06.
 
 The authoritative skill is maintained in Main_Page at `.agents/skills/dbt-game-integration/`, with explicit-only invocation configured in `agents/openai.yaml`. The standard workflow runs from Main_Page against both it and a user-supplied game repository path. Game-local installation is optional. The earlier standalone package is superseded. See [the package changelog](changelog.md).
 
@@ -34,7 +34,7 @@ Paths after the first entry above are relative to `backend/api/`.
 
 `assets/examples/verify-login.mjs` is a new adapter example for the current login claims. It uses `jose`, requires deployment configuration, and does not create database players, issue sessions, or perform live account introspection.
 
-No game backend source or production environment was inspected for this package. The portal can verify a signed game assertion but cannot prove how a game produced that assertion. Complete game-side validation and deployment checks separately.
+The local Freefall Chess backend/frontend were inspected for the [primary worked reference](freefall-chess.md), against game base commit `4ad7e59fad4bdfbedebe7d4dbbcf739d1cc8f297` plus its local workspace. Other game backends and production environments were not checked. The portal verifies signed game assertions rather than replaying gameplay. Complete target-game validation and deployed acceptance separately; the source review is not a full security audit.
 
 ## Updating contracts
 

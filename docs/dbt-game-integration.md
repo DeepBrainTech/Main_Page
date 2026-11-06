@@ -20,6 +20,7 @@ Record changes, checks, and remaining deployment requirements per repository usi
 
 ## Read as needed
 
+- [Primary worked example: Freefall Chess](../.agents/skills/dbt-game-integration/references/freefall-chess.md)
 - [Installation and explicit invocation](dbt-game-integration-install.md)
 - [Skill entrypoint](../.agents/skills/dbt-game-integration/SKILL.md)
 - [Ready-to-copy prompt](../.agents/skills/dbt-game-integration/assets/integration-prompt.md)
@@ -35,7 +36,7 @@ Record changes, checks, and remaining deployment requirements per repository usi
 
 ## Maintenance
 
-Update relevant contracts and examples when the portal changes. Version 0.3.0 standardizes combined work from Main_Page without changing game API contracts. Existing optional installed copies must be updated deliberately; changing Main_Page does not rewrite game repositories.
+Update relevant contracts and examples when the portal changes. Version 0.4.0 uses Freefall Chess as the source-verified primary reference while keeping combined work from Main_Page. Examples retain its `chessmater` compatibility identifiers; another game requires its own identifiers and rules. Existing optional installed copies must be updated deliberately; changing Main_Page does not rewrite game repositories.
 
 Run from Main_Page:
 

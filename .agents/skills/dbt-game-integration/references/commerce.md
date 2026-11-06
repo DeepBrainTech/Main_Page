@@ -10,17 +10,18 @@ Separate three operations: earning portal assets for a verified achievement; spe
 
 The game backend confirms a genuine completed level and persists completion plus a pending reward event in its database transaction. A worker or recoverable retry loop sends the signed first-clear request in [API contracts](api.md). Derive `user_id` and `level` from trusted server records, not client claims.
 
-The portal determines the amount from `config/game_rewards.py`. Current support is one reward vector for an inclusive range per game:
+The portal determines the amount from `config/game_rewards.py`. The existing Freefall Chess configuration is:
 
 ```python
-"mygame": LevelRewardRule(
+"chessmater": LevelRewardRule(
     first_level=1,
-    last_level=50,
-    rewards={"coins": 50, "diamonds": 2},
+    last_level=105,
+    rewards={"coins": 200},
+    ledger_operation="first-clear-coins",
 ),
 ```
 
-This is a proposed registration example. Currently only `chessmater` is configured: levels 1–105, 200 coins per first clear. The generic service supports additional registered games after configuration. Different per-level amounts, repeatable wins, daily/seasonal rewards, and event budgets require new rules/contracts; the current range rule does not implement them.
+This is an existing rule, not a new-game default. The game backend also checks the returned 200-coin amount before acknowledging a reward, so Freefall Chess policy changes require coordination. Current support is one reward vector per inclusive game-level range; configure separate keys and agreed amounts for new games. Per-level amounts, repeatable wins, daily/seasonal rewards, and budgets need expanded rules/contracts. See [the full reference flow](freefall-chess.md).
 
 The portal verifies the signed event, checks the portal account, serializes asset changes, and commits the reward and deduplication record together. Claim identity is per user/game/level. Repeated calls do not credit again. The `chessmater` ledger operation `first-clear-coins` is a historical identifier and must remain stable.
 
@@ -29,6 +30,8 @@ On timeout, retry the same event with a freshly signed short-lived credential. M
 The portal trusts the game's signed completion assertion; it does not replay the game to prove the win. Protect the backend completion logic and signing secret accordingly.
 
 ## Paid backend features
+
+Freefall Chess's primary paid-flow example is **hint inventory delivery**, described below and in [the worked reference](freefall-chess.md). It has no currently registered product in the generic `GAME_PRODUCTS` registry. This section documents a separate optional target-bound authorization capability; do not invent a Freefall Chess product to make the examples look uniform.
 
 The portal maintainer registers a `GameProduct` in `config/game_commerce.py`, including a target validator, fixed price, purpose, and duration. The game first checks the target exists and the player can use it; portal format validation is not proof of game ownership.
 
