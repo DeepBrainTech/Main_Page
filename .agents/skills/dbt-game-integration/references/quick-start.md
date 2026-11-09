@@ -12,6 +12,8 @@ Obtain the portal API origin and portal login URL from the maintainer. The API b
 
 Agree on production and development frontend origins, the game API origin, and optional purchases/rewards. Real secrets must be shared through your deployment secret manager, separately from the handoff document.
 
+For concrete local ports, environment-file locations, Docker/direct startup, Cookie/CORS settings, and browser verification, use [local development](local-development.md). The Freefall Chess baseline uses portal frontend/API 3000/8000 and game frontend/API 5173/3001.
+
 ## Minimal game integration
 
 1. Inspect both repositories and register the game in Main_Page using the agreed identifiers. Record the integration requirements and outcomes with [the integration record template](../assets/portal-registration.md). A handoff to another session is needed only for explicitly split work or unavailable access; it is not the default deliverable.

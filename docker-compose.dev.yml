@@ -113,6 +113,7 @@ services:
       - NEXT_PUBLIC_API_URL=http://localhost:8000
       # FogChess 前端入口（本地或指向线上）
       - NEXT_PUBLIC_FOGCHESS_URL=http://localhost:8080
+      - NEXT_PUBLIC_NUMBER_BLAST_URL=${NEXT_PUBLIC_NUMBER_BLAST_URL:-http://localhost:5173}
       - WATCHPACK_POLLING=true
     volumes:
       # 开发模式：挂载代码目录以便热重载

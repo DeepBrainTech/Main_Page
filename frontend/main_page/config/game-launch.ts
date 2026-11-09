@@ -86,7 +86,9 @@ export const GAME_LAUNCH_ENTRIES: GameLaunchEntry[] = [
     kind: "token",
     launchKey: "numberBlast",
     apiSlug: "number-blast",
-    gameUrl: "https://number-blast.deepbraintechnology.com",
+    gameUrl:
+      process.env.NEXT_PUBLIC_NUMBER_BLAST_URL ||
+      "https://number-blast.deepbraintechnology.com",
   },
 ];
 

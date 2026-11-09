@@ -4,6 +4,8 @@ Freefall Chess is the primary worked example: the inspected source covers portal
 
 ## Identity and configuration
 
+See [local development](local-development.md) for the verified local port plan, environment files, startup commands, and troubleshooting for this reference game.
+
 - Public name: **Freefall Chess**; localize display names through i18n.
 - Reviewed game directory: `D:\DeepBrainTech\ChessMater`. This is a local example, not a required directory name.
 - Existing `game_key`, `api_slug`, and default login audience: `chessmater`.

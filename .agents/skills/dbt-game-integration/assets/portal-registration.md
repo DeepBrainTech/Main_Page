@@ -22,6 +22,18 @@ Reference only: Freefall Chess uses `chessmater` for game key/API slug/audience,
 - `track_daily_play` and why:
 - Secret-manager references for each backend (no values):
 
+## Local testing configuration
+
+Use [local development](../references/local-development.md) as the Freefall Chess baseline; record the target game's actual configuration without secrets.
+
+- Startup mode (Docker or direct) and per-service working directories/commands:
+- Portal frontend/API and game frontend/API origins and ports:
+- Environment-file locations and public URL variable names:
+- Portal/game database targets and initialization status (no passwords):
+- CORS allowlists, Cookie names/domain/SameSite/Secure:
+- Backend-to-backend URLs, including container-to-host routing:
+- Health checks, browser launch/refresh/account-switch results:
+
 ## Game implementation
 
 - Game bootstrap/authentication route and payload:

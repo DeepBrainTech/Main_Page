@@ -47,7 +47,15 @@ export function useGameLauncher() {
       }
 
       if (!response.ok) {
-        throw new Error("Failed to fetch game token");
+        const body = await response.json().catch(() => null);
+        if (body?.detail === "game_signing_not_configured") {
+          throw new Error("gameSigningNotConfigured");
+        }
+        if (body?.detail === "AUTH_USER_DISABLED") {
+          throw new Error("gameAccountDisabled");
+        }
+        if (response.status >= 500) throw new Error("gameServiceUnavailable");
+        throw new Error("failedToStartGame");
       }
 
       const data = await response.json();
@@ -71,8 +79,10 @@ export function useGameLauncher() {
 
       window.location.href = url;
     } catch (error) {
-      console.error(error);
-      alert(tHome("failedToStartGame"));
+      const code = error instanceof Error ? error.message : "failedToStartGame";
+      const messageKey = code === "gameSigningNotConfigured" || code === "gameAccountDisabled" || code === "gameServiceUnavailable"
+        ? code : "failedToStartGame";
+      alert(tHome(messageKey));
     }
   };
 

@@ -2,6 +2,8 @@
 
 Use an isolated test environment and accounts. Record game revision, portal revision, origins, and actual results. Do not make real payments or mutate production data solely to run this checklist.
 
+For local service setup and the Freefall Chess browser smoke flow, follow [local development](local-development.md) before running this checklist.
+
 ## Identity and sessions
 
 - A portal launch reaches the correct game, verifies the backend token, and resolves the expected portal user ID.
