@@ -76,15 +76,23 @@ export default function AIPoweredTools() {
             className="h-auto w-full"
             aria-hidden="true"
           />
-          {/* Replace this screen layer with the final GIF or video when it is ready. */}
           <div
-            className="absolute left-[2.85%] top-[2.8%] flex h-[64.2%] w-[97.15%] items-center justify-center overflow-hidden rounded-[2px] border border-[#cfe1eb] bg-[#e7f2f8]"
-            role="img"
-            aria-label={t("aiPoweredMediaPlaceholder")}
+            className="absolute left-[2.85%] top-[2.8%] h-[64.2%] w-[97.15%] overflow-hidden rounded-[2px] border border-[#cfe1eb] bg-[#faf6ed]"
           >
-            <span className="rounded-full border border-dashed border-[#8fb2c5] bg-white/70 px-4 py-2 font-app-body text-xs text-[#4d7185] sm:text-sm">
-              {t("aiPoweredMediaPlaceholder")}
-            </span>
+            <video
+              autoPlay
+              loop
+              muted
+              playsInline
+              preload="none"
+              poster="/landing/AI-Powered/ai-review-poster.webp"
+              aria-label={t("aiPoweredMediaAlt")}
+              width={1200}
+              height={768}
+              className="h-full w-full object-contain"
+            >
+              <source src="/landing/AI-Powered/ai-review.mp4" type="video/mp4" />
+            </video>
           </div>
         </div>
       </div>
