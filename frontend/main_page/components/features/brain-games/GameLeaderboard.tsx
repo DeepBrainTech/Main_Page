@@ -19,7 +19,7 @@ const medalGeometry = [
 function LeaderboardRow({ entry }: { entry: GameLeaderboardEntry }) {
   const t = useTranslations("gameDetails");
   const podium = entry.rank <= 3;
-  const name = entry.is_current_user ? t("leaderboardYou") : entry.username || t("leaderboardPlayer", { rank: entry.rank });
+  const name = entry.username || t("leaderboardPlayer", { rank: entry.rank });
   return (
     <li aria-current={entry.is_current_user ? "true" : undefined}
       className={`flex min-h-14 items-center gap-3 rounded-xl p-3 ${entry.is_current_user ? "bg-[#E45C44] text-white" : podium ? "bg-gradient-to-r from-[#FFF3D2] to-[#FEF9E7] text-[#333333]" : "bg-[#F5F9FC] text-[#333333]"}`}>
