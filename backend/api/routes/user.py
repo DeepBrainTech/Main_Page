@@ -2,7 +2,7 @@
 
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Header, Query
+from fastapi import APIRouter, Depends, Header, Query, HTTPException
 from sqlalchemy.orm import Session
 
 from auth import get_current_active_user
@@ -19,7 +19,8 @@ from schemas import (
     LearningTopicProgressReset,
     MentalMathUnlockDiamondsBody,
 )
-from services import chessmater_inventory, tourmaster_inventory
+from services import chessmater_inventory, tourmaster_inventory, game_purchases
+from config.game_commerce import get_game_inventory_delivery, get_game_inventory_delivery_for_item
 from services import (
     assessments,
     assets,
@@ -388,6 +389,7 @@ async def get_inventory(
 
 @router.post("/shop/redeem", response_model=APIResponse)
 async def redeem_item(
+    expected_user_id: int | None = Query(None),
     item_id: str = Query(..., description="道具 ID，如 avatar_hat_crown"),
     game_mode: str | None = Query(
         None, description="可选：当前游戏模式，用于校验道具可用范围"
@@ -398,6 +400,8 @@ async def redeem_item(
         None, description="Reuse this UUID when retrying the same operation"
     ),
 ):
+    if get_game_inventory_delivery_for_item(item_id) is not None and expected_user_id != current_user.id:
+        raise HTTPException(status_code=409, detail="payment_account_mismatch")
     return await inventory.redeem_item(
         item_id=item_id,
         game_mode=game_mode,
@@ -474,3 +478,22 @@ async def consume_item(
         db=db,
         request_id=request_id,
     )
+
+
+@router.get("/shop/{game_key}/quote", response_model=APIResponse)
+async def game_inventory_quote(game_key: str, current_user: User = Depends(get_current_active_user), db: Session = Depends(get_db)):
+    if get_game_inventory_delivery(game_key) is None:
+        raise HTTPException(status_code=404, detail="unknown_game_inventory_delivery")
+    return APIResponse(success=True, message="ok", data={"user_id": current_user.id, "assets": assets.get_asset_balances(db, current_user.id)})
+
+
+@router.get("/shop/{game_key}/deliveries", response_model=APIResponse)
+async def game_inventory_deliveries(game_key: str, current_user: User = Depends(get_current_active_user), db: Session = Depends(get_db)):
+    return APIResponse(success=True, message="ok", data={"user_id": current_user.id, **game_purchases.pending_inventory_deliveries(db, current_user.id, game_key)})
+
+
+@router.post("/shop/{game_key}/deliveries/{purchase_id}/ack", response_model=APIResponse)
+async def game_inventory_delivery_ack(game_key: str, purchase_id: UUID, expected_user_id: int = Query(...), current_user: User = Depends(get_current_active_user), db: Session = Depends(get_db)):
+    if expected_user_id != current_user.id:
+        raise HTTPException(status_code=409, detail="payment_account_mismatch")
+    return APIResponse(success=True, message="ok", data=game_purchases.acknowledge_inventory_delivery(db, current_user.id, purchase_id, game_key))

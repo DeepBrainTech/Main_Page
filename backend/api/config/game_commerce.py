@@ -33,3 +33,36 @@ GAME_PRODUCTS: dict[tuple[str, str], GameProduct] = {
 
 def get_game_product(game_key: str, product_id: str) -> GameProduct | None:
     return GAME_PRODUCTS.get((game_key, product_id))
+
+
+@dataclass(frozen=True)
+class GameInventoryDelivery:
+    """Configuration only: usable stock and consumption belong to the game."""
+    game_key: str
+    item_ids: tuple[str, ...]
+    grant_items: tuple[str, ...]
+    purpose: str
+    ack_operation: str
+    token_ttl_seconds: int = 600
+
+
+GAME_INVENTORY_DELIVERIES: dict[str, GameInventoryDelivery] = {
+    "online-chess": GameInventoryDelivery(
+        game_key="online-chess",
+        item_ids=("online_chess_analysis_access", "online_chess_analysis_access_pack25"),
+        grant_items=("online_chess_analysis_access",),
+        purpose="online-chess-inventory",
+        ack_operation="online-chess.inventory.delivered",
+    ),
+}
+
+
+def get_game_inventory_delivery(game_key: str) -> GameInventoryDelivery | None:
+    return GAME_INVENTORY_DELIVERIES.get(game_key)
+
+
+def get_game_inventory_delivery_for_item(item_id: str) -> GameInventoryDelivery | None:
+    matches = [rule for rule in GAME_INVENTORY_DELIVERIES.values() if item_id in rule.item_ids]
+    if len(matches) > 1:
+        raise ValueError("duplicate_inventory_delivery_item")
+    return matches[0] if matches else None

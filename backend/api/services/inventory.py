@@ -11,6 +11,7 @@ from config.shop_items import (
     is_item_available_for_game,
 )
 from models import User, UserItemInventory
+from config.game_commerce import get_game_inventory_delivery_for_item
 from schemas import APIResponse
 from services.assets import balances, debit_assets, lock_account
 from services.idempotency import replay_operation, save_operation
@@ -85,7 +86,11 @@ async def redeem_item(
     db: Session,
     request_id: UUID | None = None,
 ):
-    """Spend portal assets and add inventory once when a request UUID is supplied."""
+    """Spend assets once; configured game-owned items return signed delivery receipts."""
+    if get_game_inventory_delivery_for_item(item_id) is not None:
+        from services.game_purchases import purchase_inventory_delivery
+        result = purchase_inventory_delivery(db, current_user.id, item_id, game_mode, request_id)
+        return APIResponse(success=True, message="ok", data=result)
     if item_id.startswith("chess_tourmaster_"):
         from services.tourmaster_inventory import purchase_item
         result = purchase_item(db, current_user.id, item_id, game_mode, request_id)
@@ -167,6 +172,8 @@ async def consume_item(
         raise HTTPException(status_code=410, detail="tourmaster_inventory_is_game_owned")
     if item_id.startswith("chess_mater_"):
         raise HTTPException(status_code=410, detail="chessmater_inventory_is_game_owned")
+    if get_game_inventory_delivery_for_item(item_id) is not None:
+        raise HTTPException(status_code=410, detail="use_signed_game_purchase")
     lock_account(db, current_user.id)
     payload = {"item_id": item_id, "game_mode": game_mode, "count": count}
     replay = replay_operation(db, current_user.id, request_id, "shop.consume", payload)

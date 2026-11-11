@@ -15,6 +15,17 @@ from typing import Any
 
 
 SHOP_ITEMS: dict[str, dict[str, Any]] = {
+    "online_chess_analysis_access": {
+        "name": "Online Chess Advanced Analysis Access",
+        "games": ["online-chess"],
+        "cost": {"coins": 0, "diamonds": 10, "flowers": 0},
+    },
+    "online_chess_analysis_access_pack25": {
+        "name": "Online Chess Advanced Analysis Access Pack of 25",
+        "games": ["online-chess"],
+        "cost": {"coins": 0, "diamonds": 199, "flowers": 0},
+        "grants": {"online_chess_analysis_access": 25},
+    },
     "chess_tourmaster_hint": {
         "name": "Knightours Chess Hint",
         "games": ["chess-tourmaster"],
