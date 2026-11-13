@@ -59,6 +59,10 @@ test("the authenticated Landing redirect does not trap browser Back", async ({ p
   await page.goto("/en/forgot-password", { waitUntil: "domcontentloaded" });
   await page.goto("/en", { waitUntil: "domcontentloaded" });
   await expect(page).toHaveURL("/en/dashboard");
+  await expect(page.locator("main")).toBeVisible();
+  // Let mounted UI requests and route prefetches finish before unloading the document.
+  // WebKit can report interrupted requests as access-control page errors.
+  await page.waitForLoadState("networkidle");
   await page.goBack({ waitUntil: "domcontentloaded" });
   await expect(page).toHaveURL("/en/forgot-password");
 });
