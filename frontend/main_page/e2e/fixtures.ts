@@ -1,9 +1,36 @@
-import { test as base, expect } from "@playwright/test";
+import { test as base, expect, type Request } from "@playwright/test";
 
 type ApiState = { signedIn: boolean; logoutCalls: number };
 
 /** Browser smoke tests exercise the UI contract without real accounts or services. */
-export const test = base.extend<{ api: ApiState }>({
+export const test = base.extend<{ api: ApiState; waitForPageRequests: () => Promise<void> }>({
+  waitForPageRequests: async ({ page }, provide) => {
+    const pending = new Set<Request>();
+    let lastActivity = Date.now();
+    const onRequest = (request: Request) => {
+      // EventSource is long-lived and reconnects after the fixture closes its stream.
+      // Only finite UI fetches and Next.js route prefetches need to settle before navigation.
+      if (!["fetch", "xhr"].includes(request.resourceType())) return;
+      if (new URL(request.url()).pathname === "/api/notifications/events") return;
+      pending.add(request);
+      lastActivity = Date.now();
+    };
+    const onFinished = (request: Request) => {
+      if (pending.delete(request)) lastActivity = Date.now();
+    };
+    page.on("request", onRequest);
+    page.on("requestfinished", onFinished);
+    page.on("requestfailed", onFinished);
+    await provide(async () => {
+      await expect.poll(() => {
+        if (pending.size) return [...pending].map((request) => request.url());
+        return Date.now() - lastActivity >= 500 ? [] : ["Waiting for finite UI requests to settle"];
+      }, { timeout: 10_000, message: "Finite UI requests must settle before hard navigation" }).toEqual([]);
+    });
+    page.off("request", onRequest);
+    page.off("requestfinished", onFinished);
+    page.off("requestfailed", onFinished);
+  },
   api: [async ({ context, page, baseURL }, use) => {
     const api: ApiState = { signedIn: true, logoutCalls: 0 };
     const unexpected: string[] = [];

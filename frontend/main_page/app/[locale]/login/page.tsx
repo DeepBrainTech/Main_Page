@@ -9,11 +9,13 @@ import AuthPageShell from "@/components/auth/AuthPageShell";
 import AuthTextField from "@/components/auth/AuthTextField";
 import CompleteProfileDialog from "@/components/features/profile/CompleteProfileDialog";
 import { useAuthNavigation } from "@/hooks/useAuthNavigation";
+import { useHydrated } from "@/hooks/useHydrated";
 
 export default function LoginPage() {
   const router = useRouter();
   const { destination, authHref } = useAuthNavigation();
   const t = useTranslations();
+  const hydrated = useHydrated();
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -44,6 +46,7 @@ export default function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!hydrated || loading) return;
     setError("");
     setLoading(true);
 
@@ -95,6 +98,7 @@ export default function LoginPage() {
 
           <AuthTextField
             id="username"
+            disabled={!hydrated}
             label={t("login.username")}
             icon="email"
             value={username}
@@ -106,6 +110,7 @@ export default function LoginPage() {
 
           <AuthTextField
             id="password"
+            disabled={!hydrated}
             label={t("login.password")}
             icon="password"
             type="password"
@@ -120,6 +125,7 @@ export default function LoginPage() {
             <label className="inline-flex cursor-pointer items-center gap-2 text-[#636363]">
               <input
                 type="checkbox"
+                disabled={!hydrated}
                 checked={rememberMe}
                 onChange={(event) => setRememberMe(event.target.checked)}
                 className="h-4 w-4 rounded border-[#9e9e9e] text-[#3692f6] focus:ring-[#3692f6]"
@@ -129,6 +135,7 @@ export default function LoginPage() {
             <button
               type="button"
               onClick={() => router.push(authHref("/forgot-password"))}
+              disabled={!hydrated}
               className="font-medium text-[#3692f6] transition hover:text-[#106faa] hover:underline"
             >
               {t("login.forgotPassword")}
@@ -137,7 +144,7 @@ export default function LoginPage() {
 
           <button
             type="submit"
-            disabled={loading}
+            disabled={!hydrated || loading}
             className="h-12 w-full rounded-[7px] bg-[#3692f6] px-8 text-[1.0625rem] font-medium text-white transition hover:bg-[#197fe5] focus:outline-none focus:ring-2 focus:ring-[#3692f6]/30 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {loading ? t("login.buttonLoading") : t("login.button")}
@@ -159,7 +166,7 @@ export default function LoginPage() {
                 }
               }}
               onError={(code) => setError(t(`auth.${code}`))}
-              disabled={loading}
+              disabled={!hydrated || loading}
             />
           </div>
         )}
@@ -169,6 +176,7 @@ export default function LoginPage() {
           <button
             type="button"
             onClick={() => router.push(authHref("/register"))}
+            disabled={!hydrated}
             className="text-[#3692f6] transition hover:text-[#106faa] hover:underline"
           >
             {t("login.registerLink")}

@@ -42,6 +42,32 @@ test("login does not follow an external return address", async ({ page, api }) =
   await expect(page).toHaveURL("/en/dashboard");
 });
 
+test("login controls wait for hydration before accepting input", async ({ page, api }) => {
+  api.signedIn = false;
+  let releaseScripts!: () => void;
+  const scriptsReady = new Promise<void>((resolve) => { releaseScripts = resolve; });
+  await page.route(/\/_next\/static\/.*\.js(?:\?.*)?$/, async (route) => {
+    await scriptsReady;
+    await route.continue();
+  });
+  try {
+    await page.goto("/en/login?returnTo=%2F%2Foutside.example.test", { waitUntil: "commit" });
+    await expect(page.locator("#username")).toBeDisabled();
+    await expect(page.locator("#password")).toBeDisabled();
+    await expect(page.locator('button[type="submit"]')).toBeDisabled();
+  } finally {
+    releaseScripts();
+  }
+  await page.locator("#username").fill("ci-user");
+  await page.locator("#password").fill("ci-password");
+  await expect(page.locator("#username")).toHaveValue("ci-user");
+  const loginRequest = page.waitForRequest((request) =>
+    new URL(request.url()).pathname === "/api/auth/login" && request.method() === "POST");
+  await page.locator('button[type="submit"]').click();
+  expect((await loginRequest).postData()).toContain("ci-user");
+  await expect(page).toHaveURL("/en/dashboard");
+});
+
 test("registration and password recovery retain the original destination", async ({ page, api }) => {
   api.signedIn = false;
   const returnTo = "/braingames/fogchess?category=memory";
@@ -55,14 +81,13 @@ test("registration and password recovery retain the original destination", async
   expect(new URL(page.url()).searchParams.get("returnTo")).toBe(returnTo);
 });
 
-test("the authenticated Landing redirect does not trap browser Back", async ({ page }) => {
+test("the authenticated Landing redirect does not trap browser Back", async ({ page, waitForPageRequests }) => {
   await page.goto("/en/forgot-password", { waitUntil: "domcontentloaded" });
   await page.goto("/en", { waitUntil: "domcontentloaded" });
   await expect(page).toHaveURL("/en/dashboard");
   await expect(page.locator("main")).toBeVisible();
-  // Let mounted UI requests and route prefetches finish before unloading the document.
-  // WebKit can report interrupted requests as access-control page errors.
-  await page.waitForLoadState("networkidle");
+  // Avoid interrupting route prefetches without waiting for long-lived connections.
+  await waitForPageRequests();
   await page.goBack({ waitUntil: "domcontentloaded" });
   await expect(page).toHaveURL("/en/forgot-password");
 });

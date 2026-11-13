@@ -93,14 +93,13 @@ test("Study Tools remain disabled and unfinished modules keep working entry poin
   await expect(page.getByRole("heading", { name: en.test.title, exact: true })).toBeVisible();
 });
 
-test("main content fits the viewport on stable pages", async ({ page }) => {
+test("main content fits the viewport on stable pages", async ({ page, waitForPageRequests }) => {
   for (const path of ["learning", "leaderboard", "braingames", "test"]) {
     await page.goto(`/en/${path}`, { waitUntil: "domcontentloaded" });
     await expect(page.locator("main")).toBeVisible();
     await expect(page.locator("main button").first()).toBeVisible();
     expect(await page.locator("main").evaluate((element) => element.scrollWidth <= element.clientWidth + 1), path).toBe(true);
     // Finish route prefetches before the next hard navigation unloads this page.
-    // The fixture completes its mocked SSE response, so network idle is finite here.
-    await page.waitForLoadState("networkidle");
+    await waitForPageRequests();
   }
 });
