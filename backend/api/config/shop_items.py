@@ -29,12 +29,12 @@ SHOP_ITEMS: dict[str, dict[str, Any]] = {
     "chess_tourmaster_hint": {
         "name": "Knightours Chess Hint",
         "games": ["chess-tourmaster"],
-        "cost": {"coins": 5, "diamonds": 0, "flowers": 0},
+        "cost": {"coins": 300, "diamonds": 0, "flowers": 0},
     },
-        "chess_tourmaster_undo": {
+    "chess_tourmaster_undo": {
         "name": "Knightours Chess Undo",
         "games": ["chess-tourmaster"],
-        "cost": {"coins": 5, "diamonds": 0, "flowers": 0},
+        "cost": {"coins": 400, "diamonds": 0, "flowers": 0},
     },
 
     # Freefall Chess is the display name; keep chess_mater_* SKUs and chessmater mode IDs

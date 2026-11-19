@@ -7,7 +7,8 @@ from fastapi import HTTPException
 from jose import jwt
 from test_chessmater_hint_tickets import CommerceFixture
 from models import UserRewards, UserItemInventory, GamePurchase
-from services.inventory import redeem_item, consume_item
+from routes.user import game_inventory_quote
+from services.inventory import redeem_item, consume_item, get_shop_catalog_public
 from services.tourmaster_inventory import migrate_inventory, pending_deliveries, acknowledge_delivery
 
 
@@ -21,8 +22,20 @@ class TourmasterInventoryTests(CommerceFixture):
         self.tourmaster_settings.stop()
         super().tearDown()
 
+    def test_quote_and_catalog_expose_current_tourmaster_balances_and_prices(self):
+        quote = asyncio.run(game_inventory_quote("chess-tourmaster", self.user, self.db))
+        self.assertEqual(quote.data, {
+            "user_id": self.user.id, "assets": {"coins": 10000, "diamonds": 99, "flowers": 7},
+        })
+        catalog = asyncio.run(get_shop_catalog_public("chess-tourmaster"))
+        self.assertEqual(catalog.data["items"]["chess_tourmaster_hint"]["cost"]["coins"], 300)
+        self.assertEqual(catalog.data["items"]["chess_tourmaster_undo"]["cost"]["coins"], 400)
+        with self.assertRaises(HTTPException) as error:
+            asyncio.run(game_inventory_quote("unregistered-game", self.user, self.db))
+        self.assertEqual(error.exception.status_code, 404)
+
     def test_hint_and_undo_charge_once_and_issue_tourmaster_only_receipts(self):
-        for sku in ("chess_tourmaster_hint", "chess_tourmaster_undo"):
+        for sku, price in (("chess_tourmaster_hint", 300), ("chess_tourmaster_undo", 400)):
             before = self.db.query(UserRewards).first().coins
             request = uuid4()
             result = asyncio.run(redeem_item(sku, "chess-tourmaster", self.user, self.db, request))
@@ -32,7 +45,8 @@ class TourmasterInventoryTests(CommerceFixture):
             self.assertEqual(claims["purpose"], "chess-tourmaster-inventory")
             self.assertEqual(claims["grants"], {sku: 1})
             self.assertEqual(result.data["purchase_id"], retry.data["purchase_id"])
-            self.assertEqual(self.db.query(UserRewards).first().coins, before - 5)
+            self.assertEqual(result.data["cost"], {"coins": price, "diamonds": 0, "flowers": 0})
+            self.assertEqual(self.db.query(UserRewards).first().coins, before - price)
             self.assertEqual(self.db.query(UserItemInventory).count(), 0)
             self.assertEqual(self.db.query(UserRewards).first().diamonds, 99)
 
@@ -58,13 +72,13 @@ class TourmasterInventoryTests(CommerceFixture):
             with self.assertRaises(HTTPException):
                 asyncio.run(redeem_item("chess_tourmaster_hint", game, self.user, self.db, uuid4()))
             self.db.rollback()
-        self.db.query(UserRewards).first().coins = 10
+        self.db.query(UserRewards).first().coins = 400
         self.db.commit()
         with patch("services.tourmaster_inventory.create_game_token", side_effect=RuntimeError("signing failed")):
             with self.assertRaises(RuntimeError):
                 asyncio.run(redeem_item("chess_tourmaster_undo", "chess-tourmaster", self.user, self.db, uuid4()))
         self.db.rollback()
-        self.assertEqual(self.db.query(UserRewards).first().coins, 10)
+        self.assertEqual(self.db.query(UserRewards).first().coins, 400)
         self.assertEqual(self.db.query(GamePurchase).count(), 0)
 
     def test_retired_portal_consumption_does_not_touch_tourmaster_stock(self):

@@ -158,6 +158,7 @@ const used = await portal.consumeItem(consumption, 1);
 
 - GET /api/user/assets：余额。
 - GET /api/games/shop/catalog?game_mode=mygame：公开商品目录。
+- GET /api/user/shop/{game_key}/quote：使用主站登录 Cookie，返回当前账户的 user_id 和 assets。已在主站游戏目录注册的游戏可以使用此接口读取余额；商品价格从公开商品目录读取。
 - GET /api/user/shop/inventory：库存。
 - POST /api/user/shop/redeem?item_id=mygame_hint&game_mode=mygame&request_id=<UUID>：扣费并入库。
 - POST /api/user/shop/consume?item_id=mygame_hint&game_mode=mygame&count=1&request_id=<UUID>：消耗库存。

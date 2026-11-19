@@ -20,7 +20,8 @@ from schemas import (
     MentalMathUnlockDiamondsBody,
 )
 from services import chessmater_inventory, tourmaster_inventory, game_purchases
-from config.game_commerce import get_game_inventory_delivery, get_game_inventory_delivery_for_item
+from config.game_catalog import SUPPORTED_GAME_KEYS
+from config.game_commerce import get_game_inventory_delivery_for_item
 from services import (
     assessments,
     assets,
@@ -482,7 +483,7 @@ async def consume_item(
 
 @router.get("/shop/{game_key}/quote", response_model=APIResponse)
 async def game_inventory_quote(game_key: str, current_user: User = Depends(get_current_active_user), db: Session = Depends(get_db)):
-    if get_game_inventory_delivery(game_key) is None:
+    if game_key not in SUPPORTED_GAME_KEYS:
         raise HTTPException(status_code=404, detail="unknown_game_inventory_delivery")
     return APIResponse(success=True, message="ok", data={"user_id": current_user.id, "assets": assets.get_asset_balances(db, current_user.id)})
 
