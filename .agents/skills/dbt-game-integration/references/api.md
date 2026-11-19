@@ -22,9 +22,13 @@ Returns `data.game_token`, `expires_in`, `user_id`, `username`, and `user: {id, 
 
 ### Assets and inventory
 
+`GET /api/user/shop/{game_key}/quote` uses the portal login Cookie and returns the current user's numeric `user_id` and portal `assets`. Any game in the portal's supported game catalog can use it; catalog items and inventory delivery rules are not prerequisites. The quote reports portal asset balances, not game-owned hint/undo stock.
+
 Freefall Chess's concrete purchase is `POST /api/user/shop/redeem?item_id=chess_mater_reply&game_mode=chessmater&request_id=<UUID>`. The portal charges its catalog price and returns a signed delivery in `data` (`purchase_id`, `item_id`, `grants`, `grant_token`, `cost`, `assets`). Submit `grant_token` to the **game** `/inventory/claim`, then acknowledge the portal `/api/user/shop/chessmater/deliveries/{purchase_id}/ack` after game success. Pending portal deliveries can reissue receipts. See the reference for the complete retry flow.
 
-Freefall Chess inventory lives in the game: read game `GET /inventory`. The portal's generic `/shop/consume` returns 410 for these game-owned items. The following generic inventory routes describe the separate portal-owned model, not the Freefall Chess hint contract:
+Game-specific item inventory lives in the game database. For Freefall Chess, read game `GET /inventory`; for other games, use their documented game API. The portal's generic `/shop/consume` returns 410 for game-owned items. The portal owns asset balances and the shop transaction, while a verified signed delivery transfers the purchased item quantity to the game's authoritative inventory.
+
+These generic inventory routes exist for legacy/separate functionality and are not the default game-item inventory model:
 
 - `GET /api/user/assets`: `data` contains `coins`, `diamonds`, `flowers`.
 - `GET /api/user/shop/inventory`: `data.items` is an array of `{item_id, quantity}` for portal-owned inventory only.

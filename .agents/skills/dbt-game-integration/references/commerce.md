@@ -45,13 +45,11 @@ Currently QuantumGo `ai-review` costs 5 diamonds with a 24-hour grant. Its targe
 
 ## Choose one inventory owner
 
-### Existing shared portal inventory
+Portal coins, diamonds, and flowers are authoritative in the portal asset service and ledger. The portal also owns the shop catalog, prices, charges, and purchase records. Game-specific usable items such as hints, undo credits, and power-ups belong in the corresponding game's database, where the game backend grants and consumes them. The portal does not hold authoritative game-item stock. Never mirror one item's usable quantity as authoritative in both databases.
 
-The generic `/api/user/shop/redeem` deducts assets and adds items to the portal inventory. `/consume` decrements that inventory with request deduplication. Do not also maintain a separate authoritative game quantity for the same item.
+Game-owned inventory requires a delivery integration. The game must validate signed deliveries, persist an idempotency receipt, update stock transactionally, and support retry/reconciliation. Prefer a shared delivery framework for future games over duplicating per-game endpoint logic. Until such a framework exists, do not claim that adding a catalog item alone enables game-owned delivery.
 
-The browser client can coordinate UI actions, but a browser's claim that consumption succeeded is not a cryptographic backend authorization. A feature requiring trusted backend payment proof should use a signed paid-grant or an explicitly implemented delivery flow. Portal-side deduplication does not prevent duplicate game effects by itself.
-
-### Existing game-owned inventory deliveries
+### Game-owned inventory deliveries
 
 Freefall Chess (`chessmater`) and Knightours Chess (`chess-tourmaster`) have dedicated portal implementations. Portal catalog/charges remain central, while the game owns its inventory and consumption.
 
@@ -67,9 +65,9 @@ Portal-side recovery endpoints, authenticated by the browser's portal Cookie:
 
 Pending deliveries return newly signed receipts. Acknowledge only after the game database commit. A crash after game commit but before acknowledgment is recovered by repeating the same purchase ID; the game deduplicates and then the client can acknowledge. Portal acknowledgment itself trusts the authenticated caller and is not independent cryptographic proof that a game commit occurred. The client must follow the sequence faithfully.
 
-The two `/migrate` endpoints convert their legacy portal inventory into durable deliveries; do not call them as a new-game onboarding step. Generic portal `/consume` rejects these game-owned item prefixes with 410.
+The two `/migrate` endpoints convert their legacy portal inventory into durable deliveries; do not call them as a new-game onboarding step. Generic portal `/consume` rejects these game-owned item prefixes with 410. The generic portal inventory endpoints are legacy/separate functionality and are not the default source of game-item stock.
 
-**A new game does not receive this delivery mechanism merely by adding a catalog item.** The current dispatcher selects these two game implementations by item prefix. To use game-owned inventory in a new game, the portal maintainer must implement/register an appropriate delivery contract, pending/reissue flow, acknowledgment, and deduplication, or generalize that mechanism first. Do not copy another game's prefix to trigger its routes.
+**A new game does not receive this delivery mechanism merely by adding a catalog item.** The current dispatcher selects these two game implementations by item prefix. To use game-owned inventory in a new game, the portal maintainer must implement/register an appropriate delivery contract, pending/reissue flow, acknowledgment, and deduplication, or generalize that mechanism first. Do not copy another game's prefix to trigger its routes. Game registration and balance quotes are independent of inventory delivery registration. A registered game can read the current user's portal asset balances without owning a catalog item or delivery rule.
 
 ## Payment recovery
 

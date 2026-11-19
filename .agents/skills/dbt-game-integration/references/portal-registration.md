@@ -34,7 +34,7 @@ Use the shared `useGameLauncher` path so authentication failures and launch sema
 ## Optional features
 
 - First-clear assets: add a `LevelRewardRule` in `config/game_rewards.py`. Confirm the event range, amount, user-ID type, secret, and stable deduplication identity. Non-range reward rules require an implementation change.
-- Catalog items: add to `config/shop_items.py` with game applicability and portal-owned prices. Choose inventory ownership first. A new game's game-owned inventory requires additional delivery code; the existing dispatcher only supports the two explicit prefixes.
+- Catalog items: add to `config/shop_items.py` with game applicability and portal-owned prices. The portal owns asset balances, charges, and purchase records. Game-specific usable item stock belongs in the game's database. Game delivery needs signed receipts, idempotent game-side persistence, and recoverable acknowledgment; the existing dispatcher only supports the two explicit prefixes, so generalize it before onboarding more games. Balance quotes are available to games registered in the supported game catalog and do not require a catalog item or delivery rule.
 - Paid authorizations: add target validation in `lib/commerce_targets.py` and a `GameProduct` in `config/game_commerce.py`. Confirm target ownership is checked in the game backend.
 - Avatars: the bounded server-signed avatar lookup is shared for registered games.
 - Leaderboards/achievements: implement explicit adapters/configuration after agreeing the game's API; current support is Freefall Chess-specific. Do not register a game and claim these are enabled.
