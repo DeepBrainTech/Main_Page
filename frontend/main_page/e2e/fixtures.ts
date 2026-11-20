@@ -1,6 +1,6 @@
 import { test as base, expect, type Request } from "@playwright/test";
 
-type ApiState = { signedIn: boolean; logoutCalls: number };
+type ApiState = { signedIn: boolean; logoutCalls: number; username: string };
 
 /** Browser smoke tests exercise the UI contract without real accounts or services. */
 export const test = base.extend<{ api: ApiState; waitForPageRequests: () => Promise<void> }>({
@@ -32,7 +32,7 @@ export const test = base.extend<{ api: ApiState; waitForPageRequests: () => Prom
     page.off("requestfailed", onFinished);
   },
   api: [async ({ context, page, baseURL }, use) => {
-    const api: ApiState = { signedIn: true, logoutCalls: 0 };
+    const api: ApiState = { signedIn: true, logoutCalls: 0, username: "CI Preview" };
     const unexpected: string[] = [];
     const errors: string[] = [];
     page.on("pageerror", (error) => errors.push(error.message));
@@ -59,7 +59,7 @@ export const test = base.extend<{ api: ApiState; waitForPageRequests: () => Prom
       if (pathname === "/api/auth/me" || pathname === "/api/auth/verify") {
         if (!api.signedIn) return route.fulfill({ status: 401, json: { detail: "unauthorized" } });
         return route.fulfill({ json: {
-          id: 1, username: "CI Preview", email: "preview@example.test", date_of_birth: "2000-01-01",
+          id: 1, username: api.username, email: "preview@example.test", date_of_birth: "2000-01-01",
           country: "US", avatar_url: null, membership_plan: "free", membership_expires_at: null,
           stripe_subscription_id: null,
         } });
@@ -69,7 +69,7 @@ export const test = base.extend<{ api: ApiState; waitForPageRequests: () => Prom
       }
       if (pathname === "/api/notifications") return respond({ notifications: [], unread_count: 0 });
       if (pathname === "/api/user/rewards") return respond({
-        coins: 0, diamonds: 0, flowers: 0, check_in_dates: [], has_checked_in_today: false,
+        coins: 0, diamonds: 0, flowers: 0, check_in_dates: [], total_check_in_days: 28, has_checked_in_today: false,
         current_streak: 0, daily_progress: {}, monthly_progress: 0, monthly_target: 10,
         task_claimed_today: [], monthly_claimed: false, played_game_count: 0,
       });

@@ -89,7 +89,7 @@ export default function AppShell({
   }, [avatarUrl]);
 
   return (
-    <div className="min-h-screen bg-[var(--background)] pb-8 text-slate-800">
+    <div className="min-h-screen bg-[var(--background)] text-slate-800 lg:[--app-header-row-height:6rem]">
       <AppHeader
         activeTab={activeTab}
         tabHrefMap={tabHrefMap}
@@ -122,7 +122,7 @@ export default function AppShell({
         <AppSidebar activeTab={activeTab} tabHrefMap={tabHrefMap} />
 
         <div className="min-w-0 flex-1">
-          <main className="px-4 pt-5 sm:px-6">{children}</main>
+          <main className="px-4 pb-8 pt-5 sm:px-6">{children}</main>
         </div>
       </div>
 

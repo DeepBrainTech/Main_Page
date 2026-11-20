@@ -170,6 +170,7 @@ async def get_rewards(current_user: User, db: Session, x_user_timezone: str | No
             "diamonds": rewards.diamonds,
             "flowers": rewards.flowers,
             "check_in_dates": check_in_dates,
+            "total_check_in_days": len(sorted_dates),
             "has_checked_in_today": today_iso in sorted_dates,
             "current_streak": streak,
             "daily_progress": daily_progress,

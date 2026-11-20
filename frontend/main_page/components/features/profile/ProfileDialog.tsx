@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { apiFetch } from "@/lib/api-config";
 import { getCountryLabel } from "@/constants/countries";
+import { USERNAME_MAX_LENGTH, USERNAME_MIN_LENGTH } from "@/constants/username";
 import CountrySelect from "@/components/ui/CountrySelect";
 
 function countryCodeToFlagEmoji(code: string | null | undefined): string {
@@ -208,8 +209,8 @@ export default function ProfileDialog({
 
     const body: Record<string, string | null> = {};
 
-    if (usernameVal !== username) {
-      if (usernameVal.length < 3 || usernameVal.length > 50) {
+    if (editValue !== username && usernameVal !== username) {
+      if (usernameVal.length < USERNAME_MIN_LENGTH || usernameVal.length > USERNAME_MAX_LENGTH) {
         setError(tProfile("usernamePlaceholder"));
         return;
       }
@@ -339,18 +340,21 @@ export default function ProfileDialog({
           </div>
         </div>
 
-        <div className="relative z-0 min-h-0 flex-1 overflow-y-auto overscroll-y-contain bg-white px-8 pb-8 pt-16">
+        <div className="relative z-0 min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-y-contain bg-white px-8 pb-8 pt-16">
           <h2 className="sr-only">{tProfile("title")}</h2>
           <div className="mb-6 flex w-full justify-center">
-            <div className="relative inline-flex min-h-8 items-center">
-              <span className="inline-block max-w-[min(100%,260px)] truncate text-center text-2xl font-semibold leading-8 text-zinc-800">
+            <div className="grid min-h-9 min-w-0 max-w-full grid-cols-[2.25rem_minmax(0,1fr)_2.25rem] items-center gap-0.5">
+              <span
+                className="col-start-2 row-start-1 max-w-[16rem] truncate text-center text-2xl font-semibold leading-8 text-zinc-800"
+                title={username}
+              >
                 {username || "—"}
               </span>
               {!isEditingProfile && (
                 <button
                   type="button"
                   onClick={openProfileFieldEditors}
-                  className="absolute left-full top-1/2 ml-0.5 flex h-9 w-9 shrink-0 -translate-y-1/2 items-center justify-center rounded-full transition-colors hover:bg-sky-50"
+                  className="col-start-3 row-start-1 flex h-9 w-9 items-center justify-center rounded-full transition-colors hover:bg-sky-50"
                   aria-label={tProfile("editProfile")}
                 >
                   <img src="/profile/edit.svg" alt="" width={20} height={20} className="h-5 w-5" />
@@ -386,8 +390,8 @@ export default function ProfileDialog({
                         setEditValue(e.target.value);
                         setError("");
                       }}
-                      minLength={3}
-                      maxLength={50}
+                      minLength={USERNAME_MIN_LENGTH}
+                      maxLength={USERNAME_MAX_LENGTH}
                       className="mt-1 w-full rounded-xl border border-sky-200 bg-white px-3 py-2 text-base font-medium text-zinc-800 shadow-sm outline-none ring-sky-300 focus:ring-2 dark:border-sky-800 dark:bg-zinc-900 dark:text-white"
                       placeholder={tProfile("usernamePlaceholder")}
                       autoFocus

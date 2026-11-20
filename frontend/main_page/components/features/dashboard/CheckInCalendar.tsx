@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useLocale, useTranslations } from "next-intl";
 import type { CheckInState } from "@/hooks/useRewards";
+import { getWeekdayLabels } from "@/lib/weekProgress";
 import {
   dashboardCardClass,
   dashboardPairedCardPadding,
@@ -34,16 +35,25 @@ export default function CheckInCalendar({
   const now = new Date();
   const year = now.getFullYear();
   const month = now.getMonth();
-  const firstDay = new Date(year, month, 1).getDay();
+  const firstDay = (new Date(year, month, 1).getDay() + 6) % 7;
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const monthYearLabel = new Intl.DateTimeFormat(locale, { month: "long", year: "numeric" }).format(
     new Date(year, month, 1)
   );
 
   const monthKey = `${year}-${String(month + 1).padStart(2, "0")}`;
-  const signedSet = new Set(
-    checkIn.dates.filter((d) => d.startsWith(monthKey))
-  );
+  const signedSet = new Set(checkIn.dates.filter((date) => date.startsWith(`${monthKey}-`)));
+  const [sunday, ...weekdays] = getWeekdayLabels(tHome);
+  const numberFormat = new Intl.NumberFormat(locale);
+  const percentFormat = new Intl.NumberFormat(locale, { style: "percent" });
+  const checkInSummary = [
+    {
+      label: tHome("checkInDaysChecked"),
+      value: checkIn.totalDays === null ? "—" : numberFormat.format(checkIn.totalDays),
+    },
+    { label: tHome("checkInThisMonth"), value: numberFormat.format(signedSet.size) },
+    { label: tHome("checkInCompletion"), value: percentFormat.format(signedSet.size / daysInMonth) },
+  ];
 
   const days: (number | null)[] = [];
   for (let i = 0; i < firstDay; i++) days.push(null);
@@ -71,7 +81,7 @@ export default function CheckInCalendar({
 
       <div className="flex flex-col">
         <div className="mb-[clamp(0.45rem,1vw,0.75rem)] grid grid-cols-7 gap-[clamp(0.38rem,1vw,0.55rem)] text-center">
-          {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((w) => (
+          {[...weekdays, sunday].map((w) => (
             <div
               key={w}
               className="py-[clamp(0.1rem,0.35vw,0.25rem)] font-['Outfit'] text-sm font-medium leading-5 text-sky-700"
@@ -113,6 +123,15 @@ export default function CheckInCalendar({
           })}
         </div>
       </div>
+
+      <dl className="mt-5 grid grid-cols-3 gap-2 text-center text-sky-700 sm:mt-6 sm:gap-4">
+        {checkInSummary.map(({ label, value }) => (
+          <div key={label} className="flex min-h-16 min-w-0 flex-col justify-center rounded-2xl bg-[#EDF4FC] px-1 py-2 2xl:min-h-21">
+            <dt className="order-2 font-app-body text-xs sm:text-sm">{label}</dt>
+            <dd className="font-app-body text-xl font-semibold leading-tight sm:text-2xl">{value}</dd>
+          </div>
+        ))}
+      </dl>
     </div>
   );
 }

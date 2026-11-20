@@ -6,7 +6,12 @@ from uuid import uuid4
 from fastapi import HTTPException, Response, UploadFile, status
 from sqlalchemy.orm import Session
 
-from config.profile import ALLOWED_AVATAR_MIME_TYPES, MAX_AVATAR_UPLOAD_BYTES
+from config.profile import (
+    ALLOWED_AVATAR_MIME_TYPES,
+    MAX_AVATAR_UPLOAD_BYTES,
+    USERNAME_MAX_LENGTH,
+    USERNAME_MIN_LENGTH,
+)
 from models import User
 from schemas import CompleteProfileBody, UserResponse, compute_age
 from services.avatars import avatar_url
@@ -59,7 +64,7 @@ async def update_current_user_profile(
     original_username = current_user.username
 
     if body.username is not None:
-        if len(body.username) < 3 or len(body.username) > 50:
+        if not USERNAME_MIN_LENGTH <= len(body.username) <= USERNAME_MAX_LENGTH:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="AUTH_USERNAME_INVALID",

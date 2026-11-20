@@ -11,6 +11,7 @@ import GoogleLoginButton from "@/components/auth/GoogleLoginButton";
 import AuthPageShell from "@/components/auth/AuthPageShell";
 import AuthTextField from "@/components/auth/AuthTextField";
 import CompleteProfileDialog from "@/components/features/profile/CompleteProfileDialog";
+import { USERNAME_MAX_LENGTH, USERNAME_MIN_LENGTH } from "@/constants/username";
 import { useAuthNavigation } from "@/hooks/useAuthNavigation";
 
 type FormField =
@@ -187,7 +188,7 @@ export default function RegisterPage() {
     const requestId = usernameAvailabilityRequestRef.current + 1;
     usernameAvailabilityRequestRef.current = requestId;
 
-    if (!username || username.length < 3 || username.length > 50) return;
+    if (username.length < USERNAME_MIN_LENGTH || username.length > USERNAME_MAX_LENGTH) return;
 
     const timer = window.setTimeout(async () => {
       try {
@@ -337,6 +338,11 @@ export default function RegisterPage() {
     const verificationCode = formData.verificationCode.trim();
     setFormData((prev) => ({ ...prev, username, country, email, verificationCode }));
 
+    if (username.length < USERNAME_MIN_LENGTH || username.length > USERNAME_MAX_LENGTH) {
+      raiseFieldError("username", t("auth.AUTH_USERNAME_INVALID"));
+      return;
+    }
+
     if (!formData.dateOfBirth) {
       raiseFieldError("dateOfBirth", t("register.dateOfBirthRequired"));
       return;
@@ -434,8 +440,8 @@ export default function RegisterPage() {
             onChange={handleChange}
             error={fieldErrors.username}
             required
-            minLength={3}
-            maxLength={50}
+            minLength={USERNAME_MIN_LENGTH}
+            maxLength={USERNAME_MAX_LENGTH}
             autoComplete="username"
             placeholder={t("register.usernamePlaceholder")}
           />

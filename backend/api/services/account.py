@@ -12,6 +12,7 @@ from auth import (
     clear_access_token_cookie,
     get_password_hash,
 )
+from config.profile import USERNAME_MAX_LENGTH, USERNAME_MIN_LENGTH
 from models import User
 from schemas import (
     APIResponse,
@@ -59,7 +60,7 @@ async def check_availability(
     data = {}
     if username is not None:
         normalized_username = username.strip()
-        if not 3 <= len(normalized_username) <= 50:
+        if not USERNAME_MIN_LENGTH <= len(normalized_username) <= USERNAME_MAX_LENGTH:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="AUTH_USERNAME_INVALID",
@@ -164,7 +165,7 @@ async def google_login(request: GoogleTokenRequest, response: Response, db: Sess
 
     google_id = payload.get("sub")
     email = payload.get("email") or ""
-    name = (payload.get("name") or email.split("@")[0] or "user").strip()[:50]
+    name = (payload.get("name") or email.split("@")[0] or "user").strip()
     google_avatar_url = payload.get("picture") or None
 
     if not google_id or not email:
@@ -201,15 +202,18 @@ async def google_login(request: GoogleTokenRequest, response: Response, db: Sess
             db.commit()
             db.refresh(user)
         else:
-            base_username = (name or email.split("@")[0] or "user")[:50]
+            base_username = name or email.split("@")[0] or "user"
             base_username = (
                 "".join(c for c in base_username if c.isalnum() or c in "._-") or "user"
-            )
+            )[:USERNAME_MAX_LENGTH]
             username = base_username
             suffix = 0
             while db.query(User).filter(User.username == username).first():
                 suffix += 1
-                username = f"{base_username}{suffix}"[:50]
+                suffix_text = str(suffix)
+                username = (
+                    base_username[: USERNAME_MAX_LENGTH - len(suffix_text)] + suffix_text
+                )
 
             user = User(
                 username=username,

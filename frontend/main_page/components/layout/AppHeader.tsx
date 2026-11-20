@@ -60,7 +60,7 @@ export default function AppHeader({
 
   return (
     <header className="sticky top-0 z-50 border-b border-slate-200 bg-white/95 shadow-sm backdrop-blur">
-      <div className="flex min-h-16 items-center justify-between gap-2 px-4 py-3 sm:min-h-[4.75rem] sm:gap-3 sm:px-6 sm:py-3.5 lg:min-h-24 lg:px-8 lg:py-4">
+      <div className="flex min-h-16 items-center justify-between gap-2 px-4 py-3 sm:min-h-[4.75rem] sm:gap-3 sm:px-6 sm:py-3.5 lg:min-h-(--app-header-row-height) lg:px-8 lg:py-4">
         <Link
           href={tabHrefMap.dashboard}
           onClick={onCloseOverlays}

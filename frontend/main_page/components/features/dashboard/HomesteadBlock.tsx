@@ -19,6 +19,7 @@ interface HomesteadBlockProps {
   userAvatarUrl?: string | null;
   activeCustomizeTab: HomeSystemSlot | null;
   menuOpen: boolean;
+  showChatByDefault: boolean;
   coins: number;
   diamonds: number;
   onMenuOpenChange?: (isOpen: boolean) => void;
@@ -51,6 +52,7 @@ export default function HomesteadBlock({
   userAvatarUrl = null,
   activeCustomizeTab,
   menuOpen,
+  showChatByDefault,
   coins,
   diamonds,
   onMenuOpenChange,
@@ -91,7 +93,8 @@ export default function HomesteadBlock({
   const [chatMessage, setChatMessage] = useState(tHome("wukooMessage"));
   const [chatHistory, setChatHistory] = useState<MonkeyChatMessage[]>([]);
   const [isChatLoading, setIsChatLoading] = useState(false);
-  const [isChatPanelOpen, setIsChatPanelOpen] = useState(false);
+  const [chatPanelOpen, setChatPanelOpen] = useState<boolean | null>(null);
+  const isChatPanelOpen = chatPanelOpen ?? showChatByDefault;
   const [shouldAnimateLatestAssistant, setShouldAnimateLatestAssistant] = useState(false);
 
   const targetRef = useRef(HOME_POSITION);
@@ -139,7 +142,7 @@ export default function HomesteadBlock({
   };
 
   const handleCloseChatPanel = () => {
-    setIsChatPanelOpen(false);
+    setChatPanelOpen(false);
     setChatMessage(tHome("wukooMessage"));
     setShouldAnimateLatestAssistant(false);
   };
@@ -242,7 +245,7 @@ export default function HomesteadBlock({
             <WukooMessageBubble
               message={chatMessage}
               expandLabel={tHome("wukooExpandChat")}
-              onExpand={() => setIsChatPanelOpen(true)}
+              onExpand={() => setChatPanelOpen(true)}
             />
           </div>
         ) : null}
@@ -264,7 +267,7 @@ export default function HomesteadBlock({
         </div>
 
         <div
-          className="@container/chat pointer-events-none absolute bottom-[clamp(1rem,2.5vw,1.5rem)] left-[clamp(1rem,2.5vw,1.5rem)] right-[clamp(1rem,2.5vw,1.5rem)] top-[clamp(0.75rem,2vw,1rem)] z-40 flex min-w-0 flex-col items-stretch justify-end gap-2 sm:left-auto sm:w-[min(20rem,38%,calc(100%-2rem))] sm:min-w-[14rem]"
+          className="@container/chat pointer-events-none absolute bottom-[clamp(1rem,2.5vw,1.5rem)] left-[clamp(1rem,2.5vw,1.5rem)] right-[clamp(1rem,2.5vw,1.5rem)] top-[clamp(0.75rem,2vw,1rem)] z-40 flex min-w-0 flex-col items-stretch justify-end gap-2 sm:left-auto sm:w-[min(20rem,38%,calc(100%-2rem))] sm:min-w-[14rem] 2xl:w-[40%]"
         >
           {isChatPanelOpen ? (
           <WukooConversationPanel
@@ -323,6 +326,7 @@ export default function HomesteadBlock({
               <button
                 key={tab.key}
                 type="button"
+                aria-expanded={isActive}
                 onClick={() => {
                   if (menuOpen && activeCustomizeTab === tab.key) {
                     onMenuOpenChange?.(false);
@@ -360,7 +364,7 @@ export default function HomesteadBlock({
         aria-hidden={!menuOpen || !activeCustomizeTab}
       >
         <div className="min-h-0 overflow-hidden">
-          <div className="relative px-[clamp(1rem,2vw,1.25rem)] pb-[clamp(1rem,2vw,1.25rem)] pt-3">
+          <div className="relative pb-2 pt-3">
             <div className="overflow-hidden">
               {activeCustomizeTab ? (
                 <HomesteadCustomizePanel

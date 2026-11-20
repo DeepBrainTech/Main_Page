@@ -33,6 +33,31 @@ for (const [locale, messages] of [["en", en], ["zh", zh]] as const) {
   });
 }
 
+test("a legacy long username keeps the profile heading centered and Edit in view", async ({ page, api }) => {
+  api.username = "m".repeat(50);
+  await page.goto("/en/learning", { waitUntil: "domcontentloaded" });
+  await page.getByRole("button", { name: en.nav.profile, exact: true }).click();
+
+  const dialog = page.getByRole("dialog", { name: en.profile.title });
+  const username = dialog.getByTitle(api.username);
+  const avatar = dialog.getByRole("button", { name: en.profile.changeAvatar });
+  const edit = dialog.getByRole("button", { name: en.profile.editProfile });
+  await expect(edit).toBeInViewport({ ratio: 1 });
+  await expect(username).toBeVisible();
+  const headingBox = (await username.boundingBox())!;
+  const avatarBox = (await avatar.boundingBox())!;
+  expect(Math.abs(headingBox.x + headingBox.width / 2 - (avatarBox.x + avatarBox.width / 2))).toBeLessThanOrEqual(1);
+  expect(await username.evaluate((element) => {
+    const scrollArea = element.closest(".overflow-y-auto")!;
+    return scrollArea.scrollWidth - scrollArea.clientWidth;
+  })).toBe(0);
+
+  await edit.click();
+  const input = dialog.getByPlaceholder(en.profile.usernamePlaceholder);
+  await expect(input).toHaveValue(api.username);
+  await expect(input).toHaveAttribute("maxlength", "32");
+});
+
 test("login does not follow an external return address", async ({ page, api }) => {
   api.signedIn = false;
   await page.goto("/en/login?returnTo=%2F%2Foutside.example.test", { waitUntil: "domcontentloaded" });

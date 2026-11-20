@@ -26,7 +26,6 @@ export default function WukooConversationPanel({
 }: WukooConversationPanelProps) {
   const { isScrolling, handleScroll } = useScrollActivity(true);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const bottomRef = useRef<HTMLDivElement>(null);
   const scrollFrameRef = useRef<number | null>(null);
   const scrollToBottom = useCallback((behavior: ScrollBehavior = "smooth") => {
     if (scrollFrameRef.current !== null) {
@@ -34,7 +33,8 @@ export default function WukooConversationPanel({
     }
     scrollFrameRef.current = window.requestAnimationFrame(() => {
       scrollFrameRef.current = window.requestAnimationFrame(() => {
-        bottomRef.current?.scrollIntoView({ block: "end", behavior });
+        const list = scrollRef.current;
+        list?.scrollTo({ top: list.scrollHeight, behavior });
         scrollFrameRef.current = null;
       });
     });
@@ -130,7 +130,6 @@ export default function WukooConversationPanel({
               </div>
             );
           })}
-          <div ref={bottomRef} className="h-px shrink-0" aria-hidden />
         </div>
       </div>
     </div>

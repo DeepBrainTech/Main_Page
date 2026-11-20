@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { apiFetch } from "@/lib/api-config";
+import { USERNAME_MAX_LENGTH, USERNAME_MIN_LENGTH } from "@/constants/username";
 
 interface CompleteProfileDialogProps {
   open: boolean;
@@ -40,11 +41,12 @@ export default function CompleteProfileDialog({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-    if (!username.trim()) {
-      setError(t("completeProfile.usernameInvalid"));
-      return;
-    }
-    if (username.trim().length < 3 || username.trim().length > 50) {
+    const usernameValue = username.trim();
+    const usernameChanged = username !== initialUsername && usernameValue !== initialUsername;
+    if (
+      usernameValue.length < USERNAME_MIN_LENGTH ||
+      (usernameChanged && usernameValue.length > USERNAME_MAX_LENGTH)
+    ) {
       setError(t("completeProfile.usernameInvalid"));
       return;
     }
@@ -60,7 +62,7 @@ export default function CompleteProfileDialog({
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          username: username.trim(),
+          username: usernameChanged ? usernameValue : undefined,
           date_of_birth: dateOfBirth,
         }),
       });
@@ -113,8 +115,8 @@ export default function CompleteProfileDialog({
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              minLength={3}
-              maxLength={50}
+              minLength={USERNAME_MIN_LENGTH}
+              maxLength={USERNAME_MAX_LENGTH}
               className="w-full rounded-lg border border-gray-300 px-4 py-2.5 focus:border-transparent focus:ring-2 focus:ring-black dark:border-gray-600 dark:bg-zinc-800 dark:text-white dark:focus:ring-white"
               placeholder={t("completeProfile.usernamePlaceholder")}
             />

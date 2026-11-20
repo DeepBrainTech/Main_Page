@@ -8,6 +8,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, EmailStr, Field
 
+from config.profile import USERNAME_MAX_LENGTH, USERNAME_MIN_LENGTH
+
 
 def compute_age(birth: Optional[date]) -> Optional[int]:
     """根据出生日期计算年龄（周岁），未提供则返回 None"""
@@ -24,13 +26,16 @@ def compute_age(birth: Optional[date]) -> Optional[int]:
 class UserBase(BaseModel):
     """用户基础模型"""
 
-    username: str = Field(..., min_length=3, max_length=50)
+    username: str
     email: EmailStr
 
 
 class UserCreate(UserBase):
     """创建用户模型"""
 
+    username: str = Field(
+        ..., min_length=USERNAME_MIN_LENGTH, max_length=USERNAME_MAX_LENGTH
+    )
     password: str = Field(..., min_length=6, max_length=100)
     verification_code: str = Field(..., min_length=6, max_length=6)
     date_of_birth: Optional[date] = None  # 出生日期，可选（测试阶段用于年龄分析）
@@ -119,7 +124,9 @@ class BillingUpdatePaymentMethodBody(BaseModel):
 class CompleteProfileBody(BaseModel):
     """Google 用户补全资料：用户名、出生日期"""
 
-    username: Optional[str] = Field(None, min_length=3, max_length=50)
+    username: Optional[str] = Field(
+        None, min_length=USERNAME_MIN_LENGTH, max_length=USERNAME_MAX_LENGTH
+    )
     date_of_birth: Optional[date] = None
     country: Optional[str] = Field(
         None, min_length=2, max_length=2
@@ -209,6 +216,7 @@ class RewardsState(BaseModel):
     diamonds: int = 0
     flowers: int = 0
     check_in_dates: list[str] = []  # 本月已签到日期 YYYY-MM-DD
+    total_check_in_days: int = 0
     has_checked_in_today: bool = False
     current_streak: int = 0
     daily_progress: Dict[str, int] = {}  # task_id -> count (来自游戏)

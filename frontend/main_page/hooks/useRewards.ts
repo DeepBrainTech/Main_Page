@@ -8,6 +8,7 @@ import { notifyRewardsUpdated, REWARDS_UPDATED_EVENT } from "@/lib/reward-events
 /** 签到记录（由后端返回的 check_in_dates 等推导） */
 export interface CheckInState {
   dates: string[];
+  totalDays: number | null;
   lastDate: string | null;
   streak: number;
 }
@@ -81,10 +82,11 @@ export function useRewards() {
   const checkIn: CheckInState = data
     ? {
         dates: data.check_in_dates ?? [],
+        totalDays: data.total_check_in_days ?? null,
         lastDate: data.check_in_dates?.length ? data.check_in_dates[data.check_in_dates.length - 1] : null,
         streak: data.current_streak ?? 0,
       }
-    : { dates: [], lastDate: null, streak: 0 };
+    : { dates: [], totalDays: null, lastDate: null, streak: 0 };
   const hasCheckedInToday = data?.has_checked_in_today ?? false;
   const dailyProgress = data?.daily_progress ?? {};
   const monthlyProgress = data

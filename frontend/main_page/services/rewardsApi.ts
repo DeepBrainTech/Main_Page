@@ -5,6 +5,7 @@ export interface RewardsData {
   diamonds: number;
   flowers: number;
   check_in_dates: string[];
+  total_check_in_days?: number;
   has_checked_in_today: boolean;
   current_streak: number;
   daily_progress: Record<string, number>;

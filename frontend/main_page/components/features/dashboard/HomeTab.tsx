@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useSyncExternalStore } from "react";
 import { useTranslations } from "next-intl";
 import HomesteadBlock from "./HomesteadBlock";
 import CheckInCalendar from "./CheckInCalendar";
@@ -24,6 +24,18 @@ import {
 interface HomeTabProps {
   username?: string;
   avatarUrl?: string | null;
+}
+
+const wideDashboardQuery = "(min-width: 96rem)";
+
+function subscribeToWideDashboard(onChange: () => void) {
+  const query = window.matchMedia(wideDashboardQuery);
+  query.addEventListener("change", onChange);
+  return () => query.removeEventListener("change", onChange);
+}
+
+function isWideDashboard() {
+  return window.matchMedia(wideDashboardQuery).matches;
 }
 
 /**
@@ -50,8 +62,9 @@ export default function HomeTab({ username = "", avatarUrl = null }: HomeTabProp
     claimTaskReward,
   } = useRewards();
   const { scores: radarScores } = useCognitiveScores();
+  const wideDashboard = useSyncExternalStore(subscribeToWideDashboard, isWideDashboard, () => false);
   const [activeHomesteadTab, setActiveHomesteadTab] = useState<HomeSystemSlot | null>(null);
-  const [isHomesteadMenuOpen, setIsHomesteadMenuOpen] = useState(false);
+  const [homesteadMenuOpen, setHomesteadMenuOpen] = useState<boolean | null>(null);
   const [showStreakRewardDialog, setShowStreakRewardDialog] = useState(false);
   const [streakReward, setStreakReward] = useState<StreakRewardState>({
     streak: 0,
@@ -106,8 +119,8 @@ export default function HomeTab({ username = "", avatarUrl = null }: HomeTabProp
   }
 
   return (
-    <div className="space-y-5 pb-10">
-      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+    <div className="space-y-5 pb-10 xl:space-y-6 xl:pt-1.5">
+      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4 xl:gap-6">
         <StatCard
           iconSrc="/dashboard/Cup.svg"
           iconAlt={tHome("totalPoints")}
@@ -129,27 +142,33 @@ export default function HomeTab({ username = "", avatarUrl = null }: HomeTabProp
           title={tHome("gamesPlayed")}
           value={playedGameCount.toLocaleString()}
         />
+        <StatCard
+          iconSrc="/dashboard/level.svg"
+          iconAlt={tHome("level")}
+          iconBgColor="#FFECD2"
+          title={tHome("level")}
+          value="—"
+        />
       </section>
 
-      <section className="grid grid-cols-1 gap-5 xl:grid-cols-12">
-        <div className="space-y-5 xl:col-span-8">
+      <section className="grid grid-cols-1 items-start gap-5 xl:grid-cols-[minmax(0,2.17fr)_minmax(0,1fr)] xl:gap-6">
+        <div className="@container space-y-5 xl:space-y-6">
           <div
-            className={`${dashboardCardClass} relative min-h-[clamp(20rem,42svh,31.25rem)] overflow-visible p-4 md:min-h-[clamp(22rem,46svh,31.25rem)]`}
+            className={`${dashboardCardClass} relative overflow-visible p-4 xl:p-6 2xl:p-8`}
           >
             <HomesteadBlock
               userAvatarUrl={avatarUrl}
               coins={coins}
               diamonds={diamonds}
-              activeCustomizeTab={activeHomesteadTab}
-              menuOpen={isHomesteadMenuOpen}
-              onMenuOpenChange={(isOpen) => {
-                setIsHomesteadMenuOpen(isOpen);
-              }}
+              activeCustomizeTab={activeHomesteadTab ?? (wideDashboard ? "background" : null)}
+              menuOpen={homesteadMenuOpen ?? wideDashboard}
+              showChatByDefault={wideDashboard}
+              onMenuOpenChange={setHomesteadMenuOpen}
               onCustomizeTabChange={setActiveHomesteadTab}
             />
           </div>
 
-          <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-2">
+          <div className="grid grid-cols-1 items-start gap-5 @min-[42rem]:grid-cols-[minmax(0,1.16fr)_minmax(0,1fr)] xl:gap-6">
             <CheckInCalendar
               checkIn={checkIn}
               hasCheckedInToday={hasCheckedInToday}
@@ -168,9 +187,7 @@ export default function HomeTab({ username = "", avatarUrl = null }: HomeTabProp
           </div>
         </div>
 
-        <div className="xl:col-span-4">
-          <BrainpowerPanel scores={radarScores} />
-        </div>
+        <BrainpowerPanel scores={radarScores} dashboardLayout />
       </section>
 
       <StreakRewardDialog
