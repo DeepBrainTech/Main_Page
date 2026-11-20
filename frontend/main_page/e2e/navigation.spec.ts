@@ -90,9 +90,11 @@ test("Dashboard arranges its four statistics and content cards for the viewport"
   expect(brainpower.x).toBeGreaterThan(tasks.x);
   expect(tasks.y).toBeCloseTo(calendar.y, 0);
   await expect(chat).toBeVisible();
-  await expect(background).toHaveAttribute("aria-expanded", "true");
+  await expect(background).toHaveAttribute("aria-expanded", "false");
   await chat.click();
   await expect(chat).toBeHidden();
+  await background.click();
+  await expect(background).toHaveAttribute("aria-expanded", "true");
   await background.click();
   await expect(background).toHaveAttribute("aria-expanded", "false");
 });

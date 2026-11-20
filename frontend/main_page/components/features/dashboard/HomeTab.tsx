@@ -64,7 +64,7 @@ export default function HomeTab({ username = "", avatarUrl = null }: HomeTabProp
   const { scores: radarScores } = useCognitiveScores();
   const wideDashboard = useSyncExternalStore(subscribeToWideDashboard, isWideDashboard, () => false);
   const [activeHomesteadTab, setActiveHomesteadTab] = useState<HomeSystemSlot | null>(null);
-  const [homesteadMenuOpen, setHomesteadMenuOpen] = useState<boolean | null>(null);
+  const [homesteadMenuOpen, setHomesteadMenuOpen] = useState(false);
   const [showStreakRewardDialog, setShowStreakRewardDialog] = useState(false);
   const [streakReward, setStreakReward] = useState<StreakRewardState>({
     streak: 0,
@@ -160,8 +160,8 @@ export default function HomeTab({ username = "", avatarUrl = null }: HomeTabProp
               userAvatarUrl={avatarUrl}
               coins={coins}
               diamonds={diamonds}
-              activeCustomizeTab={activeHomesteadTab ?? (wideDashboard ? "background" : null)}
-              menuOpen={homesteadMenuOpen ?? wideDashboard}
+              activeCustomizeTab={activeHomesteadTab}
+              menuOpen={homesteadMenuOpen}
               showChatByDefault={wideDashboard}
               onMenuOpenChange={setHomesteadMenuOpen}
               onCustomizeTabChange={setActiveHomesteadTab}
