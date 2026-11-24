@@ -1,14 +1,17 @@
 "use client";
 
 import Image from "next/image";
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useGameLeaderboard } from "@/hooks/useGameLeaderboard";
 import { useContainedWheelScroll } from "@/hooks/useContainedWheelScroll";
 import { useScrollActivity } from "@/hooks/useScrollActivity";
 import styles from "@/components/ui/ScrollArea.module.css";
+import FilterButton from "@/components/ui/FilterButton";
 import { dashboardCardClass } from "@/components/features/dashboard/dashboardCardStyles";
-import type { GameLeaderboardEntry } from "@/types/gameLeaderboard";
+import type { GameLeaderboardEntry, GameLeaderboardMode } from "@/types/gameLeaderboard";
+
+const tourModes: readonly GameLeaderboardMode[] = ["classic", "math_tour"];
 
 const medalGeometry = [
   { width: "146.92%", height: "213.93%", left: "-23.1%", top: "-51.39%" },
@@ -44,7 +47,9 @@ function LeaderboardRow({ entry }: { entry: GameLeaderboardEntry }) {
 
 export default function GameLeaderboard({ gameKey }: { gameKey: string }) {
   const t = useTranslations("gameDetails");
-  const { data, loading, error, supported, retry } = useGameLeaderboard(gameKey);
+  const [mode, setMode] = useState<GameLeaderboardMode>("classic");
+  const activeMode = gameKey === "chess-tourmaster" ? mode : undefined;
+  const { data, loading, error, supported, retry } = useGameLeaderboard(gameKey, activeMode);
   const scrollRef = useRef<HTMLDivElement>(null);
   useContainedWheelScroll(scrollRef, Boolean(data?.entries.length));
   const { isScrolling, handleScroll } = useScrollActivity(Boolean(data?.entries.length));
@@ -57,6 +62,15 @@ export default function GameLeaderboard({ gameKey }: { gameKey: string }) {
         </span>
         {t("leaderboard")}
       </h2>
+      {activeMode && (
+        <div role="group" aria-label={t("leaderboardModeLabel")} className="mt-4 flex shrink-0 flex-wrap gap-2">
+          {tourModes.map((option) => (
+            <FilterButton key={option} selected={option === activeMode} onClick={() => setMode(option)}>
+              {t(`leaderboardModes.${option}`)}
+            </FilterButton>
+          ))}
+        </div>
+      )}
       {!supported ? <p className="mt-5 text-sm leading-6 text-[#66758D]">{t("leaderboardEmpty")}</p> : loading ? (
         <p role="status" className="mt-5 animate-pulse text-sm leading-6 text-[#66758D]">{t("leaderboardLoading")}</p>
       ) : error && !data ? (

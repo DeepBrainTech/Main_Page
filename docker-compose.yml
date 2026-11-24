@@ -63,6 +63,12 @@ services:
       - CHESSMATER_JWT_ALG=${CHESSMATER_JWT_ALG:-HS256}
       - CHESSMATER_JWT_AUD=${CHESSMATER_JWT_AUD:-chessmater}
       - CHESSMATER_JWT_ISS=${CHESSMATER_JWT_ISS:-main-portal}
+      - TOURMASTER_API_URL=${TOURMASTER_API_URL:-https://knightours-chess.deepbraintechnology.com}
+      - TOURMASTER_JWT_SECRET=${TOURMASTER_JWT_SECRET:-}
+      - TOURMASTER_REWARD_SECRET=${TOURMASTER_REWARD_SECRET:-}
+      - TOURMASTER_JWT_ALG=${TOURMASTER_JWT_ALG:-HS256}
+      - TOURMASTER_JWT_AUD=${TOURMASTER_JWT_AUD:-chess-tourmaster}
+      - TOURMASTER_JWT_ISS=${TOURMASTER_JWT_ISS:-main-portal}
       - AVATAR_R2_BUCKET_NAME=${AVATAR_R2_BUCKET_NAME:-avatar}
       - SECRET_KEY=${SECRET_KEY:-change-this-secret-key-in-production}
     restart: unless-stopped

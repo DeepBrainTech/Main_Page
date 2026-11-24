@@ -1,4 +1,4 @@
-import type { GameAchievementRules } from "@/types/gameAchievements";
+import type { AchievementGroupKey, GameAchievementLabels } from "@/types/gameAchievements";
 
 /** Shared artwork is independent of each game's rules and progress. */
 export const GAME_ACHIEVEMENT_GROUPS = [
@@ -20,12 +20,23 @@ export const GAME_ACHIEVEMENT_GROUPS = [
   },
 ] as const;
 
-/** Only configured games show concrete conditions; never infer another game's rules. */
-export const GAME_ACHIEVEMENT_RULES: Readonly<Partial<Record<string, GameAchievementRules>>> = {
+/** The achievement API supplies targets. These keys select the labels for each game's badges. */
+export const GAME_ACHIEVEMENT_LABELS: Readonly<Partial<Record<string, GameAchievementLabels>>> = {
+  "chess-tourmaster": {
+    levels: { nameKey: "levels", descriptionKey: "classicClears" },
+    records: { descriptionKey: "mathClears" },
+    noHints: { descriptionKey: "classicStars" },
+    moves: { descriptionKey: "mathStars" },
+  },
   chessmater: {
-    levels: { descriptionKey: "levels", targets: [10, 20, 30, 40, 50] },
-    records: { descriptionKey: "records", targets: [10, 20, 30, 40, 50] },
-    noHints: { descriptionKey: "noHints", targets: [10, 20, 30, 40, 50] },
-    moves: { descriptionKey: "moves", targets: [50, 150, 500, 1500, 3000] },
+    levels: { descriptionKey: "levels" },
+    records: { descriptionKey: "records" },
+    noHints: { descriptionKey: "noHints" },
+    moves: { descriptionKey: "moves" },
   },
 };
+
+export function getAchievementNameKey(gameKey: string, groupKey: AchievementGroupKey) {
+  const labels = GAME_ACHIEVEMENT_LABELS[gameKey]?.[groupKey];
+  return labels?.nameKey ?? labels?.descriptionKey;
+}

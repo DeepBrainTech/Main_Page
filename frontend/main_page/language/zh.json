@@ -1,11 +1,13 @@
 {
   "gameDetails": {
-    "back": "返回游戏列表",
     "playNow": "立即开始",
     "like": "为游戏点赞",
     "unlike": "取消点赞",
     "intro": "{game} · {category}",
-    "freefallIntro": "自由落体国际象棋将经典棋子走法融入趣味策略谜题。",
+    "introOverrides": {
+      "chessmater": "{game}将经典棋子走法融入趣味策略谜题。",
+      "chess-tourmaster": "{game} 把骑士的 L 形跳跃变成有趣的棋盘巡游谜题。"
+    },
     "preview": "游戏预览",
     "howToPlay": "玩法教学",
     "openPreview": "打开{game}第 {count} 张截图",
@@ -32,11 +34,13 @@
     "achievementProgress": "成就解锁进度",
     "achievementProgressCount": "已解锁 {count} 枚徽章，共 {total} 枚",
     "progressPending": "暂无成就进度",
-    "achievementRulePending": "达成条件待配置",
+    "achievementRulePending": "达成条件暂不可用",
     "achievementUnlocked": "已达成",
     "achievementLocked": "未达成",
     "achievementsEmpty": "本游戏的成就即将上线。",
     "leaderboard": "排行榜",
+    "leaderboardModeLabel": "排行榜模式",
+    "leaderboardModes": { "classic": "经典巡游", "math_tour": "数学巡游" },
     "leaderboardCompleted": "通关数量前 100 名玩家",
     "leaderboardLevels": "{count} 关",
     "leaderboardRank": "第 {rank} 名",
@@ -54,7 +58,7 @@
       "mathchess": "探索数学象棋中数字与棋盘的结合，通过下方截图和教学视频了解玩法。",
       "quantumgo": "探索带有不确定性的量子围棋，通过游戏截图和教学视频了解规则。",
       "fogchess": "探索视野受限的迷雾象棋，通过游戏截图和教学视频了解玩法。",
-      "chess-tourmaster": "在骑士巡游大师中探索棋盘路径谜题，通过下方截图和教学视频了解玩法。",
+      "chess-tourmaster": "你可以选择两种模式。在经典巡游中，跳遍棋盘、清除所有格子，最后吃掉国王。在数学巡游中，每个格子都会改变分数。规划好每一步，先达到目标分数，再吃掉国王。每一关都有新的谜题。每关最多可获三颗星，随着进度推进，你会在地图上解锁更多关卡。",
       "online-chess": "体验在线国际象棋，开始前可以浏览下方游戏截图和教学视频。",
       "stack_math_chess": "探索堆叠数学象棋，通过下方游戏截图和教学视频了解玩法。",
       "recon_chess": "探索侦察象棋，通过下方截图和教学视频了解游戏规则。",
@@ -63,12 +67,19 @@
       "dash-dot-simulator": "探索 Dash & Dot 模拟器，通过下方截图和教学视频了解如何开始。"
     },
     "achievementNames": {
+      "mathClears": { "0": "数字探索者", "1": "分数挑战者", "2": "谜题分析师", "3": "数学策略家", "4": "数学大师" },
+      "classicStars": { "0": "经典之星 I", "1": "经典之星 II", "2": "经典之星 III", "3": "经典之星 IV", "4": "经典之星 V" },
+      "mathStars": { "0": "数学之星 I", "1": "数学之星 II", "2": "数学之星 III", "3": "数学之星 IV", "4": "数学之星 V" },
       "levels": { "0": "初学者", "1": "学徒", "2": "新锐策略家", "3": "棋盘专家", "4": "棋盘大师" },
       "records": { "0": "崭露头角", "1": "精准落子", "2": "路线高手", "3": "步数大师", "4": "极限解谜" },
       "noHints": { "0": "独立思考", "1": "自主探索", "2": "解谜能手", "3": "深思熟虑", "4": "思维大师" },
       "moves": { "0": "迈出脚步", "1": "棋盘漫步", "2": "探索不止", "3": "千步之旅", "4": "足迹遍布" }
     },
     "achievementRules": {
+      "classicClears": "在经典巡游中通关 {count} 关",
+      "mathClears": "在数学巡游中通关 {count} 关",
+      "classicStars": "在 {count} 个经典巡游关卡获得三星",
+      "mathStars": "在 {count} 个数学巡游关卡获得三星",
       "levels": "完成 {count} 个关卡",
       "records": "刷新或追平 {count} 关步数纪录",
       "noHints": "无提示通关 {count} 关",

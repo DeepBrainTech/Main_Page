@@ -2,28 +2,31 @@
 
 import { useEffect, useState } from "react";
 import { fetchGameLeaderboard } from "@/services/gameLeaderboardApi";
-import type { GameLeaderboard } from "@/types/gameLeaderboard";
+import type { GameLeaderboard, GameLeaderboardMode } from "@/types/gameLeaderboard";
 
-export function useGameLeaderboard(gameKey: string) {
-  const supported = gameKey === "chessmater";
+export function useGameLeaderboard(gameKey: string, mode?: GameLeaderboardMode) {
+  const supported = gameKey === "chessmater" || gameKey === "chess-tourmaster";
   const [attempt, setAttempt] = useState(0);
+  const requestKey = `${gameKey}:${mode ?? ""}:${attempt}`;
   const [state, setState] = useState<{
-    gameKey: string; data: GameLeaderboard | null; loading: boolean; error: boolean;
-  }>({ gameKey, data: null, loading: supported, error: false });
+    requestKey: string; data: GameLeaderboard | null; error: boolean;
+  }>();
 
   useEffect(() => {
     if (!supported) return;
     const controller = new AbortController();
-    setState({ gameKey, data: null, loading: true, error: false });
-    void fetchGameLeaderboard(gameKey, controller.signal).then(
-      (data) => { if (!controller.signal.aborted) setState({ gameKey, data, loading: false, error: false }); },
-      () => { if (!controller.signal.aborted) setState({ gameKey, data: null, loading: false, error: true }); },
+    void fetchGameLeaderboard(gameKey, controller.signal, mode).then(
+      (data) => { if (!controller.signal.aborted) setState({ requestKey, data, error: false }); },
+      () => { if (!controller.signal.aborted) setState({ requestKey, data: null, error: true }); },
     );
     return () => controller.abort();
-  }, [gameKey, supported, attempt]);
+  }, [gameKey, mode, supported, requestKey]);
 
+  const current = supported && state?.requestKey === requestKey ? state : undefined;
   return {
-    ...(state.gameKey === gameKey && supported ? state : { data: null, loading: supported, error: false }),
+    data: current?.data ?? null,
+    loading: supported && !current,
+    error: current?.error ?? false,
     supported,
     retry: () => setAttempt((value) => value + 1),
   };

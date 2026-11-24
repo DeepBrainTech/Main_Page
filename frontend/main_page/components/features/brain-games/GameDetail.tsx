@@ -1,9 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { Link } from "@/lib/i18n-navigation";
 import { findGameDetail } from "@/lib/game-details";
 import { useGameLauncher } from "@/hooks/useGameLauncher";
 import { useGameLikes } from "@/hooks/useGameLikes";
@@ -13,15 +11,11 @@ import { dashboardCardClass } from "@/components/features/dashboard/dashboardCar
 import GameAchievements from "./GameAchievements";
 import GameMediaGallery from "./GameMediaGallery";
 import GameLeaderboard from "./GameLeaderboard";
-import { COGNITIVE_DIMENSION_KEYS } from "@/types/cognitive";
 
 export default function GameDetail({ slug }: { slug: string }) {
   const t = useTranslations("gameDetails");
   const tHome = useTranslations("dashboard");
   const tBrain = useTranslations("brainGames");
-  const searchParams = useSearchParams();
-  const category = COGNITIVE_DIMENSION_KEYS.find((key) => key === searchParams.get("category"));
-  const backHref = category ? `/braingames?category=${category}` : "/braingames";
   const { launchEntry } = useGameLauncher();
   const { likeStates, likeBusyKey, toggleGameLike } = useGameLikes();
   const { media, loading, error, retry } = useGameMedia(slug);
@@ -29,6 +23,8 @@ export default function GameDetail({ slug }: { slug: string }) {
   const { entry, dimension } = game;
   const achievementProgress = useGameAchievements(entry.key);
   const name = tHome(entry.nameKey);
+  const introKey = `introOverrides.${entry.key}`;
+  const intro = t.has(introKey) ? t(introKey, { game: name }) : t("intro", { game: name, category: tBrain(`categoryChip.${dimension}`) });
   const likes = likeStates.get(entry.key);
 
   return (
@@ -36,10 +32,7 @@ export default function GameDetail({ slug }: { slug: string }) {
       <div className="grid min-w-0 items-start gap-7 xl:grid-cols-[minmax(0,2.18fr)_minmax(16rem,1fr)]">
         <div className="min-w-0 space-y-8">
           <article className={`${dashboardCardClass} min-w-0 p-6 sm:p-8 xl:p-12`}>
-            <Link href={backHref} className="inline-flex items-center gap-2 text-sm font-medium text-[#318EFF] hover:underline">
-              <Image src="/game-details/ArrowLeft.svg" alt="" width={16} height={16} />{t("back")}
-            </Link>
-            <div className="mt-4 flex flex-wrap items-start justify-between gap-5">
+            <div className="flex flex-wrap items-start justify-between gap-5">
               <div className="min-w-0">
                 <h1 className="break-words font-['Titan_One'] text-3xl leading-tight sm:text-4xl xl:text-[2.75rem]">{name}</h1>
                 <span className="mt-3 inline-flex rounded-full bg-[#EDF4FC] px-4 py-2 text-sm font-medium">{tBrain(`categoryChip.${dimension}`)}</span>
@@ -57,7 +50,7 @@ export default function GameDetail({ slug }: { slug: string }) {
               </div>
             </div>
             <div className="mt-7 text-base leading-relaxed">
-              <p className="font-semibold">{entry.key === "chessmater" ? t("freefallIntro") : t("intro", { game: name, category: tBrain(`categoryChip.${dimension}`) })}</p>
+              <p className="font-semibold">{intro}</p>
               <p className="mt-2">{t(`descriptions.${entry.key}`)}</p>
             </div>
             <GameMediaGallery key={slug} previews={media.previews} tutorials={media.tutorials} gameName={name}

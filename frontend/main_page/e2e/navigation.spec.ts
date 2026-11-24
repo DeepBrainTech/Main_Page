@@ -130,17 +130,17 @@ test("leaderboard tabs restore after refresh and browser Back", async ({ page })
   await expect(page.getByRole("heading", { name: title, exact: true })).toBeVisible();
 });
 
-test("game details preserve the source category on refresh and return", async ({ page }) => {
+test("game details preserve the source category with browser back", async ({ page }) => {
   await page.goto("/en/braingames", { waitUntil: "domcontentloaded" });
   await page.getByRole("button", { name: en.brainGames.categoryChip.logic, exact: true }).click();
   await expect(page).toHaveURL("/en/braingames?category=logic");
   await page.getByRole("link", { name: en.dashboard.sudoku, exact: true }).click();
   await expect(page).toHaveURL("/en/braingames/sudoku?category=logic");
   await page.reload({ waitUntil: "domcontentloaded" });
-  await page.locator('main a[href="/en/braingames?category=logic"]').click();
-  await expect(page).toHaveURL("/en/braingames?category=logic");
-  await page.goBack({ waitUntil: "domcontentloaded" });
   await expect(page).toHaveURL("/en/braingames/sudoku?category=logic");
+  await expect(page.getByRole("link", { name: "Back to Games", exact: true })).toHaveCount(0);
+  await page.goBack({ waitUntil: "domcontentloaded" });
+  await expect(page).toHaveURL("/en/braingames?category=logic");
 });
 
 test("global settings close when browser Back changes the page", async ({ page }) => {

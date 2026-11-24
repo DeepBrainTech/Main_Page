@@ -1,3 +1,5 @@
+export type GameLeaderboardMode = "classic" | "math_tour";
+
 export interface GameLeaderboardEntry {
   rank: number;
   user_id: string;

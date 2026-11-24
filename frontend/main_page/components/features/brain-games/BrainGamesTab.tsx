@@ -12,7 +12,7 @@ import { useGameLikes } from "@/hooks/useGameLikes";
 import { useUrlFilter } from "@/hooks/useUrlFilter";
 import chessmaterGif from "../../../public/brain-games/chessmater.gif";
 import sudokuGif from "../../../public/brain-games/sudoku.gif";
-import chessTourmasterGif from "../../../public/brain-games/chessTourmaster.gif";
+import knightoursChessGif from "../../../public/brain-games/knightours-chess.gif";
 import quantumGoGif from "../../../public/brain-games/quantumgo.gif";
 import fogChessGif from "../../../public/brain-games/fogchess.gif";
 import intercontinentalChessGif from "../../../public/brain-games/intercontinental-chess.gif";
@@ -21,7 +21,7 @@ import numberBlastGif from "../../../public/brain-games/number-blast.gif";
 const GAME_COVER_MAP: Record<string, string | StaticImageData> = {
   chessmater: chessmaterGif,
   sudoku: sudokuGif,
-  "chess-tourmaster": chessTourmasterGif,
+  "chess-tourmaster": knightoursChessGif,
   quantumgo: quantumGoGif,
   fogchess: fogChessGif,
   "intercontinental-chess": intercontinentalChessGif,

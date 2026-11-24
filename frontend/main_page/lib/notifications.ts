@@ -1,6 +1,6 @@
 import type { UserNotificationData } from "@/services/notificationsApi";
 import { NOTIFICATION_SOURCE_LABELS } from "@/config/notification-sources";
-import { GAME_ACHIEVEMENT_GROUPS } from "@/config/game-achievements";
+import { GAME_ACHIEVEMENT_GROUPS, getAchievementNameKey } from "@/config/game-achievements";
 
 export type NotificationMessageParts = {
   before: string;
@@ -111,8 +111,8 @@ function localizeNotificationContent(
     return {
       title: t("events.gameAchievement.title"),
       message: t("events.gameAchievement.message", {
-        game: t("sources.chessMater"),
-        achievement: tAchievements(`achievementNames.${achievement.group.key}.${achievement.tier}`),
+        game: t(`sources.${achievement.sourceLabel}`),
+        achievement: tAchievements(`achievementNames.${achievement.nameKey}.${achievement.tier}`),
       }),
       messageParts: null,
     };
@@ -288,11 +288,14 @@ export function formatNotificationTime(value: string | null, t: NotificationTran
 
 function getAchievement(notification: UserNotificationData) {
   const metadata = notification.metadata ?? {};
-  if (notification.type !== "game_achievement" || metadata.game_key !== "chessmater") return null;
+  const gameKey = metadata.game_key;
+  if (notification.type !== "game_achievement" || typeof gameKey !== "string") return null;
   const group = GAME_ACHIEVEMENT_GROUPS.find((item) => item.key === metadata.group);
+  const nameKey = group && getAchievementNameKey(gameKey, group.key);
+  const sourceLabel = NOTIFICATION_SOURCE_LABELS[gameKey.replace(/-/g, "")];
   const tier = metadata.tier;
-  return group && typeof tier === "number" && Number.isInteger(tier) && tier >= 0 && tier < group.icons.length
-    ? { group, tier } : null;
+  return group && nameKey && sourceLabel && typeof tier === "number" && Number.isInteger(tier) && tier >= 0 && tier < group.icons.length
+    ? { group, tier, sourceLabel, nameKey } : null;
 }
 
 export function mapNotification(

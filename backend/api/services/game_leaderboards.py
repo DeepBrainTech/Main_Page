@@ -7,27 +7,39 @@ import requests
 from fastapi import HTTPException
 
 from config.game_auth import create_game_token
+from config.game_upstreams import GAME_API_BASES
 from models import User
 
 
-def get_game_leaderboard(api_slug: str, user: User) -> dict:
-    start_rank = 1
-    if api_slug != "chessmater":
+def get_game_leaderboard(api_slug: str, user: User, mode: str | None = None) -> dict:
+    source = GAME_API_BASES.get(api_slug)
+    if source is None:
         raise HTTPException(status_code=404, detail="game_leaderboard_not_configured")
-    base = os.getenv("CHESSMATER_API_URL", "https://chessmater-production.up.railway.app").strip().rstrip("/")
+    env_key, default_base = source
+    tourmaster = api_slug == "chess-tourmaster"
+    if tourmaster and mode not in (None, "classic", "math_tour"):
+        raise HTTPException(status_code=422, detail="invalid_leaderboard_mode")
+    page_size = 100
+    if tourmaster:
+        path = "/api/leaderboard"
+        params = {"mode": mode or "classic", "limit": page_size}
+    else:
+        path = "/leaderboard"
+        params = {"mode": "completed", "includeMe": "1", "paged": "1", "startRank": 1}
+    base = os.getenv(env_key, default_base).strip().rstrip("/")
     parsed = urlsplit(base)
     if parsed.scheme not in ("http", "https") or not parsed.hostname or parsed.username or parsed.password or parsed.query or parsed.fragment:
         raise HTTPException(status_code=503, detail="game_leaderboard_not_configured")
     try:
-        token, _ = create_game_token("chessmater", {
+        token, _ = create_game_token(api_slug, {
             "sub": user.username, "username": user.username, "user_id": user.id,
         }, expires_seconds=60)
     except ValueError as error:
         raise HTTPException(status_code=503, detail="game_signing_not_configured") from error
     try:
         response = requests.get(
-            f"{base}/leaderboard",
-            params={"mode": "completed", "includeMe": "1", "paged": "1", "startRank": start_rank},
+            f"{base}{path}",
+            params=params,
             headers={"Authorization": f"Bearer {token}"},
             timeout=(3.05, 8), allow_redirects=False,
         )
@@ -36,20 +48,30 @@ def get_game_leaderboard(api_slug: str, user: User) -> dict:
         payload = response.json()
         if not isinstance(payload, dict):
             raise ValueError("invalid_leaderboard")
-        rows, total, next_rank = payload.get("entries"), payload.get("total"), payload.get("next_rank")
-        if (not isinstance(rows, list) or len(rows) > 100
-                or type(total) is not int or total < 0
-                or payload.get("start_rank") != start_rank
-                or len(rows) != min(100, max(0, total - start_rank + 1))
-                or next_rank != (start_rank + 100 if start_rank + 100 <= total else None)):
-            raise ValueError("invalid_leaderboard")
+        if tourmaster:
+            rows = payload.get("data")
+            if payload.get("success") is not True or not isinstance(rows, list) or len(rows) > page_size + 1:
+                raise ValueError("invalid_leaderboard")
+            if len(rows) > page_size:
+                extra = rows[-1]
+                if (not isinstance(extra, dict) or extra.get("portal_user_id") != user.id
+                        or type(extra.get("rank")) is not int or extra["rank"] <= page_size):
+                    raise ValueError("invalid_leaderboard")
+                rows = rows[:page_size]
+        else:
+            rows, total, next_rank = payload.get("entries"), payload.get("total"), payload.get("next_rank")
+            if (not isinstance(rows, list) or type(total) is not int or total < 0 or payload.get("start_rank") != 1
+                    or len(rows) != min(page_size, total)
+                    or next_rank != (1 + page_size if 1 + page_size <= total else None)):
+                raise ValueError("invalid_leaderboard")
         entries = []
         seen = set()
-        for expected_rank, row in enumerate(rows, start=start_rank):
+        for expected_rank, row in enumerate(rows, start=1):
             if not isinstance(row, dict):
                 raise ValueError("invalid_entry")
-            rank, completed = row.get("rank"), row.get("completed_levels")
-            user_id = str(row.get("user_id", ""))
+            rank = row.get("rank")
+            completed = row.get("total_levels" if tourmaster else "completed_levels")
+            user_id = str(row.get("portal_user_id" if tourmaster else "user_id", ""))
             username = row.get("username")
             if (type(rank) is not int or rank != expected_rank
                     or type(completed) is not int or completed < 1

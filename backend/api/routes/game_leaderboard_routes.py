@@ -15,6 +15,7 @@ def game_leaderboard(
     api_slug: str,
     response: Response,
     current_user: User = Depends(get_current_active_user),
+    mode: str | None = None,
 ):
     response.headers["Cache-Control"] = "no-store"
-    return APIResponse(success=True, message="ok", data=get_game_leaderboard(api_slug, current_user))
+    return APIResponse(success=True, message="ok", data=get_game_leaderboard(api_slug, current_user, mode))

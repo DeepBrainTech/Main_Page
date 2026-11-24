@@ -1,5 +1,7 @@
 "use client";
 
+import FilterButton from "@/components/ui/FilterButton";
+
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import CourseCard from "./CourseCard";
@@ -54,15 +56,13 @@ export default function LearningCourseHome({ onOpenCourse, ...progress }: Learni
           <h2 id="learning-courses-heading" className="text-3xl font-medium text-[#106FAA] lg:text-4xl">{t("coursesHeading")}</h2>
           <div role="group" aria-label={t("courseCategoriesLabel")} className="flex flex-wrap gap-3">
             {LEARNING_CATEGORIES.map((id) => (
-              <button
+              <FilterButton
                 key={id}
-                type="button"
-                aria-pressed={category === id}
+                selected={category === id}
                 onClick={() => setCategory(id)}
-                className={`min-h-10 rounded-xl border border-[#045E96] px-5 py-2 text-sm font-medium transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#045E96] ${category === id ? "bg-[#045E96] text-white" : "text-[#045E96] hover:bg-[#EDF4FC]"}`}
               >
                 {t(`courseCategories.${id}`)}
-              </button>
+              </FilterButton>
             ))}
           </div>
         </div>

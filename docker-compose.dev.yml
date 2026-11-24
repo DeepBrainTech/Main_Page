@@ -58,6 +58,7 @@ services:
       - AI_LEARNING_VIDEO_BUCKET_NAME=${AI_LEARNING_VIDEO_BUCKET_NAME:-dbt-learning}
       # The game backend runs on the host; localhost here would refer to this container.
       - CHESSMATER_API_URL=${CHESSMATER_API_URL:-http://host.docker.internal:3001}
+      - TOURMASTER_API_URL=${TOURMASTER_API_URL:-http://host.docker.internal:5173}
       - SECRET_KEY=dev-secret-key-change-in-production-please
       # ===== Cross-subdomain auth cookie =====
       # Local dev: host-only cookie on localhost, no HTTPS requirement.

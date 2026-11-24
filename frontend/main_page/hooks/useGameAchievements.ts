@@ -2,12 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { fetchGameAchievements } from "@/services/gameAchievementsApi";
+import { GAME_ACHIEVEMENT_LABELS } from "@/config/game-achievements";
 import type { GameAchievementProgress } from "@/types/gameAchievements";
 
 export function useGameAchievements(gameKey: string) {
   const [progress, setProgress] = useState<GameAchievementProgress>();
   useEffect(() => {
-    if (gameKey !== "chessmater") return;
+    if (!GAME_ACHIEVEMENT_LABELS[gameKey]) return;
     const controller = new AbortController();
     let busy = false;
     const refresh = async () => {

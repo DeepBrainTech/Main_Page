@@ -83,9 +83,17 @@ export const test = base.extend<{ api: ApiState; waitForPageRequests: () => Prom
       if (pathname === "/api/leaderboard") return respond({ list: [] });
       if (pathname === "/api/games/likes") return respond({ likes: [] });
       if (/^\/api\/games\/[^/]+\/media$/.test(pathname)) return respond({ previews: [], tutorials: [] });
-      if (/^\/api\/games\/[^/]+\/achievements$/.test(pathname)) return respond({
-        gameKey: pathname.split("/")[3], values: { levels: 0, records: 0, noHints: 0, moves: 0 },
-      });
+      if (/^\/api\/games\/[^/]+\/achievements$/.test(pathname)) {
+        const gameKey = pathname.split("/")[3];
+        const tiers = [10, 20, 30, 40, 50];
+        return respond({
+          gameKey,
+          targets: { levels: tiers, records: tiers, noHints: tiers, moves: tiers },
+          values: gameKey === "chess-tourmaster"
+            ? { classicClears: 0, mathClears: 0, classicStars: 0, mathStars: 0 }
+            : { levels: 0, records: 0, noHints: 0, moves: 0 },
+        });
+      }
       if (/^\/api\/games\/[^/]+\/leaderboard$/.test(pathname)) return respond({ metric: "completed_levels", entries: [] });
       if (pathname === "/api/user/learning/mental-math/bundle-access") return respond({
         bundle_unlocked: false, access_badge: "none", days_left: null, expires_at: null, diamonds: 0,

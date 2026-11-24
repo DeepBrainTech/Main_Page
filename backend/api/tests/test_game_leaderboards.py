@@ -111,10 +111,35 @@ class GameLeaderboardTests(unittest.TestCase):
             response = client.get("/api/games/chessmater/leaderboard")
             self.assertEqual(response.status_code, 200)
             self.assertEqual(response.headers["cache-control"], "no-store")
-            lookup.assert_called_once_with("chessmater", self.user)
+            lookup.assert_called_once_with("chessmater", self.user, None)
             lookup.reset_mock()
             self.assertEqual(client.get("/api/games/chessmater/leaderboard?start_rank=101").status_code, 200)
-            lookup.assert_called_once_with("chessmater", self.user)
+            lookup.assert_called_once_with("chessmater", self.user, None)
+            lookup.reset_mock()
+            self.assertEqual(client.get("/api/games/chess-tourmaster/leaderboard?mode=math_tour").status_code, 200)
+            lookup.assert_called_once_with("chess-tourmaster", self.user, "math_tour")
+
+    @patch("services.game_leaderboards.requests.get")
+    def test_tourmaster_uses_separate_rankings_and_normalizes_entries(self, send):
+        with patch.dict(os.environ, {
+            "TOURMASTER_API_URL": "https://tour.example.test/",
+            "TOURMASTER_JWT_SECRET": "tour-leaderboard-test-key",
+        }):
+            send.return_value = Mock(status_code=200, json=Mock(return_value={
+                "success": True, "data": [{"rank": 1, "portal_user_id": self.user.id, "username": "reader", "total_levels": 15}],
+            }))
+            for requested, upstream in ((None, "classic"), ("math_tour", "math_tour")):
+                result = get_game_leaderboard("chess-tourmaster", self.user, requested)
+                self.assertEqual(send.call_args.args[0], "https://tour.example.test/api/leaderboard")
+                self.assertEqual(send.call_args.kwargs["params"], {"mode": upstream, "limit": 100})
+                self.assertEqual(result["entries"], [{
+                    "rank": 1, "user_id": str(self.user.id), "username": "reader", "completed_levels": 15, "is_current_user": True,
+                }])
+            send.reset_mock()
+            with self.assertRaises(HTTPException) as error:
+                get_game_leaderboard("chess-tourmaster", self.user, "total")
+            self.assertEqual(error.exception.status_code, 422)
+            send.assert_not_called()
 
     @patch("services.game_leaderboards.requests.get")
     def test_top_hundred_cap_and_no_extra_current_user_row(self, send):

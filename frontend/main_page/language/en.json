@@ -1,11 +1,13 @@
 {
   "gameDetails": {
-    "back": "Back to Games",
     "playNow": "Play Now",
     "like": "Like this game",
     "unlike": "Unlike this game",
     "intro": "{game} · {category}",
-    "freefallIntro": "Freefall Chess turns classic chess movement into fun strategy puzzles.",
+    "introOverrides": {
+      "chessmater": "{game} turns classic chess movement into fun strategy puzzles.",
+      "chess-tourmaster": "{game} turns the knight's L-shaped jump into fun puzzle tours."
+    },
     "preview": "Preview",
     "howToPlay": "How to play?",
     "openPreview": "Open {game} screenshot {count}",
@@ -32,11 +34,13 @@
     "achievementProgress": "Achievement progress",
     "achievementProgressCount": "{count} of {total} achievements unlocked",
     "progressPending": "Progress not yet available",
-    "achievementRulePending": "Unlock condition to be configured",
+    "achievementRulePending": "Unlock condition not yet available",
     "achievementUnlocked": "Unlocked",
     "achievementLocked": "Locked",
     "achievementsEmpty": "Achievements for this game are coming soon.",
     "leaderboard": "Leaderboard",
+    "leaderboardModeLabel": "Leaderboard mode",
+    "leaderboardModes": { "classic": "Classic Tour", "math_tour": "Math Tour" },
     "leaderboardCompleted": "Top 100 players by completed levels",
     "leaderboardLevels": "{count, plural, one {# level} other {# levels}}",
     "leaderboardRank": "Rank {rank}",
@@ -54,7 +58,7 @@
       "mathchess": "Explore Math Chess and its combination of numbers and chess. View screenshots and video tutorials below to get started.",
       "quantumgo": "Discover Quantum Go, a variation on Go with uncertain outcomes. Explore the screenshots and video tutorials to learn its rules.",
       "fogchess": "Discover FogChess, a chess variation with limited visibility. Explore the screenshots and video tutorials to learn how to play.",
-      "chess-tourmaster": "Explore chess-based route puzzles in Knight Tour Master. View screenshots and video tutorials below to get started.",
+      "chess-tourmaster": "Pick from two modes. In Classic Tour, hop across the board, clear every tile and catch the King last. In Math Tour, every tile changes your score, so plan your jumps to reach the target before you take the King. Each level is a new puzzle. Earn up to 3 stars and unlock new levels on the map as you go.",
       "online-chess": "Play Online Chess. Explore screenshots and video tutorials below before entering the game.",
       "stack_math_chess": "Discover Stack Math Chess. View screenshots and video tutorials below to explore its gameplay.",
       "recon_chess": "Discover Recon Chess. Explore screenshots and video tutorials below to learn its rules.",
@@ -63,12 +67,19 @@
       "dash-dot-simulator": "Explore the Dash & Dot Simulator. View screenshots and video tutorials below to learn how to get started."
     },
     "achievementNames": {
+      "mathClears": { "0": "Number Explorer", "1": "Score Builder", "2": "Puzzle Analyst", "3": "Math Strategist", "4": "Master of Math" },
+      "classicStars": { "0": "Classic Star I", "1": "Classic Star II", "2": "Classic Star III", "3": "Classic Star IV", "4": "Classic Star V" },
+      "mathStars": { "0": "Math Star I", "1": "Math Star II", "2": "Math Star III", "3": "Math Star IV", "4": "Math Star V" },
       "levels": { "0": "Novice", "1": "Apprentice", "2": "Rising Strategist", "3": "Board Expert", "4": "Master of the Board" },
       "records": { "0": "First Breakthrough", "1": "Precision Player", "2": "Route Expert", "3": "Move Master", "4": "Puzzle Virtuoso" },
       "noHints": { "0": "Independent Thinker", "1": "Self-Guided Explorer", "2": "Puzzle Solver", "3": "Deep Thinker", "4": "The Mastermind" },
       "moves": { "0": "First Steps", "1": "Board Wanderer", "2": "Persistent Explorer", "3": "Thousand-Step Journey", "4": "Footprints Everywhere" }
     },
     "achievementRules": {
+      "classicClears": "Clear {count} levels in Classic Tour",
+      "mathClears": "Clear {count} levels in Math Tour",
+      "classicStars": "Earn 3 stars in {count} Classic Tour levels",
+      "mathStars": "Earn 3 stars in {count} Math Tour levels",
       "levels": "Complete {count} levels",
       "records": "Tie or beat records in {count, plural, one {# level} other {# levels}}",
       "noHints": "Clear {count, plural, one {# level} other {# levels}} without hints",
