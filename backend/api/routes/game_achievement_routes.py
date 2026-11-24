@@ -7,7 +7,7 @@ from auth import get_current_active_user
 from database import get_db
 from models import User
 from schemas import APIResponse
-from services.game_achievements import get_game_achievements, receive_achievement_events
+from services.game_achievements import get_game_achievements, receive_achievement_events, sync_game_achievements
 
 router = APIRouter()
 
@@ -16,6 +16,13 @@ router = APIRouter()
 def game_achievements(api_slug: str, response: Response, current_user: User = Depends(get_current_active_user)):
     response.headers["Cache-Control"] = "no-store"
     return APIResponse(success=True, message="ok", data=get_game_achievements(api_slug, current_user))
+
+
+@router.post("/{api_slug}/achievements/sync", response_model=APIResponse)
+def sync_achievements(api_slug: str, response: Response, current_user: User = Depends(get_current_active_user),
+                      db: Session = Depends(get_db)):
+    response.headers["Cache-Control"] = "no-store"
+    return APIResponse(success=True, message="ok", data=sync_game_achievements(db, api_slug, current_user))
 
 
 @router.post("/{api_slug}/achievements/events", response_model=APIResponse)

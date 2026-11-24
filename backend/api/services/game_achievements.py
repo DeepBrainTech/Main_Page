@@ -32,6 +32,10 @@ TOURMASTER_TARGETS = {
     "moves": TOURMASTER_THREE_STAR_TARGETS,
 }
 TOURMASTER_LEVEL_MODES = (("classic", "classic"), ("math_tour", "math"))
+ACHIEVEMENT_NOTIFICATION_MESSAGES = {
+    "chessmater": "You unlocked a Freefall Chess achievement.",
+    "chess-tourmaster": "You unlocked a Knightours Chess achievement.",
+}
 
 
 def _get_level_progress(base: str, token: str, modes: tuple[tuple[str, str], ...]) -> dict:
@@ -135,11 +139,9 @@ def _tourmaster_unlocks(claims: dict) -> list[dict]:
 def receive_achievement_events(db: Session, token: str, api_slug: str) -> dict:
     if api_slug == "chessmater":
         env_prefix = "CHESSMATER"
-        fallback_message = "You unlocked a Freefall Chess achievement."
         get_unlocks = _chessmater_unlocks
     elif api_slug == "chess-tourmaster":
         env_prefix = "TOURMASTER"
-        fallback_message = "You unlocked a Knightours Chess achievement."
         get_unlocks = _tourmaster_unlocks
     else:
         raise HTTPException(status_code=404, detail="game_achievements_not_configured")
@@ -163,25 +165,61 @@ def receive_achievement_events(db: Session, token: str, api_slug: str) -> dict:
         return {"game_key": api_slug, "accepted": []}
     if db.query(User).filter(User.id == user_id, User.is_active.is_(True)).first() is None:
         raise HTTPException(status_code=404, detail="unknown_achievement_account")
+    return {"game_key": api_slug, "accepted": _store_achievement_notifications(db, api_slug, user_id, events)}
+
+
+def sync_game_achievements(db: Session, api_slug: str, user: User) -> dict:
+    progress = get_game_achievements(api_slug, user)
+    values = progress["values"]
+    if api_slug == "chess-tourmaster":
+        counts = {
+            group: count
+            for mode, prefix in TOURMASTER_LEVEL_MODES
+            for group, count in zip(TOURMASTER_NOTIFICATION_GROUPS[mode],
+                                    (values[f"{prefix}Clears"], values[f"{prefix}Stars"]))
+        }
+        versions = {}
+    else:
+        counts = values
+        versions = RULE_VERSIONS
+    events = [
+        {"group": group, "tier": tier, "target": target, "rule_version": versions.get(group, 1)}
+        for group, targets in progress["targets"].items()
+        for tier, target in enumerate(targets)
+        if counts[group] >= target
+    ]
+    if events:
+        _store_achievement_notifications(db, api_slug, user.id, events)
+    return progress
+
+
+def _store_achievement_notifications(db: Session, api_slug: str, user_id: int, events: list[dict]) -> list[dict]:
+    accepted = [{"group": event["group"], "tier": event["tier"]} for event in events]
+    by_source_id = {
+        f"{api_slug}:achievement:v{event.get('rule_version', 1)}:{user_id}:{event['group']}:{event['tier']}": event
+        for event in events
+    }
+    notifications = db.query(UserNotification.source_event_id).filter(
+        UserNotification.source_event_id.in_(tuple(by_source_id))
+    )
+    if notifications.count() == len(by_source_id):
+        return accepted
+
     lock_account(db, user_id)
-    accepted = []
-    created = False
-    for event in events:
-        group, tier = event["group"], event["tier"]
-        version = event.get("rule_version", 1)
-        source_id = f"{api_slug}:achievement:v{version}:{user_id}:{group}:{tier}"
-        if db.query(UserNotification).filter_by(source_event_id=source_id).first() is None:
-            db.add(UserNotification(
-                user_id=user_id, type="game_achievement", title="Achievement Unlocked",
-                message=fallback_message, icon="achievement", is_read=False,
-                source=api_slug, source_event_id=source_id,
-                notification_metadata={"game_key": api_slug, "group": group, "tier": tier,
-                                       "target": event["target"]},
-            ))
-            db.flush()
-            created = True
-        accepted.append({"group": group, "tier": tier})
-    if created:
+    existing_ids = {source_id for (source_id,) in notifications.all()}
+    new_notifications = [
+        UserNotification(
+            user_id=user_id, type="game_achievement", title="Achievement Unlocked",
+            message=ACHIEVEMENT_NOTIFICATION_MESSAGES[api_slug], icon="achievement", is_read=False,
+            source=api_slug, source_event_id=source_id,
+            notification_metadata={"game_key": api_slug, "group": event["group"], "tier": event["tier"],
+                                   "target": event["target"]},
+        )
+        for source_id, event in by_source_id.items()
+        if source_id not in existing_ids
+    ]
+    if new_notifications:
+        db.add_all(new_notifications)
         schedule_notification_event(db, user_id)
     db.commit()
-    return {"game_key": api_slug, "accepted": accepted}
+    return accepted

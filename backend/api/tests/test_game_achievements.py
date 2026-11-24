@@ -8,7 +8,9 @@ from fastapi.testclient import TestClient
 from jose import jwt
 
 from test_chessmater_hint_tickets import CommerceFixture, UserNotification
-from services.game_achievements import get_game_achievements, receive_achievement_events
+from services.game_achievements import (
+    TARGETS, TOURMASTER_TARGETS, get_game_achievements, receive_achievement_events, sync_game_achievements,
+)
 from routes.game_achievement_routes import router
 from auth import get_current_active_user
 from database import get_db
@@ -69,6 +71,52 @@ class GameAchievementTests(CommerceFixture):
                 receive_achievement_events(self.db, self.tourmaster_token(**overrides), 'chess-tourmaster')
             self.assertEqual(error.exception.status_code, 401)
         self.assertEqual(self.db.query(UserNotification).count(), 0)
+
+    def test_tourmaster_sync_fills_missing_historical_unlocks_and_shares_delivery_deduplication(self):
+        progress = {
+            "gameKey": "chess-tourmaster",
+            "targets": TOURMASTER_TARGETS,
+            "values": {"classicClears": 9, "classicStars": 6, "mathClears": 10, "mathStars": 4},
+        }
+        with patch('services.game_achievements.get_game_achievements', return_value=progress) as get, \
+                patch('services.game_achievements.schedule_notification_event') as publish:
+            self.assertEqual(sync_game_achievements(self.db, "chess-tourmaster", self.user), progress)
+            get.assert_called_once_with("chess-tourmaster", self.user)
+            local_star = self.db.query(UserNotification).filter_by(
+                source_event_id='chess-tourmaster:achievement:v1:1:noHints:0'
+            ).one()
+            local_star.is_read = True
+            self.db.commit()
+            receive_achievement_events(self.db, self.tourmaster_token(clears=9), 'chess-tourmaster')
+            sync_game_achievements(self.db, "chess-tourmaster", self.user)
+            publish.assert_called_once_with(self.db, 1)
+        rows = self.db.query(UserNotification).all()
+        self.assertEqual({row.source_event_id for row in rows}, {
+            'chess-tourmaster:achievement:v1:1:noHints:0', 'chess-tourmaster:achievement:v1:1:records:0',
+        })
+        self.assertTrue(local_star.is_read)
+
+    def test_freefall_sync_backfills_current_versions_without_repeating_live_notifications(self):
+        values = {"levels": 12, "records": 10, "noHints": 10, "moves": 49}
+        self.db.add(UserNotification(user_id=1, type='game_achievement', title='Historical achievement',
+                                    message='Historical message', icon='achievement', is_read=True,
+                                    source_event_id='chessmater:achievement:v1:1:records:0'))
+        self.db.commit()
+        with patch('services.game_achievements.schedule_notification_event') as publish, \
+                patch('services.game_achievements.requests.get') as upstream:
+            upstream.return_value = Mock(status_code=200, json=lambda: {"gameKey": "chessmater", "values": values})
+            receive_achievement_events(self.db, self.token(), 'chessmater')
+            for _ in range(2):
+                self.assertEqual(sync_game_achievements(self.db, 'chessmater', self.user),
+                                 {"gameKey": "chessmater", "targets": TARGETS, "values": values})
+            self.assertEqual(publish.call_count, 2)
+        rows = self.db.query(UserNotification).all()
+        self.assertEqual({row.source_event_id: row.is_read for row in rows}, {
+            'chessmater:achievement:v1:1:levels:0': False,
+            'chessmater:achievement:v1:1:records:0': True,
+            'chessmater:achievement:v2:1:records:0': False,
+            'chessmater:achievement:v2:1:noHints:0': False,
+        })
 
     def test_delivery_retries_create_one_notification_with_badge_metadata(self):
         with patch('services.game_achievements.schedule_notification_event') as publish:
@@ -167,8 +215,17 @@ class GameAchievementTests(CommerceFixture):
         with TestClient(app) as client:
             self.assertEqual(client.get('/api/games/chessmater/achievements').status_code, 401)
             self.assertEqual(client.post('/api/games/chessmater/achievements/events').status_code, 401)
+            for game_key in ('chess-tourmaster', 'chessmater'):
+                self.assertEqual(client.post(f'/api/games/{game_key}/achievements/sync').status_code, 401)
             app.dependency_overrides[get_current_active_user] = lambda: self.user
             with patch('routes.game_achievement_routes.get_game_achievements', return_value={"gameKey": "chessmater", "values": {}}):
                 response = client.get('/api/games/chessmater/achievements')
                 self.assertEqual(response.status_code, 200)
                 self.assertEqual(response.headers['cache-control'], 'no-store')
+            for game_key in ('chess-tourmaster', 'chessmater'):
+                with patch('routes.game_achievement_routes.sync_game_achievements',
+                           return_value={"gameKey": game_key, "values": {}}) as sync:
+                    response = client.post(f'/api/games/{game_key}/achievements/sync', json={"user_id": 2})
+                    self.assertEqual(response.status_code, 200)
+                    self.assertEqual(response.headers['cache-control'], 'no-store')
+                    sync.assert_called_once_with(self.db, game_key, self.user)

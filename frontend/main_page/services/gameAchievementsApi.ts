@@ -5,7 +5,8 @@ import type { GameAchievementProgress } from "@/types/gameAchievements";
 export async function fetchGameAchievements(gameKey: string, signal?: AbortSignal): Promise<GameAchievementProgress> {
   const labels = GAME_ACHIEVEMENT_LABELS[gameKey];
   if (!labels) throw new Error("game_achievements_unavailable");
-  const response = await apiFetch(`/api/games/${encodeURIComponent(gameKey)}/achievements`, { signal, cache: "no-store" });
+  const endpoint = `/api/games/${encodeURIComponent(gameKey)}/achievements/sync`;
+  const response = await apiFetch(endpoint, { method: "POST", signal, cache: "no-store" });
   if (!response.ok) throw new Error("game_achievements_unavailable");
   const result = await response.json();
   const progress = result.data;

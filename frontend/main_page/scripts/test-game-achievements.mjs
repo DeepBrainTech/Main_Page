@@ -13,6 +13,7 @@ const require = createRequire(import.meta.url);
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 let translate;
 let achievementResponse;
+let achievementRequest;
 const cache = new Map();
 function load(relative) {
   if (cache.has(relative)) return cache.get(relative);
@@ -20,7 +21,10 @@ function load(relative) {
   const context = { exports: {}, require: name => {
     if (name === 'next-intl') return { useTranslations: () => translate };
     if (name === 'next/image') return props => React.createElement('img', props);
-    if (name === '@/lib/api-config') return { apiFetch: async () => ({ ok: true, json: async () => achievementResponse }) };
+    if (name === '@/lib/api-config') return { apiFetch: async (endpoint, options) => {
+      achievementRequest = { endpoint, method: options.method ?? 'GET' };
+      return { ok: true, json: async () => achievementResponse };
+    } };
     if (name.startsWith('@/')) return load(name.slice(2) + '.ts');
     return require(name);
   } };
@@ -47,10 +51,19 @@ const tourProgress = {
 };
 achievementResponse = { success: true, data: tourProgress };
 assert.equal(await fetchGameAchievements(tourProgress.gameKey), tourProgress);
+assert.equal(achievementRequest.endpoint, '/api/games/chess-tourmaster/achievements/sync');
+assert.equal(achievementRequest.method, 'POST');
 for (const badTargets of [undefined, { ...tourTargets, levels: [] }, { ...tourTargets, levels: [7, 7, 30, 40, 50] }]) {
   achievementResponse = { success: true, data: { ...tourProgress, targets: badTargets } };
   await assert.rejects(fetchGameAchievements(tourProgress.gameKey), /game_achievements_unavailable/);
 }
+const freefallProgress = {
+  gameKey: 'chessmater', targets: freefallTargets, values: { levels: 10, records: 0, noHints: 0, moves: 50 },
+};
+achievementResponse = { success: true, data: freefallProgress };
+assert.equal(await fetchGameAchievements(freefallProgress.gameKey), freefallProgress);
+assert.equal(achievementRequest.endpoint, '/api/games/chessmater/achievements/sync');
+assert.equal(achievementRequest.method, 'POST');
 for (const locale of ['zh', 'en']) {
   const messages = JSON.parse(fs.readFileSync(path.join(root, `language/${locale}.json`), 'utf8'));
   const options = { locale, messages, onError(error) { throw error; } };

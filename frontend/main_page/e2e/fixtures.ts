@@ -83,7 +83,7 @@ export const test = base.extend<{ api: ApiState; waitForPageRequests: () => Prom
       if (pathname === "/api/leaderboard") return respond({ list: [] });
       if (pathname === "/api/games/likes") return respond({ likes: [] });
       if (/^\/api\/games\/[^/]+\/media$/.test(pathname)) return respond({ previews: [], tutorials: [] });
-      if (/^\/api\/games\/[^/]+\/achievements$/.test(pathname)) {
+      if (/^\/api\/games\/[^/]+\/achievements(?:\/sync)?$/.test(pathname)) {
         const gameKey = pathname.split("/")[3];
         const tiers = [10, 20, 30, 40, 50];
         return respond({
