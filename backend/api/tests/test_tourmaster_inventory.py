@@ -50,6 +50,27 @@ class TourmasterInventoryTests(CommerceFixture):
             self.assertEqual(self.db.query(UserItemInventory).count(), 0)
             self.assertEqual(self.db.query(UserRewards).first().diamonds, 99)
 
+    def test_packs_charge_once_and_deliver_their_items(self):
+        catalog = asyncio.run(get_shop_catalog_public("chess-tourmaster")).data["items"]
+        packs = (
+            ("chess_tourmaster_hint_pack5", 1300, {"chess_tourmaster_hint": 5}),
+            ("chess_tourmaster_undo_pack5", 1700, {"chess_tourmaster_undo": 5}),
+            ("chess_tourmaster_utility_pack", 1400, {"chess_tourmaster_hint": 3, "chess_tourmaster_undo": 5}),
+        )
+        for sku, coins, grants in packs:
+            with self.subTest(sku=sku):
+                self.assertEqual(catalog[sku]["cost"]["coins"], coins)
+                self.assertEqual(catalog[sku]["grants"], grants)
+                before = self.db.query(UserRewards).first().coins
+                request = uuid4()
+                details = asyncio.run(redeem_item(sku, "chess-tourmaster", self.user, self.db, request)).data
+                retry = asyncio.run(redeem_item(sku, "chess-tourmaster", self.user, self.db, request)).data
+                claims = jwt.decode(details["grant_token"], os.environ["TOURMASTER_JWT_SECRET"],
+                                    algorithms=["HS256"], audience="chess-tourmaster", issuer="main-portal")
+                self.assertEqual(claims["grants"], grants)
+                self.assertEqual(details["purchase_id"], retry["purchase_id"])
+                self.assertEqual(self.db.query(UserRewards).first().coins, before - coins)
+
     def test_migration_removes_only_tourmaster_stock_and_can_redeliver(self):
         self.db.add_all([UserItemInventory(user_id=1, item_id="chess_tourmaster_hint", quantity=4),
                          UserItemInventory(user_id=1, item_id="chess_tourmaster_undo", quantity=2),

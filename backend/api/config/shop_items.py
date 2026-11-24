@@ -37,6 +37,25 @@ SHOP_ITEMS: dict[str, dict[str, Any]] = {
         "cost": {"coins": 400, "diamonds": 0, "flowers": 0},
     },
 
+    "chess_tourmaster_hint_pack5": {
+        "name": "Knightours Chess Hint Pack",
+        "games": ["chess-tourmaster"],
+        "cost": {"coins": 1300, "diamonds": 0, "flowers": 0},
+        "grants": {"chess_tourmaster_hint": 5},
+    },
+    "chess_tourmaster_undo_pack5": {
+        "name": "Knightours Chess Undo Pack",
+        "games": ["chess-tourmaster"],
+        "cost": {"coins": 1700, "diamonds": 0, "flowers": 0},
+        "grants": {"chess_tourmaster_undo": 5},
+    },
+    "chess_tourmaster_utility_pack": {
+        "name": "Knightours Chess Utility Pack",
+        "games": ["chess-tourmaster"],
+        "cost": {"coins": 1400, "diamonds": 0, "flowers": 0},
+        "grants": {"chess_tourmaster_hint": 3, "chess_tourmaster_undo": 5},
+    },
+
     # Freefall Chess is the display name; keep chess_mater_* SKUs and chessmater mode IDs
     # stable for existing purchases, inventory receipts and game clients.
     "chess_mater_reply": {
