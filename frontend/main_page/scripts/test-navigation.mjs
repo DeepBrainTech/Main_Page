@@ -59,4 +59,9 @@ assert.equal(safeReturnTo(login.searchParams.get("returnTo")), returnTo);
 assert.equal(authHref("/login"), "/login");
 assert.equal(new URL(authHref("/login", "//example.com"), "https://example.test").searchParams.get("returnTo"), "/dashboard");
 
-console.log("Navigation checks passed: local destinations, unsafe redirects, and auth flow round trips.");
+const { findGameDetail, getGameDetailHref } = load("lib/game-details.ts");
+assert.equal(getGameDetailHref("chess-tourmaster", "logic"), "/braingames/knightours-chess?category=logic");
+assert.equal(findGameDetail("knightours-chess")?.entry.key, "chess-tourmaster");
+assert.equal(findGameDetail("chess-tourmaster"), undefined);
+
+console.log("Navigation checks passed: local destinations, unsafe redirects, auth flow round trips, and game detail URLs.");

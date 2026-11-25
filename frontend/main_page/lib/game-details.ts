@@ -2,6 +2,7 @@ import { GAMES_BY_DIMENSION, type GameEntry } from "@/config/brain-games";
 import type { CognitiveDimensionKey } from "@/types/cognitive";
 
 export function getGameDetailSlug(gameKey: string): string {
+  if (gameKey === "chess-tourmaster") return "knightours-chess";
   return gameKey === "chessmater" ? "freefall-chess" : gameKey;
 }
 

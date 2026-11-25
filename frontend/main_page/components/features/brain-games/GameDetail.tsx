@@ -18,9 +18,10 @@ export default function GameDetail({ slug }: { slug: string }) {
   const tBrain = useTranslations("brainGames");
   const { launchEntry } = useGameLauncher();
   const { likeStates, likeBusyKey, toggleGameLike } = useGameLikes();
-  const { media, loading, error, retry } = useGameMedia(slug);
   const game = findGameDetail(slug)!;
   const { entry, dimension } = game;
+  const mediaSlug = entry.key === "chess-tourmaster" ? entry.key : slug;
+  const { media, loading, error, retry } = useGameMedia(mediaSlug);
   const achievementProgress = useGameAchievements(entry.key);
   const name = tHome(entry.nameKey);
   const introKey = `introOverrides.${entry.key}`;

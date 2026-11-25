@@ -200,6 +200,7 @@ export default function MakingWholeLessonPanel({
         }
       : null
   );
+  const hasActivePracticeReport = activePracticeReport !== null;
 
   const loadPracticeReportTrend = useCallback(
     async (pendingReport?: PersistedSecretPracticeReport | null) => {
@@ -239,7 +240,7 @@ export default function MakingWholeLessonPanel({
   );
 
   useEffect(() => {
-    if (!selectedSecret || viewMode !== "practice" || !activePracticeReport) {
+    if (!selectedSecret || viewMode !== "practice" || !hasActivePracticeReport) {
       setPracticeReportTrend([]);
       return;
     }
@@ -247,7 +248,7 @@ export default function MakingWholeLessonPanel({
       practice.phase === "summary" && !viewingPersistedReport ? savedSummaryReport : null;
     void loadPracticeReportTrend(pendingReport);
   }, [
-    activePracticeReport,
+    hasActivePracticeReport,
     loadPracticeReportTrend,
     practice.phase,
     practiceProgressVersion,
@@ -565,11 +566,13 @@ export default function MakingWholeLessonPanel({
               key={secret.key}
               className="relative flex h-full flex-col rounded-[24px] border border-white/70 bg-white/80 p-[clamp(12px,1.25vw,16px)] shadow-[0px_10px_15px_0px_rgba(0,0,0,0.1)]"
             >
-              <div className="relative shrink-0 overflow-hidden rounded-2xl">
-                <img
-                  src="/learning/mental_math/mental_math.png"
+              <div className="relative h-[clamp(76px,6.25vw,90px)] shrink-0 overflow-hidden rounded-2xl">
+                <Image
+                  src="/learning/mental_math/mental_math_cover.webp"
                   alt={secret.title}
-                  className="h-[clamp(76px,6.25vw,90px)] w-full object-cover"
+                  fill
+                  sizes="(min-width: 80rem) 33vw, (min-width: 48rem) 50vw, 100vw"
+                  className="object-cover"
                 />
                 <span className="absolute right-2 top-2 rounded-md bg-[#4ADE80] px-2 py-0.5 text-sm font-semibold text-white">
                   {tLearn("home.statusFree")}
