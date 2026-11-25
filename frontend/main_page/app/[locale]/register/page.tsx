@@ -464,6 +464,7 @@ export default function RegisterPage() {
                 {t("register.country")}
               </label>
               <CountrySelect
+                id="country"
                 value={formData.country}
                 onChange={(code) => {
                   setFormData({ ...formData, country: code });
@@ -473,11 +474,12 @@ export default function RegisterPage() {
                 locale={locale}
                 placeholder={t("register.countryPlaceholder")}
                 className={`${controlClassName("country")} flex items-center text-left`}
-                dropdownClassName="right-0 sm:left-0"
                 buttonRef={countryRef}
+                invalid={Boolean(fieldErrors.country)}
+                describedBy={fieldErrors.country ? "country-error" : undefined}
               />
               {fieldErrors.country && (
-                <p className="text-xs leading-4 text-rose-600" role="alert">
+                <p id="country-error" className="text-xs leading-4 text-rose-600" role="alert">
                   {fieldErrors.country}
                 </p>
               )}
@@ -522,7 +524,8 @@ export default function RegisterPage() {
                   onChange={handleChange}
                   required
                   maxLength={6}
-                  autoComplete="off"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
                   aria-invalid={Boolean(fieldErrors.verificationCode)}
                   aria-describedby={fieldErrors.verificationCode ? "verificationCode-error" : undefined}
                   placeholder={t("register.verificationCodePlaceholder")}

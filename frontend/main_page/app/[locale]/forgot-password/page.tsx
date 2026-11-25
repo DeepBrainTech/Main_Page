@@ -261,7 +261,8 @@ export default function ForgotPasswordPage() {
                   onChange={handleChange}
                   required
                   maxLength={6}
-                  autoComplete="off"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
                   className="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-black dark:focus:ring-white focus:border-transparent bg-white dark:bg-zinc-800 text-black dark:text-white"
                   placeholder={t("forgotPassword.verificationCodePlaceholder")}
                 />

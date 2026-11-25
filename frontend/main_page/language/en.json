@@ -87,6 +87,8 @@
     }
   },
   "common": {
+    "searchCountry": "Search countries",
+    "noCountriesFound": "No countries found",
     "welcome": "Welcome to DeepBrain Tech Platform",
     "login": "Log in",
     "register": "Register",

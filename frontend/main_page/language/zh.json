@@ -87,6 +87,8 @@
     }
   },
   "common": {
+    "searchCountry": "搜索国家或地区",
+    "noCountriesFound": "没有找到匹配的国家或地区",
     "welcome": "欢迎来到 DeepBrain Tech 平台",
     "login": "登录",
     "register": "注册",

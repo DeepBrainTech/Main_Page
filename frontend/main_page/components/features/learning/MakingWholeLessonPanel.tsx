@@ -888,6 +888,7 @@ export default function MakingWholeLessonPanel({
                     onKeyDown={(event) => {
                       if (event.key === "Enter" && practice.canSubmit) {
                         event.preventDefault();
+                        if (event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229) return;
                         practice.submitCurrentAnswer();
                       }
                     }}

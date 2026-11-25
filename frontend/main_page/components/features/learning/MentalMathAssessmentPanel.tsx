@@ -716,6 +716,7 @@ export default function MentalMathAssessmentPanel({ onBackToLessons }: MentalMat
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && canSubmit) {
                       e.preventDefault();
+                      if (e.nativeEvent.isComposing || e.nativeEvent.keyCode === 229) return;
                       submitAnswer(false);
                     }
                   }}

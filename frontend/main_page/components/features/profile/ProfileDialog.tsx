@@ -417,9 +417,10 @@ export default function ProfileDialog({
               <div className="flex min-h-20 items-center gap-3.5 rounded-2xl bg-[#F2FAFF] p-4">
                 <ProfileRowIcon flagEmoji={countryCodeToFlagEmoji(isEditingProfile ? editCountryValue : country)} />
                 <div className="min-w-0 flex-1">
-                  <div className="text-sm font-normal leading-5 text-slate-500">{tProfile("country")}</div>
+                  <label htmlFor={isEditingProfile ? "profile-country" : undefined} className="block text-sm font-normal leading-5 text-slate-500">{tProfile("country")}</label>
                   {isEditingProfile ? (
                     <CountrySelect
+                      id="profile-country"
                       value={editCountryValue}
                       onChange={setEditCountryValue}
                       locale={currentLocale}

@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect } from "react";
+import { useId } from "react";
+import Modal from "./Modal";
 
 type ConfirmDialogProps = {
   open: boolean;
@@ -24,18 +25,8 @@ export default function ConfirmDialog({
   onCancel,
   destructive = false,
 }: ConfirmDialogProps) {
-  useEffect(() => {
-    if (!open) {
-      return;
-    }
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        onCancel();
-      }
-    };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [open, onCancel]);
+  const titleId = useId();
+  const messageId = useId();
 
   if (!open) {
     return null;
@@ -46,27 +37,23 @@ export default function ConfirmDialog({
     : "bg-sky-700 text-white hover:opacity-95";
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4 font-app-body"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="confirm-dialog-title"
-      aria-describedby="confirm-dialog-message"
-      onClick={onCancel}
+    <Modal
+      className="max-w-[27.5rem] rounded-3xl font-app-body shadow-[0px_20px_40px_0px_rgba(0,0,0,0.20)]"
+      labelledBy={titleId}
+      describedBy={messageId}
+      onClose={onCancel}
     >
-      <div
-        className="w-full max-w-[440px] rounded-3xl bg-white px-8 py-8 shadow-[0px_20px_40px_0px_rgba(0,0,0,0.20)]"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <h2 id="confirm-dialog-title" className="text-2xl font-semibold leading-8 text-sky-700">
+      <div className="p-8">
+        <h2 id={titleId} className="text-2xl font-semibold leading-8 text-sky-700">
           {title}
         </h2>
-        <p id="confirm-dialog-message" className="mt-4 text-lg font-normal leading-7 text-sky-700">
+        <p id={messageId} className="mt-4 text-lg font-normal leading-7 text-sky-700">
           {message}
         </p>
         <div className="mt-8 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
           <button
             type="button"
+            data-modal-autofocus
             onClick={onCancel}
             className="flex h-12 flex-1 items-center justify-center rounded-2xl bg-indigo-50 px-6 text-base font-medium text-sky-700 transition hover:bg-indigo-100 sm:flex-none sm:min-w-[7rem]"
           >
@@ -81,6 +68,6 @@ export default function ConfirmDialog({
           </button>
         </div>
       </div>
-    </div>
+    </Modal>
   );
 }

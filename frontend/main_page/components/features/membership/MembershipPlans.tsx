@@ -1,9 +1,10 @@
 "use client";
 
 import Image from "next/image";
-import type { ReactNode } from "react";
-import { useState } from "react";
+import type { MouseEvent, ReactNode } from "react";
+import { useId, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
+import Modal from "@/components/ui/Modal";
 
 export type MembershipPlan = "free" | "plus" | "premium";
 export type MembershipBillingInterval = "monthly" | "annual";
@@ -244,6 +245,8 @@ export default function MembershipPlans({
   const pendingDateLabel = pendingEffectiveAtIso ? formatMembershipPeriodDate(pendingEffectiveAtIso, locale) : "";
   const hasScheduledPlanChange = Boolean(pendingPlan && pendingBillingInterval && pendingDateLabel);
   const [cancelDialogPlan, setCancelDialogPlan] = useState<Extract<MembershipPlan, "plus" | "premium"> | null>(null);
+  const cancelDialogTitleId = useId();
+  const cancelDialogDescriptionId = useId();
 
   const cancelLoseKeys =
     cancelDialogPlan === "premium"
@@ -344,7 +347,7 @@ export default function MembershipPlans({
           const periodDateLabel = membershipPeriodEndIso ? formatMembershipPeriodDate(membershipPeriodEndIso, locale) : "";
           let buttonLabel: string | null;
           let buttonDisabled = redirecting;
-          let handleClick: () => void = () => void onPlanAction(plan.key);
+          let handleClick: (event: MouseEvent<HTMLButtonElement>) => void = () => void onPlanAction(plan.key);
           const pendingMatches =
             pendingPlan === plan.key && pendingBillingInterval === billingInterval && Boolean(pendingDateLabel);
           const isPaidPlan = plan.key === "plus" || plan.key === "premium";
@@ -374,7 +377,10 @@ export default function MembershipPlans({
               } else {
                 buttonLabel = hasScheduledPlanChange ? t("cancelAllRenewal") : t("cancelInPortal");
                 buttonDisabled = buttonDisabled || !portalEnabled;
-                handleClick = () => setCancelDialogPlan(plan.key as "plus" | "premium");
+                handleClick = (event) => {
+                  event.currentTarget.focus({ preventScroll: true });
+                  setCancelDialogPlan(plan.key as "plus" | "premium");
+                };
               }
             } else if (pendingMatches) {
               buttonLabel = t("cancelScheduledPlanChange");
@@ -594,8 +600,16 @@ export default function MembershipPlans({
       </div>
 
       {cancelDialogPlan ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 px-4 py-6" role="dialog" aria-modal="true" aria-labelledby="membership-cancel-dialog-title">
-          <div className="relative flex w-full max-w-[524px] flex-col rounded-3xl bg-white font-['Outfit'] shadow-[0px_4px_6px_-4px_rgba(0,0,0,0.10)] shadow-lg outline outline-2 outline-offset-[-2px] outline-slate-200 md:h-[549px] md:min-h-[549px]">
+        <Modal
+          labelledBy={cancelDialogTitleId}
+          describedBy={cancelDialogDescriptionId}
+          busy={redirecting}
+          dismissOnBackdrop={false}
+          onClose={() => setCancelDialogPlan(null)}
+          className="max-w-[32.75rem] rounded-3xl font-app-body shadow-lg outline outline-2 outline-offset-[-2px] outline-slate-200"
+          backdropClassName="backdrop:bg-slate-950/45"
+        >
+          <div className="relative flex w-full flex-col md:min-h-[34.3125rem]">
             <button
               type="button"
               className="absolute right-[19px] top-[19px] inline-flex cursor-pointer flex-col items-start justify-start rounded-sm p-0 text-neutral-950 opacity-70 transition hover:opacity-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-600 disabled:pointer-events-none disabled:opacity-40"
@@ -608,10 +622,10 @@ export default function MembershipPlans({
 
             <div className="flex flex-col items-center px-8 pb-0 pt-8">
               <CancelDialogWarningIcon />
-              <h2 id="membership-cancel-dialog-title" className="mt-6 w-full max-w-[460px] text-center text-2xl font-bold leading-8 text-cyan-950">
+              <h2 id={cancelDialogTitleId} className="mt-6 w-full max-w-[460px] text-center text-2xl font-bold leading-8 text-cyan-950">
                 {t("cancelDialog.title")}
               </h2>
-              <p className="mt-2 w-full max-w-[460px] text-center text-base font-normal leading-6 text-sky-700">
+              <p id={cancelDialogDescriptionId} className="mt-2 w-full max-w-[460px] text-center text-base font-normal leading-6 text-sky-700">
                 {t("cancelDialog.description", { plan: t(`plans.${cancelDialogPlan}`) })}
               </p>
             </div>
@@ -633,6 +647,7 @@ export default function MembershipPlans({
             <div className="mx-8 mb-8 mt-6 inline-flex w-[calc(100%-4rem)] max-w-[460px] flex-col items-start justify-end gap-3 max-sm:mx-4 max-sm:w-[calc(100%-2rem)] md:mt-auto md:pt-2">
               <button
                 type="button"
+                data-modal-autofocus
                 className="relative h-14 w-full rounded-[100px] bg-gradient-to-r from-sky-700 from-0% via-sky-700 via-[8%] to-blue-600 to-100% text-center text-base font-bold leading-6 text-white transition hover:brightness-105 disabled:opacity-60"
                 onClick={() => setCancelDialogPlan(null)}
                 disabled={redirecting}
@@ -652,7 +667,7 @@ export default function MembershipPlans({
               </button>
             </div>
           </div>
-        </div>
+        </Modal>
       ) : null}
     </section>
   );

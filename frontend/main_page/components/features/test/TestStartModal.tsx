@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect } from "react";
+import { useId } from "react";
+import Modal from "@/components/ui/Modal";
 import Image from "next/image";
 import { useTranslations } from "next-intl";
 import type { CognitiveDimensionKey } from "@/types/cognitive";
@@ -43,43 +44,22 @@ function StopwatchGlyph({ className }: { className?: string }) {
 export default function TestStartModal({ dimension, onClose, onConfirm }: TestStartModalProps) {
   const t = useTranslations("test");
   const tDim = useTranslations("dimensions");
+  const titleId = useId();
 
   const sectionCount = getTestSectionCount(dimension);
   const minutes = getTestEstimateMinutes(dimension);
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
-
-  useEffect(() => {
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = prev;
-    };
-  }, []);
-
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6">
-      <button
-        type="button"
-        className="absolute inset-0 bg-slate-900/40 backdrop-blur-[2px]"
-        aria-label={t("modalClose")}
-        onClick={onClose}
-      />
-
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="test-start-modal-title"
-        className="relative w-full max-w-[400px] rounded-3xl bg-white p-6 font-app-body shadow-2xl shadow-slate-900/15 sm:p-8"
-      >
+    <Modal
+      labelledBy={titleId}
+      onClose={onClose}
+      className="max-w-[25rem] rounded-3xl font-app-body shadow-2xl shadow-slate-900/15"
+      backdropClassName="backdrop:bg-slate-900/40 backdrop:backdrop-blur-[2px]"
+    >
+      <div className="relative p-6 sm:p-8">
         <button
           type="button"
+          data-modal-autofocus
           onClick={onClose}
           className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full text-[#1565C0] transition hover:bg-sky-50"
           aria-label={t("modalClose")}
@@ -103,7 +83,7 @@ export default function TestStartModal({ dimension, onClose, onConfirm }: TestSt
             />
           </div>
 
-          <h2 id="test-start-modal-title" className="mt-5 text-xl font-bold text-[#003366] sm:text-2xl">
+          <h2 id={titleId} className="mt-5 text-xl font-bold text-[#003366] sm:text-2xl">
             {t("modalDimensionTitle", { dimension: tDim(dimension) })}
           </h2>
           <p className="mt-2 text-sm font-medium text-[#1565C0]">{t("modalSubtitle")}</p>
@@ -143,6 +123,6 @@ export default function TestStartModal({ dimension, onClose, onConfirm }: TestSt
           {t("modalStartFree")}
         </button>
       </div>
-    </div>
+    </Modal>
   );
 }
